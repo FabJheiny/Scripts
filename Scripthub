@@ -1,150 +1,275 @@
--- ScriptHub.lua
+-- ScriptHub.lua | Cronos Hub
 local Hub = {}
 local LP = game:GetService("Players").LocalPlayer
 local UIS = game:GetService("UserInputService")
 local PG = LP:WaitForChild("PlayerGui")
 local B = Color3.fromRGB(0,0,0)
 local W = Color3.fromRGB(255,255,255)
-local G = Color3.fromRGB(40,40,40)
+local D = Color3.fromRGB(15,15,15)
+local G = Color3.fromRGB(50,50,50)
+local DT = Color3.fromRGB(180,180,180)
 
-local function o(cls, props, par)
-    local x = Instance.new(cls)
+local function o(cls,props,par)
+    local x=Instance.new(cls)
     for k,v in pairs(props) do x[k]=v end
     if par then x.Parent=par end
     return x
 end
+local function stroke(par,t) o("UIStroke",{Color=W,Thickness=t or 1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},par) end
 
--- ROOT
-local sg = o("ScreenGui",{Name="Hub",ResetOnSpawn=false,IgnoreGuiInset=true},PG)
+-- ── ScreenGui ────────────────────────────────────────────────────────
+local sg = o("ScreenGui",{Name="CronosHub",ResetOnSpawn=false,IgnoreGuiInset=true,DisplayOrder=100},PG)
+
+-- ── Janela principal (horizontal: 680×320) ───────────────────────────
 local win = o("Frame",{
-    Size=UDim2.new(0,580,0,400),
-    Position=UDim2.new(.5,-290,.5,-200),
+    Size=UDim2.new(0,680,0,310),
+    Position=UDim2.new(.5,-340,.5,-155),
     BackgroundColor3=B,
-    BorderSizePixel=2,
+    BorderSizePixel=0,
     Active=true,
+    ClipsDescendants=true,
+    Visible=true,
 },sg)
-o("UIStroke",{Color=W,Thickness=2,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},win)
+stroke(win,1)
 
--- TOPBAR
-local top = o("Frame",{Size=UDim2.new(1,0,0,36),BackgroundColor3=B,BorderSizePixel=0},win)
-o("UIStroke",{Color=W,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},top)
+-- ── Topbar ───────────────────────────────────────────────────────────
+local top = o("Frame",{Size=UDim2.new(1,0,0,24),BackgroundColor3=B,BorderSizePixel=0},win)
+o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0},top)
+
 o("TextLabel",{
-    Size=UDim2.new(1,-40,1,0),Position=UDim2.new(0,10,0,0),
-    BackgroundTransparency=1,Text="Xx SCRIPTHUB xX",
-    TextColor3=W,TextSize=16,Font=Enum.Font.GothamBold,
-    TextXAlignment=Enum.TextXAlignment.Left
+    Size=UDim2.new(1,-60,1,0),Position=UDim2.new(0,8,0,0),
+    BackgroundTransparency=1,Text="Cronos Hub",
+    TextColor3=W,TextSize=11,Font=Enum.Font.SourceSansBold,
+    TextXAlignment=Enum.TextXAlignment.Left,
 },top)
-local xb = o("TextButton",{
-    Size=UDim2.new(0,36,0,36),Position=UDim2.new(1,-36,0,0),
-    BackgroundColor3=B,BorderSizePixel=0,
-    Text="X",TextColor3=W,TextSize=16,Font=Enum.Font.GothamBold,AutoButtonColor=false
-},top)
-o("UIStroke",{Color=W,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},xb)
-xb.MouseButton1Click:Connect(function() sg.Enabled=false end)
 
--- DRAG
+local minBtn = o("TextButton",{
+    Size=UDim2.new(0,18,0,14),Position=UDim2.new(1,-40,0.5,-7),
+    BackgroundColor3=B,BorderSizePixel=0,
+    Text="-",TextColor3=W,TextSize=13,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
+},top)
+stroke(minBtn,1)
+
+local xBtn = o("TextButton",{
+    Size=UDim2.new(0,18,0,14),Position=UDim2.new(1,-20,0.5,-7),
+    BackgroundColor3=B,BorderSizePixel=0,
+    Text="x",TextColor3=W,TextSize=10,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
+},top)
+stroke(xBtn,1)
+
+-- ── Drag ─────────────────────────────────────────────────────────────
 do local d,ds,sp
     top.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then d=true ds=i.Position sp=win.Position end end)
     top.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then d=false end end)
     UIS.InputChanged:Connect(function(i) if d and i.UserInputType==Enum.UserInputType.MouseMovement then local dt=i.Position-ds win.Position=UDim2.new(sp.X.Scale,sp.X.Offset+dt.X,sp.Y.Scale,sp.Y.Offset+dt.Y) end end)
 end
-UIS.InputBegan:Connect(function(i,gp) if not gp and i.KeyCode==Enum.KeyCode.RightShift then sg.Enabled=not sg.Enabled end end)
 
--- LEFT TAB COLUMN (100px)
-local tcol = o("Frame",{
-    Size=UDim2.new(0,110,1,-36),Position=UDim2.new(0,0,0,36),
-    BackgroundColor3=B,BorderSizePixel=0
+-- ── Minimizar / Fechar ───────────────────────────────────────────────
+local body -- referência ao body, definida abaixo
+local mini = false
+local fullH, miniH = 310, 24
+
+minBtn.MouseButton1Click:Connect(function()
+    mini = not mini
+    if mini then
+        win.Size=UDim2.new(0,680,0,miniH)
+        minBtn.Text="+"
+    else
+        win.Size=UDim2.new(0,680,0,fullH)
+        minBtn.Text="-"
+    end
+end)
+
+xBtn.MouseButton1Click:Connect(function()
+    win.Visible=false
+    -- pill aparece
+    _G.CronosHubPill.Visible=true
+end)
+
+-- ── Body (abaixo da topbar) ──────────────────────────────────────────
+body = o("Frame",{
+    Size=UDim2.new(1,0,1,-24),
+    Position=UDim2.new(0,0,0,24),
+    BackgroundColor3=B,
+    BorderSizePixel=0,
+    ClipsDescendants=true,
 },win)
-o("UIStroke",{Color=W,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},tcol)
+
+-- ── Coluna de abas (esquerda, 90px) ──────────────────────────────────
+local tcol = o("Frame",{
+    Size=UDim2.new(0,90,1,0),
+    BackgroundColor3=B,
+    BorderSizePixel=0,
+},body)
+o("Frame",{Size=UDim2.new(0,1,1,0),Position=UDim2.new(1,0,0,0),BackgroundColor3=G,BorderSizePixel=0},tcol)
+
 local tlist = o("ScrollingFrame",{
-    Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,BorderSizePixel=0,
-    ScrollBarThickness=0,CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y
+    Size=UDim2.new(1,0,1,0),
+    BackgroundTransparency=1,BorderSizePixel=0,
+    ScrollBarThickness=0,
+    CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y,
 },tcol)
 o("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder},tlist)
 
--- RIGHT CONTENT AREA (grid of buttons)
+-- ── Área de conteúdo (direita) ────────────────────────────────────────
 local area = o("Frame",{
-    Size=UDim2.new(1,-110,1,-36),Position=UDim2.new(0,110,0,36),
-    BackgroundColor3=B,BorderSizePixel=0,ClipsDescendants=true
-},win)
-o("UIStroke",{Color=W,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},area)
+    Size=UDim2.new(1,-91,1,0),
+    Position=UDim2.new(0,91,0,0),
+    BackgroundColor3=B,
+    BorderSizePixel=0,
+    ClipsDescendants=true,
+},body)
 
--- STATE
-local btns,pages,cur = {},{},nil
+-- ── Estado das abas ───────────────────────────────────────────────────
+local tabBtns,tabPages,cur = {},{},nil
+
 local function sw(i)
     if cur==i then return end
     if cur then
-        btns[cur].BackgroundColor3=B
-        btns[cur].TextColor3=W
-        btns[cur].Font=Enum.Font.Gotham
-        pages[cur].Visible=false
+        tabBtns[cur].BackgroundColor3=B
+        tabBtns[cur].TextColor3=DT
     end
     cur=i
-    btns[i].BackgroundColor3=W
-    btns[i].TextColor3=B
-    btns[i].Font=Enum.Font.GothamBold
-    pages[i].Visible=true
+    tabBtns[i].BackgroundColor3=D
+    tabBtns[i].TextColor3=W
+    for j,p in ipairs(tabPages) do p.Visible=(j==i) end
 end
 
--- PUBLIC API
+-- ── API pública ───────────────────────────────────────────────────────
 function Hub:Tab(name)
-    local i = #btns+1
+    local i = #tabBtns+1
 
-    -- tab button
+    -- botão da aba
     local tb = o("TextButton",{
-        Size=UDim2.new(1,0,0,44),
-        BackgroundColor3= i==1 and W or B,
+        Size=UDim2.new(1,0,0,28),
+        BackgroundColor3= i==1 and D or B,
         BorderSizePixel=0,
         Text=name,
-        TextColor3= i==1 and B or W,
-        TextSize=13,
-        Font= i==1 and Enum.Font.GothamBold or Enum.Font.Gotham,
+        TextColor3= i==1 and W or DT,
+        TextSize=10,
+        Font=Enum.Font.SourceSansBold,
         AutoButtonColor=false,
         LayoutOrder=i,
+        TextWrapped=true,
     },tlist)
-    o("UIStroke",{Color=W,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},tb)
+    o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0},tb)
 
-    -- page (grid)
-    local pg = o("ScrollingFrame",{
+    -- página (search + grade)
+    local pg = o("Frame",{
         Size=UDim2.new(1,0,1,0),
-        BackgroundTransparency=1,
+        BackgroundColor3=B,
         BorderSizePixel=0,
-        ScrollBarThickness=3,
-        ScrollBarImageColor3=W,
-        CanvasSize=UDim2.new(0,0,0,0),
-        AutomaticCanvasSize=Enum.AutomaticSize.Y,
         Visible=i==1,
     },area)
-    o("UIGridLayout",{
-        CellSize=UDim2.new(0,140,0,60),
-        CellPadding=UDim2.new(0,4,0,4),
+
+    -- search bar
+    local search = o("TextBox",{
+        Size=UDim2.new(1,-10,0,20),
+        Position=UDim2.new(0,5,0,4),
+        BackgroundColor3=D,
+        BorderSizePixel=0,
+        PlaceholderText="Pesquisar...",
+        PlaceholderColor3=Color3.fromRGB(90,90,90),
+        Text="",
+        TextColor3=W,
+        TextSize=10,
+        Font=Enum.Font.SourceSans,
+        ClearTextOnFocus=false,
+    },pg)
+    stroke(search,1)
+    o("UIPadding",{PaddingLeft=UDim.new(0,6)},search)
+
+    -- grid scroll
+    local scroll = o("ScrollingFrame",{
+        Size=UDim2.new(1,0,1,-30),
+        Position=UDim2.new(0,0,0,28),
+        BackgroundTransparency=1,
+        BorderSizePixel=0,
+        ScrollBarThickness=2,
+        ScrollBarImageColor3=G,
+        CanvasSize=UDim2.new(0,0,0,0),
+        AutomaticCanvasSize=Enum.AutomaticSize.Y,
+    },pg)
+
+    local grid = o("UIGridLayout",{
+        CellSize=UDim2.new(0,108,0,40),
+        CellPadding=UDim2.new(0,3,0,3),
         SortOrder=Enum.SortOrder.LayoutOrder,
         HorizontalAlignment=Enum.HorizontalAlignment.Left,
-    },pg)
-    o("UIPadding",{PaddingTop=UDim.new(0,6),PaddingLeft=UDim.new(0,6),PaddingRight=UDim.new(0,6),PaddingBottom=UDim.new(0,6)},pg)
+    },scroll)
+    o("UIPadding",{PaddingTop=UDim.new(0,4),PaddingLeft=UDim.new(0,4),PaddingRight=UDim.new(0,4)},scroll)
 
-    btns[i]=tb pages[i]=pg if i==1 then cur=1 end
+    tabBtns[i]=tb tabPages[i]=pg if i==1 then cur=1 end
     tb.MouseButton1Click:Connect(function() sw(i) end)
 
-    local T = {}
-    function T:Button(name, cb)
+    -- pesquisa: mostra/oculta botões
+    local allBtns = {}
+    search:GetPropertyChangedSignal("Text"):Connect(function()
+        local q = search.Text:lower()
+        for _,b in ipairs(allBtns) do
+            b.Visible = (q=="" or b.Name:lower():find(q,1,true)~=nil)
+        end
+    end)
+
+    local T={}
+    function T:Button(txt,cb)
         local b = o("TextButton",{
-            BackgroundColor3=B,
+            Name=txt,
+            BackgroundColor3=D,
             BorderSizePixel=0,
-            Text=name,
+            Text=txt,
             TextColor3=W,
-            TextSize=12,
-            Font=Enum.Font.Gotham,
+            TextSize=10,
+            Font=Enum.Font.SourceSans,
             AutoButtonColor=false,
             TextWrapped=true,
-        },pg)
-        o("UIStroke",{Color=W,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},b)
-        b.MouseEnter:Connect(function() b.BackgroundColor3=Color3.fromRGB(30,30,30) end)
-        b.MouseLeave:Connect(function() b.BackgroundColor3=B end)
+        },scroll)
+        stroke(b,1)
+        b.MouseEnter:Connect(function() b.BackgroundColor3=Color3.fromRGB(25,25,25) end)
+        b.MouseLeave:Connect(function() b.BackgroundColor3=D end)
         b.MouseButton1Click:Connect(function() if cb then pcall(cb) end end)
+        table.insert(allBtns,b)
         return self
     end
     return T
 end
+
+-- ── Pill (botão flutuante para reabrir) ───────────────────────────────
+local pill = o("Frame",{
+    Name="Pill",
+    Size=UDim2.new(0,54,0,18),
+    Position=UDim2.new(1,-60,1,-80),
+    BackgroundColor3=B,
+    BorderSizePixel=0,
+    Visible=false,
+    ZIndex=200,
+},sg)
+stroke(pill,1)
+_G.CronosHubPill = pill
+
+local pillBtn = o("TextButton",{
+    Size=UDim2.new(1,0,1,0),
+    BackgroundTransparency=1,
+    Text="> cronos",
+    TextSize=9,
+    Font=Enum.Font.SourceSansBold,
+    TextColor3=W,
+    BorderSizePixel=0,
+    ZIndex=201,
+},pill)
+
+pillBtn.MouseButton1Click:Connect(function()
+    win.Visible=true
+    pill.Visible=false
+end)
+
+-- ── RightShift toggle ────────────────────────────────────────────────
+UIS.InputBegan:Connect(function(i,gp)
+    if not gp and i.KeyCode==Enum.KeyCode.RightShift then
+        local v = not win.Visible
+        win.Visible=v
+        if v then pill.Visible=false end
+    end
+end)
 
 return Hub
