@@ -1,0 +1,150 @@
+-- ScriptHub.lua
+local Hub = {}
+local LP = game:GetService("Players").LocalPlayer
+local UIS = game:GetService("UserInputService")
+local PG = LP:WaitForChild("PlayerGui")
+local B = Color3.fromRGB(0,0,0)
+local W = Color3.fromRGB(255,255,255)
+local G = Color3.fromRGB(40,40,40)
+
+local function o(cls, props, par)
+    local x = Instance.new(cls)
+    for k,v in pairs(props) do x[k]=v end
+    if par then x.Parent=par end
+    return x
+end
+
+-- ROOT
+local sg = o("ScreenGui",{Name="Hub",ResetOnSpawn=false,IgnoreGuiInset=true},PG)
+local win = o("Frame",{
+    Size=UDim2.new(0,580,0,400),
+    Position=UDim2.new(.5,-290,.5,-200),
+    BackgroundColor3=B,
+    BorderSizePixel=2,
+    Active=true,
+},sg)
+o("UIStroke",{Color=W,Thickness=2,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},win)
+
+-- TOPBAR
+local top = o("Frame",{Size=UDim2.new(1,0,0,36),BackgroundColor3=B,BorderSizePixel=0},win)
+o("UIStroke",{Color=W,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},top)
+o("TextLabel",{
+    Size=UDim2.new(1,-40,1,0),Position=UDim2.new(0,10,0,0),
+    BackgroundTransparency=1,Text="Xx SCRIPTHUB xX",
+    TextColor3=W,TextSize=16,Font=Enum.Font.GothamBold,
+    TextXAlignment=Enum.TextXAlignment.Left
+},top)
+local xb = o("TextButton",{
+    Size=UDim2.new(0,36,0,36),Position=UDim2.new(1,-36,0,0),
+    BackgroundColor3=B,BorderSizePixel=0,
+    Text="X",TextColor3=W,TextSize=16,Font=Enum.Font.GothamBold,AutoButtonColor=false
+},top)
+o("UIStroke",{Color=W,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},xb)
+xb.MouseButton1Click:Connect(function() sg.Enabled=false end)
+
+-- DRAG
+do local d,ds,sp
+    top.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then d=true ds=i.Position sp=win.Position end end)
+    top.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then d=false end end)
+    UIS.InputChanged:Connect(function(i) if d and i.UserInputType==Enum.UserInputType.MouseMovement then local dt=i.Position-ds win.Position=UDim2.new(sp.X.Scale,sp.X.Offset+dt.X,sp.Y.Scale,sp.Y.Offset+dt.Y) end end)
+end
+UIS.InputBegan:Connect(function(i,gp) if not gp and i.KeyCode==Enum.KeyCode.RightShift then sg.Enabled=not sg.Enabled end end)
+
+-- LEFT TAB COLUMN (100px)
+local tcol = o("Frame",{
+    Size=UDim2.new(0,110,1,-36),Position=UDim2.new(0,0,0,36),
+    BackgroundColor3=B,BorderSizePixel=0
+},win)
+o("UIStroke",{Color=W,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},tcol)
+local tlist = o("ScrollingFrame",{
+    Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,BorderSizePixel=0,
+    ScrollBarThickness=0,CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y
+},tcol)
+o("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder},tlist)
+
+-- RIGHT CONTENT AREA (grid of buttons)
+local area = o("Frame",{
+    Size=UDim2.new(1,-110,1,-36),Position=UDim2.new(0,110,0,36),
+    BackgroundColor3=B,BorderSizePixel=0,ClipsDescendants=true
+},win)
+o("UIStroke",{Color=W,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},area)
+
+-- STATE
+local btns,pages,cur = {},{},nil
+local function sw(i)
+    if cur==i then return end
+    if cur then
+        btns[cur].BackgroundColor3=B
+        btns[cur].TextColor3=W
+        btns[cur].Font=Enum.Font.Gotham
+        pages[cur].Visible=false
+    end
+    cur=i
+    btns[i].BackgroundColor3=W
+    btns[i].TextColor3=B
+    btns[i].Font=Enum.Font.GothamBold
+    pages[i].Visible=true
+end
+
+-- PUBLIC API
+function Hub:Tab(name)
+    local i = #btns+1
+
+    -- tab button
+    local tb = o("TextButton",{
+        Size=UDim2.new(1,0,0,44),
+        BackgroundColor3= i==1 and W or B,
+        BorderSizePixel=0,
+        Text=name,
+        TextColor3= i==1 and B or W,
+        TextSize=13,
+        Font= i==1 and Enum.Font.GothamBold or Enum.Font.Gotham,
+        AutoButtonColor=false,
+        LayoutOrder=i,
+    },tlist)
+    o("UIStroke",{Color=W,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},tb)
+
+    -- page (grid)
+    local pg = o("ScrollingFrame",{
+        Size=UDim2.new(1,0,1,0),
+        BackgroundTransparency=1,
+        BorderSizePixel=0,
+        ScrollBarThickness=3,
+        ScrollBarImageColor3=W,
+        CanvasSize=UDim2.new(0,0,0,0),
+        AutomaticCanvasSize=Enum.AutomaticSize.Y,
+        Visible=i==1,
+    },area)
+    o("UIGridLayout",{
+        CellSize=UDim2.new(0,140,0,60),
+        CellPadding=UDim2.new(0,4,0,4),
+        SortOrder=Enum.SortOrder.LayoutOrder,
+        HorizontalAlignment=Enum.HorizontalAlignment.Left,
+    },pg)
+    o("UIPadding",{PaddingTop=UDim.new(0,6),PaddingLeft=UDim.new(0,6),PaddingRight=UDim.new(0,6),PaddingBottom=UDim.new(0,6)},pg)
+
+    btns[i]=tb pages[i]=pg if i==1 then cur=1 end
+    tb.MouseButton1Click:Connect(function() sw(i) end)
+
+    local T = {}
+    function T:Button(name, cb)
+        local b = o("TextButton",{
+            BackgroundColor3=B,
+            BorderSizePixel=0,
+            Text=name,
+            TextColor3=W,
+            TextSize=12,
+            Font=Enum.Font.Gotham,
+            AutoButtonColor=false,
+            TextWrapped=true,
+        },pg)
+        o("UIStroke",{Color=W,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},b)
+        b.MouseEnter:Connect(function() b.BackgroundColor3=Color3.fromRGB(30,30,30) end)
+        b.MouseLeave:Connect(function() b.BackgroundColor3=B end)
+        b.MouseButton1Click:Connect(function() if cb then pcall(cb) end end)
+        return self
+    end
+    return T
+end
+
+return Hub
