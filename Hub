@@ -82,7 +82,7 @@ local Tab = Window:NewTab("Scripts")
 local Section = Tab:NewSection("Scripts")
 
 
-Section:NewButton("Hand", "", function()
+Section:NewButton("Hand (r6)", "", function()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/ian49972/SCRIPTS/refs/heads/main/hand"))()
 end)
 
