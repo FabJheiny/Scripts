@@ -174,19 +174,98 @@ local function sw(i)
     for j,p in ipairs(tabPages) do p.Visible=(j==i) end
 end
 
+-- ── Aba Main ──────────────────────────────────────────────────────────
+do
+    local i = 1
+    local tb = o("TextButton",{
+        Size=UDim2.new(1,0,0,28), BackgroundColor3=D, BorderSizePixel=0,
+        Text="Main", TextColor3=W, TextSize=10,
+        Font=Enum.Font.SourceSansBold, AutoButtonColor=false,
+        LayoutOrder=i, TextWrapped=true,
+    },tlist)
+    o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0},tb)
+    local pg = o("Frame",{
+        Size=UDim2.new(1,0,1,0), BackgroundColor3=B, BorderSizePixel=0, Visible=true,
+    },area)
+    tabBtns[i]=tb tabPages[i]=pg cur=i
+    tb.MouseButton1Click:Connect(function() sw(i) end)
+
+    -- Avatar
+    local avBox = o("Frame",{
+        Size=UDim2.new(0,122,0,170), Position=UDim2.new(0,12,0,8),
+        BackgroundColor3=B, BorderSizePixel=0,
+    },pg)
+    stroke(avBox,1)
+    local avImg = o("ImageLabel",{
+        Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
+        Image="", ScaleType=Enum.ScaleType.Fit,
+    },avBox)
+    task.spawn(function()
+        local ok,t = pcall(function()
+            return game:GetService("Players"):GetUserThumbnailAsync(
+                LP.UserId, Enum.ThumbnailType.AvatarBust, Enum.ThumbnailSize.Size420x420)
+        end)
+        if ok then avImg.Image=t end
+    end)
+
+    -- Join date
+    local joinStr = "N/A"
+    pcall(function()
+        local ts = os.time() - LP.AccountAge*86400
+        local d  = os.date("*t",ts)
+        local mo = {"January","February","March","April","May","June",
+                    "July","August","September","October","November","December"}
+        joinStr  = mo[d.month].." "..d.day.." "..d.year
+    end)
+    local platStr = UIS.TouchEnabled and "Android" or "PC"
+    local devStr  = UIS.TouchEnabled and "Mobile"  or "Desktop"
+
+    -- Info labels
+    local infoF = o("Frame",{
+        Size=UDim2.new(1,-148,0,170), Position=UDim2.new(0,144,0,8),
+        BackgroundTransparency=1, BorderSizePixel=0,
+    },pg)
+    for k,row in ipairs({
+        "Display:  "..LP.DisplayName,
+        "Username:  "..LP.Name,
+        "User ID:  "..tostring(LP.UserId),
+        "AccountAge:  "..LP.AccountAge.." days",
+        "Join Date:  "..joinStr,
+        "Platform:  "..platStr,
+        "Device:  "..devStr,
+    }) do
+        o("TextLabel",{
+            Size=UDim2.new(1,0,0,21), Position=UDim2.new(0,0,0,(k-1)*23),
+            BackgroundTransparency=1, Text=row,
+            TextColor3=W, TextSize=11, Font=Enum.Font.Code,
+            TextXAlignment=Enum.TextXAlignment.Left,
+        },infoF)
+    end
+
+    -- Welcome
+    for k,row in ipairs({"Welcome", LP.Name}) do
+        o("TextLabel",{
+            Size=UDim2.new(0,134,0,24), Position=UDim2.new(0,8,0,186+(k-1)*26),
+            BackgroundTransparency=1, Text=row,
+            TextColor3=W, TextSize=18, Font=Enum.Font.Antique,
+            TextXAlignment=Enum.TextXAlignment.Center,
+        },pg)
+    end
+end
+
 -- ── API pública ───────────────────────────────────────────────────────
 function Hub:Tab(name)
     local i=#tabBtns+1
     local tb=o("TextButton",{
         Size=UDim2.new(1,0,0,28),
-        BackgroundColor3=i==1 and D or B,BorderSizePixel=0,
-        Text=name,TextColor3=i==1 and W or DT,TextSize=10,
+        BackgroundColor3=B,BorderSizePixel=0,
+        Text=name,TextColor3=DT,TextSize=10,
         Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
         LayoutOrder=i,TextWrapped=true,
     },tlist)
     o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0},tb)
 
-    local pg=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BorderSizePixel=0,Visible=i==1},area)
+    local pg=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BorderSizePixel=0,Visible=false},area)
 
     local hotbar=o("Frame",{Size=UDim2.new(1,0,0,20),BackgroundColor3=B,BorderSizePixel=0},pg)
 
@@ -224,7 +303,7 @@ function Hub:Tab(name)
         HorizontalAlignment=Enum.HorizontalAlignment.Left,
     },scroll)
 
-    tabBtns[i]=tb tabPages[i]=pg if i==1 then cur=1 end
+    tabBtns[i]=tb tabPages[i]=pg
     tb.MouseButton1Click:Connect(function() sw(i) end)
 
     local allBtns={}
