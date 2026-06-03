@@ -13,7 +13,7 @@ Hub:Tab("Scripts Fab")
     :Button("Infinite Zoom","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/iz")
     :Button("ShiftLock","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/shiftlock")
     :Button("Emotes R6","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/emoter6")
-    :Button("Wendigo Animations (r15)","https://rawscripts.net/raw/Universal-Script-Wendigo-Animation-75269")
+    :Button("Wendigo Animation (r15)","https://rawscripts.net/raw/Universal-Script-Wendigo-Animation-75269")
 
 Hub:Tab("Outros Scripts")
     :Button("Infinite Yield","https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source")
