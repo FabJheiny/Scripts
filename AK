@@ -29,7 +29,6 @@ local win = o("Frame",{
 },sg)
 stroke(win,1)
 
--- Active=true garante captura de input para arrastar
 local top = o("Frame",{Size=UDim2.new(1,0,0,24),BackgroundColor3=B,BorderSizePixel=0,Active=true},win)
 o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0},top)
 o("TextLabel",{
@@ -48,24 +47,49 @@ local xBtn = o("TextButton",{
     TextSize=10,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
 },top)
 
--- Drag pela barra superior (renomeado dt→delta para evitar shadowing de DT)
+-- ── Drag via UIS global — único método confiável no Roblox ────────────
 do
-    local dragging, dragStart, startPos
-    top.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging  = true
-            dragStart = i.Position
-            startPos  = win.Position
+    local dragging   = false
+    local dragStart  = nil
+    local startPos   = nil
+
+    local function isOverTopBar()
+        local mp  = UIS:GetMouseLocation()
+        local ap  = top.AbsolutePosition
+        local as  = top.AbsoluteSize
+        return mp.X >= ap.X and mp.X <= ap.X + as.X
+           and mp.Y >= ap.Y and mp.Y <= ap.Y + as.Y
+    end
+
+    UIS.InputBegan:Connect(function(input, gp)
+        if gp then return end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            if isOverTopBar() then
+                -- não inicia drag se clicou nos botões
+                local mp = UIS:GetMouseLocation()
+                local minAP = minBtn.AbsolutePosition
+                local xAP   = xBtn.AbsolutePosition
+                local bW, bH = 18, 14
+                local overMin = mp.X>=minAP.X and mp.X<=minAP.X+bW and mp.Y>=minAP.Y and mp.Y<=minAP.Y+bH
+                local overX   = mp.X>=xAP.X   and mp.X<=xAP.X+bW   and mp.Y>=xAP.Y   and mp.Y<=xAP.Y+bH
+                if not overMin and not overX then
+                    dragging  = true
+                    dragStart = input.Position
+                    startPos  = win.Position
+                end
+            end
         end
     end)
-    top.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = false
         end
     end)
-    UIS.InputChanged:Connect(function(i)
-        if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = i.Position - dragStart
+
+    UIS.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
             win.Position = UDim2.new(
                 startPos.X.Scale, startPos.X.Offset + delta.X,
                 startPos.Y.Scale, startPos.Y.Offset + delta.Y
@@ -178,12 +202,12 @@ end)
 
 -- ── Estado das abas ───────────────────────────────────────────────────
 local tabBtns,tabPages,cur={},{},nil
-local function sw(i)
-    if cur==i then return end
+local function sw(idx)
+    if cur==idx then return end
     if cur then tabBtns[cur].BackgroundColor3=B tabBtns[cur].TextColor3=DT end
-    cur=i
-    tabBtns[i].BackgroundColor3=D tabBtns[i].TextColor3=W
-    for j,p in ipairs(tabPages) do p.Visible=(j==i) end
+    cur=idx
+    tabBtns[idx].BackgroundColor3=D tabBtns[idx].TextColor3=W
+    for j,p in ipairs(tabPages) do p.Visible=(j==idx) end
 end
 
 -- ── Aba Main ──────────────────────────────────────────────────────────
@@ -202,23 +226,23 @@ do
     tabBtns[i]=tb tabPages[i]=pg cur=i
     tb.MouseButton1Click:Connect(function() sw(i) end)
 
-    -- ── Avatar QUADRADO (110×110) com Crop — sem esticar ──────────────
+    -- ── Avatar quadrado 160×160 centralizado verticalmente ────────────
     local avBox = o("Frame",{
-        Size=UDim2.new(0,110,0,110), Position=UDim2.new(0,12,0,8),
+        Size=UDim2.new(0,160,0,160), Position=UDim2.new(0,16,0.5,-80),
         BackgroundColor3=B, BorderSizePixel=0, ClipsDescendants=true,
     },pg)
     stroke(avBox,1)
-    local avImg = o("ImageLabel",{
+    o("ImageLabel",{
         Size=UDim2.new(1,0,1,0), Position=UDim2.new(0,0,0,0),
-        BackgroundTransparency=1,
-        Image="", ScaleType=Enum.ScaleType.Crop,
+        BackgroundTransparency=1, Image="", ScaleType=Enum.ScaleType.Crop,
+        Name="AvImg",
     },avBox)
     task.spawn(function()
         local ok,t = pcall(function()
             return game:GetService("Players"):GetUserThumbnailAsync(
                 LP.UserId, Enum.ThumbnailType.AvatarBust, Enum.ThumbnailSize.Size420x420)
         end)
-        if ok then avImg.Image=t end
+        if ok then avBox:FindFirstChild("AvImg").Image=t end
     end)
 
     -- Join date
@@ -233,34 +257,42 @@ do
     local platStr = UIS.TouchEnabled and "Android" or "PC"
     local devStr  = UIS.TouchEnabled and "Mobile"  or "Desktop"
 
-    -- ── Info labels com espaçamento reduzido (passo 20px, altura 18px) ─
+    -- ── Info labels — fonte maior, espaçamento compacto ───────────────
+    local STEP = 26   -- px entre linhas
+    local LH   = 22   -- altura de cada label
+    local rows = {
+        "Display:   "..LP.DisplayName,
+        "Username:  "..LP.Name,
+        "User ID:   "..tostring(LP.UserId),
+        "Age:       "..LP.AccountAge.." days",
+        "Joined:    "..joinStr,
+        "Platform:  "..platStr,
+        "Device:    "..devStr,
+    }
+    local totalH = #rows * STEP
+    local infoStartY = (286 - totalH) / 2   -- centraliza no content (286 = fullH-24)
+
     local infoF = o("Frame",{
-        Size=UDim2.new(1,-148,0,160), Position=UDim2.new(0,144,0,8),
+        Size=UDim2.new(1,-210,0,totalH), Position=UDim2.new(0,200,0,infoStartY),
         BackgroundTransparency=1, BorderSizePixel=0,
     },pg)
-    for k,row in ipairs({
-        "Display:  "..LP.DisplayName,
-        "Username:  "..LP.Name,
-        "User ID:  "..tostring(LP.UserId),
-        "AccountAge:  "..LP.AccountAge.." days",
-        "Join Date:  "..joinStr,
-        "Platform:  "..platStr,
-        "Device:  "..devStr,
-    }) do
+    for k,row in ipairs(rows) do
         o("TextLabel",{
-            Size=UDim2.new(1,0,0,18), Position=UDim2.new(0,0,0,(k-1)*20),
+            Size=UDim2.new(1,0,0,LH), Position=UDim2.new(0,0,0,(k-1)*STEP),
             BackgroundTransparency=1, Text=row,
-            TextColor3=W, TextSize=11, Font=Enum.Font.Code,
+            TextColor3=W, TextSize=13, Font=Enum.Font.Code,
             TextXAlignment=Enum.TextXAlignment.Left,
         },infoF)
     end
 
-    -- ── Welcome (reposicionado para baixo do avatar 110px) ─────────────
-    for k,row in ipairs({"Welcome", LP.Name}) do
+    -- ── Welcome abaixo do avatar ───────────────────────────────────────
+    local welY = 0.5 + 80/286   -- logo abaixo do avatar
+    for k,row in ipairs({"Welcome,", LP.Name}) do
         o("TextLabel",{
-            Size=UDim2.new(0,134,0,24), Position=UDim2.new(0,8,0,122+(k-1)*24),
+            Size=UDim2.new(0,190,0,28),
+            Position=UDim2.new(0,3, 0, 286*0.5 + 84 + (k-1)*28),
             BackgroundTransparency=1, Text=row,
-            TextColor3=W, TextSize=18, Font=Enum.Font.Antique,
+            TextColor3=W, TextSize=20, Font=Enum.Font.Antique,
             TextXAlignment=Enum.TextXAlignment.Center,
         },pg)
     end
@@ -367,8 +399,8 @@ local pillBtn=o("TextButton",{
 },pill)
 pillBtn.MouseButton1Click:Connect(function() win.Visible=true pill.Visible=false end)
 
-UIS.InputBegan:Connect(function(i,gp)
-    if not gp and i.KeyCode==Enum.KeyCode.RightShift then
+UIS.InputBegan:Connect(function(inp,gp)
+    if not gp and inp.KeyCode==Enum.KeyCode.RightShift then
         local v=not win.Visible win.Visible=v
         if v then pill.Visible=false end
     end
