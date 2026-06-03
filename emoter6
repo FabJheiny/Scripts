@@ -1,0 +1,375 @@
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- ── Listas de emotes ─────────────────────────────────────────────────
+local R6Buttons = {
+	{name = "HeadThrow",     text = "Head Throw",     id = "35154961",  loop = true},
+	{name = "FloatingHead",  text = "Floating Head",  id = "121572214", loop = false},
+	{name = "Insane",        text = "Insane",         id = "33796059",  loop = false, speed = 1e8},
+	{name = "HeroJump",      text = "Hero Jump",      id = "184574340", loop = true},
+	{name = "LoopHead",      text = "Loop Head",      id = "35154961",  loop = true},
+	{name = "SwordSlam",     text = "Sword Slam",     id = "204295235", loop = true},
+	{name = "Levitate",      text = "Levitate",       id = "313762630", loop = false},
+	{name = "DinoWalk",      text = "Dino Walk",      id = "204328711", loop = false},
+	{name = "FloorCrawl",    text = "Floor Crawl",    id = "282574440", loop = false},
+	{name = "Faint",         text = "Faint",          id = "181526230", loop = false},
+	{name = "WeirdMove",     text = "Weird Move",     id = "215384594", loop = false},
+	{name = "CloneIllusion", text = "Clone Illusion", id = "215384594", loop = false, speed = 1e7, fade = 0.5},
+	{name = "Spinner",       text = "Spinner",        id = "188632011", loop = true,  speed = 2},
+	{name = "MegaInsane",    text = "Mega Insane",    id = "184574340", loop = true,  speed = 40, weight = 0.5},
+	{name = "ArmDetach",     text = "Arm Detach",     id = "33169583",  loop = true,  speed = 1e6},
+	{name = "FloorFaint",    text = "Floor Faint",    id = "181525546", loop = true,  speed = 2},
+	{name = "SpinDance",     text = "Spin Dance",     id = "429730430", loop = true},
+	{name = "JumpingJacks",  text = "Jumping Jacks",  id = "429681631", loop = false},
+	{name = "FullPunch",     text = "Full Punch",     id = "204062532", loop = true},
+	{name = "Crouch",        text = "Crouch",         id = "182724289", loop = false},
+	{name = "MoonDance",     text = "Moon Dance",     id = "45834924",  loop = true},
+	{name = "FullSwing",     text = "Full Swing",     id = "218504594", loop = true},
+	{name = "MovingDance",   text = "Moving Dance",   id = "429703734", loop = true},
+	{name = "GlitchLevitate",text = "Glitch Levitate",id = "313762630", loop = false, speed = 1e7, fade = 0.5},
+	{name = "Dab",           text = "Dab",            id = "183412246", loop = true},
+	{name = "SuperPunch",    text = "Super Punch",    id = "126753849", loop = true,  speed = 3},
+	{name = "ArmTurbine",    text = "Arm Turbine",    id = "259438880", loop = false, speed = 1e3},
+	{name = "LoopSlam",      text = "Loop Slam",      id = "204295235", loop = true,  speed = 1e4},
+	{name = "FloatSit",      text = "Float Sit",      id = "179224234", loop = false},
+	{name = "BarrelRoll",    text = "Barrel Roll",    id = "136801964", loop = true},
+	{name = "InsaneArms",    text = "Insane Arms",    id = "27432691",  loop = true,  speed = 1e4},
+	{name = "SwordSlice",    text = "Sword Slice",    id = "35978879",  loop = false},
+	{name = "Scared",        text = "Scared",         id = "180612465", loop = true},
+	{name = "SuperFaint",    text = "Super Faint",    id = "181525546", loop = true,  speed = 40, weight = 0.5},
+	{name = "SpinDance2",    text = "Spin Dance 2",   id = "186934910", loop = true},
+	{name = "BowDown",       text = "Bow Down",       id = "204292303", loop = true,  speed = 3},
+}
+
+local R15Buttons = {
+	{name = "CrazySlash",  text = "Crazy Slash",  id = "674871189", loop = true},
+	{name = "Open",        text = "Open",         id = "582855105", loop = true},
+	{name = "ArmsOut",     text = "Arms Out",     id = "582384156", loop = true},
+	{name = "R15Spinner",  text = "Spinner",      id = "754658275", loop = true},
+	{name = "FlingArms",   text = "Fling Arms",   id = "754656200", loop = true, speed = 10},
+	{name = "RotateSlash", text = "Rotate Slash", id = "675025570", loop = true},
+	{name = "Pull",        text = "Pull",         id = "675025795", loop = true},
+	{name = "CircleArm",   text = "Circle Arm",   id = "698251653", loop = true},
+	{name = "Bend",        text = "Bend",         id = "696096087", loop = true},
+	{name = "WeirdZombie", text = "Weird Zombie", id = "708553116", loop = true},
+	{name = "FloatSlash",  text = "Float Slash",  id = "717879555", loop = true},
+	{name = "DownSlash",   text = "Down Slash",   id = "746398327", loop = true},
+}
+
+-- ── Menu (PlayerGui) ──────────────────────────────────────────────────
+local gui = Instance.new("ScreenGui")
+gui.Name = "Emotes r6"
+gui.ResetOnSpawn = false
+gui.Parent = playerGui
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 240, 0, 280)
+frame.Position = UDim2.new(0.5, -120, 0.5, -140)
+frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+frame.BackgroundTransparency = 0
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+frame.ClipsDescendants = true
+
+local frameStroke = Instance.new("UIStroke", frame)
+frameStroke.Color = Color3.fromRGB(255, 255, 255)
+frameStroke.Thickness = 1
+frameStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+-- Barra superior
+local topBar = Instance.new("Frame", frame)
+topBar.Size = UDim2.new(1, 0, 0, 24)
+topBar.Position = UDim2.new(0, 0, 0, 0)
+topBar.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+topBar.BackgroundTransparency = 0
+topBar.BorderSizePixel = 0
+
+local topSep = Instance.new("Frame", topBar)
+topSep.Size = UDim2.new(1, 0, 0, 1)
+topSep.Position = UDim2.new(0, 0, 1, -1)
+topSep.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+topSep.BackgroundTransparency = 0
+topSep.BorderSizePixel = 0
+
+local titulo = Instance.new("TextLabel", topBar)
+titulo.Size = UDim2.new(1, -100, 1, 0)
+titulo.Position = UDim2.new(0, 10, 0, 0)
+titulo.BackgroundTransparency = 1
+titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
+titulo.TextSize = 10
+titulo.TextXAlignment = Enum.TextXAlignment.Left
+titulo.Text = "Emotes R6"
+titulo.Font = Enum.Font.SourceSansBold
+
+local recolherBtn = Instance.new("TextButton", topBar)
+recolherBtn.Size = UDim2.new(0, 18, 0, 14)
+recolherBtn.Position = UDim2.new(1, -42, 0.5, -7)
+recolherBtn.Text = "-"
+recolherBtn.TextSize = 12
+recolherBtn.Font = Enum.Font.SourceSansBold
+recolherBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+recolherBtn.BackgroundTransparency = 0
+recolherBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+recolherBtn.BorderSizePixel = 0
+recolherBtn.AutoButtonColor = false
+
+local closeBtn = Instance.new("TextButton", topBar)
+closeBtn.Size = UDim2.new(0, 18, 0, 14)
+closeBtn.Position = UDim2.new(1, -20, 0.5, -7)
+closeBtn.Text = "x"
+closeBtn.TextSize = 10
+closeBtn.Font = Enum.Font.SourceSansBold
+closeBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+closeBtn.BackgroundTransparency = 0
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.BorderSizePixel = 0
+closeBtn.AutoButtonColor = false
+
+-- Área com scroll
+local scrollFrame = Instance.new("ScrollingFrame", frame)
+scrollFrame.Size = UDim2.new(1, -4, 1, -28)
+scrollFrame.Position = UDim2.new(0, 2, 0, 26)
+scrollFrame.BackgroundTransparency = 1
+scrollFrame.BorderSizePixel = 0
+scrollFrame.ScrollBarThickness = 4
+scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
+scrollFrame.ScrollingDirection = Enum.ScrollingDirection.Y
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+
+local gradeContent = Instance.new("Frame", scrollFrame)
+gradeContent.Name = "GradeContent"
+gradeContent.Size = UDim2.new(1, 0, 0, 0)
+gradeContent.BackgroundTransparency = 1
+gradeContent.BorderSizePixel = 0
+
+local gridLayout = Instance.new("UIGridLayout", gradeContent)
+gridLayout.CellSize = UDim2.new(0, 68, 0, 28)
+gridLayout.CellPadding = UDim2.new(0, 6, 0, 6)
+gridLayout.FillDirection = Enum.FillDirection.Horizontal
+gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+gridLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+gridLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	local altura = gridLayout.AbsoluteContentSize.Y
+	gradeContent.Size = UDim2.new(1, 0, 0, altura)
+	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, altura)
+end)
+
+-- ── Função para criar botão (agora ativo = branco) ─────────────────
+local function criarBotaoEmote(emote, parent)
+	local btn = Instance.new("TextButton", parent)
+	btn.Size = UDim2.new(1, 0, 1, 0)
+	btn.Text = emote.text or emote.nome
+	btn.TextSize = 8
+	btn.Font = Enum.Font.SourceSansBold
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)   -- texto branco padrão
+	btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30) -- fundo escuro inativo
+	btn.BorderSizePixel = 0
+	btn.AutoButtonColor = false
+
+	local stroke = Instance.new("UIStroke", btn)
+	stroke.Color = Color3.fromRGB(120, 120, 120)
+	stroke.Thickness = 1
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+	local ativo = false
+	local track = nil
+	local corOff = Color3.fromRGB(30, 30, 30)      -- fundo escuro
+	local corOn = Color3.fromRGB(255, 255, 255)    -- fundo branco ao ativar
+	local textoOff = Color3.fromRGB(255, 255, 255) -- texto branco
+	local textoOn = Color3.fromRGB(0, 0, 0)        -- texto preto (contraste)
+
+	-- Hover
+	btn.MouseEnter:Connect(function()
+		if not ativo then
+			btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+		end
+		stroke.Color = Color3.fromRGB(255, 255, 255)
+	end)
+	btn.MouseLeave:Connect(function()
+		if not ativo then
+			btn.BackgroundColor3 = corOff
+		end
+		stroke.Color = Color3.fromRGB(120, 120, 120)
+	end)
+
+	local function novaTrack()
+		local char = player.Character
+		if char then
+			local humanoid = char:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				local anim = Instance.new("Animation")
+				anim.AnimationId = "rbxassetid://" .. emote.id
+				return humanoid:LoadAnimation(anim)
+			end
+		end
+		return nil
+	end
+
+	local function desativar()
+		if track then
+			track:Stop()
+			track = nil
+		end
+		ativo = false
+		btn.BackgroundColor3 = corOff
+		btn.TextColor3 = textoOff
+	end
+
+	btn.MouseButton1Click:Connect(function()
+		if emote.loop then
+			ativo = not ativo
+			if ativo then
+				track = novaTrack()
+				if not track then
+					ativo = false
+					return
+				end
+				btn.BackgroundColor3 = corOn
+				btn.TextColor3 = textoOn
+				track:Play(emote.fade or 0.1, emote.weight or 1, emote.speed or 1)
+
+				task.spawn(function()
+					while ativo do
+						if not track or not track.IsPlaying then
+							track = novaTrack()
+							if track then
+								track:Play(emote.fade or 0.1, emote.weight or 1, emote.speed or 1)
+							else
+								desativar()
+								break
+							end
+						end
+						task.wait()
+					end
+				end)
+			else
+				desativar()
+			end
+		else
+			if ativo and track and track.IsPlaying then
+				desativar()
+			else
+				track = novaTrack()
+				if track then
+					ativo = true
+					btn.BackgroundColor3 = corOn
+					btn.TextColor3 = textoOn
+					track:Play(emote.fade or 0.1, emote.weight or 1, emote.speed or 1)
+					track.Stopped:Connect(function()
+						desativar()
+					end)
+				end
+			end
+		end
+	end)
+
+	player.CharacterAdded:Connect(function()
+		desativar()
+	end)
+
+	return btn
+end
+
+-- ── Carregar emotes conforme RigType ──────────────────────────────────
+local function carregarEmotes(rigType)
+	for _, child in ipairs(gradeContent:GetChildren()) do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
+
+	local lista = (rigType == Enum.HumanoidRigType.R15) and R15Buttons or R6Buttons
+	for _, emote in ipairs(lista) do
+		criarBotaoEmote(emote, gradeContent)
+	end
+
+	titulo.Text = (rigType == Enum.HumanoidRigType.R15) and "Emotes R15" or "Emotes R6"
+end
+
+local function atualizarRigType()
+	local char = player.Character
+	if char then
+		local humanoid = char:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			carregarEmotes(humanoid.RigType)
+		end
+	end
+end
+
+if player.Character then
+	atualizarRigType()
+else
+	player.CharacterAdded:Connect(atualizarRigType)
+end
+
+player.CharacterAdded:Connect(function(char)
+	char:WaitForChild("Humanoid"):GetPropertyChangedSignal("RigType"):Connect(atualizarRigType)
+end)
+
+task.wait(0.1)
+local alturaInicial = gridLayout.AbsoluteContentSize.Y
+gradeContent.Size = UDim2.new(1, 0, 0, alturaInicial)
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, alturaInicial)
+
+-- ── Pill (CoreGui) ────────────────────────────────────────────────────
+local CoreGui = game:GetService("CoreGui")
+
+local pillGui = Instance.new("ScreenGui")
+pillGui.Name = "EmotesPill"
+pillGui.ResetOnSpawn = false
+pillGui.DisplayOrder = 9999
+local ok = pcall(function() pillGui.Parent = CoreGui end)
+if not ok then pillGui.Parent = playerGui end
+
+local pill = Instance.new("Frame", pillGui)
+pill.Name = "PremiumCalcPill"
+pill.Size = UDim2.new(0, 50, 0, 18)
+pill.Position = UDim2.new(1, -56, 1, -168)
+pill.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+pill.BorderSizePixel = 0
+pill.Visible = false
+
+local pillStroke = Instance.new("UIStroke", pill)
+pillStroke.Color = Color3.fromRGB(255, 255, 255)
+pillStroke.Thickness = 1
+pillStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+local pillBtn = Instance.new("TextButton", pill)
+pillBtn.Size = UDim2.new(1, 0, 1, 0)
+pillBtn.Text = "> emote"
+pillBtn.TextSize = 9
+pillBtn.Font = Enum.Font.SourceSansBold
+pillBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+pillBtn.BackgroundTransparency = 1
+pillBtn.BorderSizePixel = 0
+pillBtn.AutoButtonColor = false
+
+closeBtn.MouseButton1Click:Connect(function()
+	frame.Visible = false
+	pill.Visible = true
+end)
+
+pillBtn.MouseButton1Click:Connect(function()
+	frame.Visible = true
+	pill.Visible = false
+end)
+
+-- Recolher
+local recolhido = false
+local fullHeight = 280
+local miniHeight = 24
+
+recolherBtn.MouseButton1Click:Connect(function()
+	recolhido = not recolhido
+	if recolhido then
+		frame.Size = UDim2.new(0, 240, 0, miniHeight)
+		recolherBtn.Text = "+"
+	else
+		frame.Size = UDim2.new(0, 240, 0, fullHeight)
+		recolherBtn.Text = "-"
+	end
+end)
