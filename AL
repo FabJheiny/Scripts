@@ -226,9 +226,9 @@ do
     tabBtns[i]=tb tabPages[i]=pg cur=i
     tb.MouseButton1Click:Connect(function() sw(i) end)
 
-    -- ── Avatar quadrado 160×160 centralizado verticalmente ────────────
+    -- ── Avatar quadrado 160×160 ── movido 30px para cima (Y offset de -80 para -110)
     local avBox = o("Frame",{
-        Size=UDim2.new(0,160,0,160), Position=UDim2.new(0,16,0.5,-80),
+        Size=UDim2.new(0,160,0,160), Position=UDim2.new(0,16,0.5,-110),
         BackgroundColor3=B, BorderSizePixel=0, ClipsDescendants=true,
     },pg)
     stroke(avBox,1)
@@ -257,9 +257,9 @@ do
     local platStr = UIS.TouchEnabled and "Android" or "PC"
     local devStr  = UIS.TouchEnabled and "Mobile"  or "Desktop"
 
-    -- ── Info labels — fonte maior, espaçamento compacto ───────────────
-    local STEP = 26   -- px entre linhas
-    local LH   = 22   -- altura de cada label
+    -- ── Info labels ── centralizadas 30px acima
+    local STEP = 26
+    local LH   = 22
     local rows = {
         "Display:   "..LP.DisplayName,
         "Username:  "..LP.Name,
@@ -270,7 +270,7 @@ do
         "Device:    "..devStr,
     }
     local totalH = #rows * STEP
-    local infoStartY = (286 - totalH) / 2   -- centraliza no content (286 = fullH-24)
+    local infoStartY = ((286 - totalH) / 2) - 30   -- 30px mais para cima
 
     local infoF = o("Frame",{
         Size=UDim2.new(1,-210,0,totalH), Position=UDim2.new(0,200,0,infoStartY),
@@ -285,12 +285,12 @@ do
         },infoF)
     end
 
-    -- ── Welcome abaixo do avatar ───────────────────────────────────────
-    local welY = 0.5 + 80/286   -- logo abaixo do avatar
+    -- ── Welcome ── 30px acima (de 227 para 197 como base)
+    local welY = 0.5 + 80/286   -- (mantido só para referência, não usado diretamente)
     for k,row in ipairs({"Welcome,", LP.Name}) do
         o("TextLabel",{
             Size=UDim2.new(0,190,0,28),
-            Position=UDim2.new(0,3, 0, 286*0.5 + 84 + (k-1)*28),
+            Position=UDim2.new(0,3, 0, 286*0.5 + 54 + (k-1)*28),  -- 84 -> 54 (-30)
             BackgroundTransparency=1, Text=row,
             TextColor3=W, TextSize=20, Font=Enum.Font.Antique,
             TextXAlignment=Enum.TextXAlignment.Center,
