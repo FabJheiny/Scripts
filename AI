@@ -192,18 +192,19 @@ do
 
     -- Avatar
     local avBox = o("Frame",{
-        Size=UDim2.new(0,140,0,200), Position=UDim2.new(0,12,0,8),
-        BackgroundColor3=B, BorderSizePixel=0,
+        Size=UDim2.new(0,120,0,150), Position=UDim2.new(0,12,0,8),
+        BackgroundColor3=B, BorderSizePixel=0, ClipsDescendants=true,
     },pg)
     stroke(avBox,1)
     local avImg = o("ImageLabel",{
-        Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
-        Image="", ScaleType=Enum.ScaleType.Fit,
+        Size=UDim2.new(1.5,0,1.5,0), Position=UDim2.new(-0.25,0,-0.1,0),
+        BackgroundTransparency=1,
+        Image="", ScaleType=Enum.ScaleType.Stretch,
     },avBox)
     task.spawn(function()
         local ok,t = pcall(function()
             return game:GetService("Players"):GetUserThumbnailAsync(
-                LP.UserId, Enum.ThumbnailType.AvatarThumbnail, Enum.ThumbnailSize.Size420x420)
+                LP.UserId, Enum.ThumbnailType.AvatarBust, Enum.ThumbnailSize.Size420x420)
         end)
         if ok then avImg.Image=t end
     end)
@@ -222,7 +223,7 @@ do
 
     -- Info labels
     local infoF = o("Frame",{
-        Size=UDim2.new(1,-168,0,200), Position=UDim2.new(0,164,0,8),
+        Size=UDim2.new(1,-148,0,200), Position=UDim2.new(0,144,0,8),
         BackgroundTransparency=1, BorderSizePixel=0,
     },pg)
     for k,row in ipairs({
@@ -245,7 +246,7 @@ do
     -- Welcome
     for k,row in ipairs({"Welcome", LP.Name}) do
         o("TextLabel",{
-            Size=UDim2.new(0,152,0,24), Position=UDim2.new(0,8,0,216+(k-1)*26),
+            Size=UDim2.new(0,134,0,24), Position=UDim2.new(0,8,0,168+(k-1)*26),
             BackgroundTransparency=1, Text=row,
             TextColor3=W, TextSize=18, Font=Enum.Font.Antique,
             TextXAlignment=Enum.TextXAlignment.Center,
@@ -328,7 +329,7 @@ function Hub:Tab(name)
         },scroll)
         stroke(b,1)
         b.MouseEnter:Connect(function() b.BackgroundColor3=Color3.fromRGB(25,25,25) end)
-        b.MouseLeave:Connect(function() b.BackgroundColor1=D end)
+        b.MouseLeave:Connect(function() b.BackgroundColor3=D end)
         local copyTxt='loadstring(game:HttpGet("'..url..'"))()'
         b.MouseButton1Click:Connect(function()
             openModal(txt,copyTxt,function() loadstring(game:HttpGet(url))() end)
