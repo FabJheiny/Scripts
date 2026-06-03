@@ -1,4 +1,4 @@
--- ScriptHub.lua | Cronos Hub
+-- ScriptHub.lua | FAB HUB
 local Hub = {}
 local LP = game:GetService("Players").LocalPlayer
 local UIS = game:GetService("UserInputService")
@@ -19,7 +19,7 @@ local function stroke(par,t,c)
     o("UIStroke",{Color=c or W,Thickness=t or 1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},par)
 end
 
-local sg = o("ScreenGui",{Name="CronosHub",ResetOnSpawn=false,IgnoreGuiInset=true,DisplayOrder=100},PG)
+local sg = o("ScreenGui",{Name="FabHub",ResetOnSpawn=false,IgnoreGuiInset=true,DisplayOrder=100},PG)
 
 local win = o("Frame",{
     Size=UDim2.new(0,680,0,310),
@@ -33,8 +33,8 @@ local top = o("Frame",{Size=UDim2.new(1,0,0,24),BackgroundColor3=B,BorderSizePix
 o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0},top)
 o("TextLabel",{
     Size=UDim2.new(1,-60,1,0),Position=UDim2.new(0,8,0,0),
-    BackgroundTransparency=1,Text="Cronos Hub",TextColor3=W,
-    TextSize=11,Font=Enum.Font.SourceSansBold,TextXAlignment=Enum.TextXAlignment.Left,
+    BackgroundTransparency=1,Text="FAB HUB",TextColor3=W,
+    TextSize=14,Font=Enum.Font.SourceSansBold,TextXAlignment=Enum.TextXAlignment.Left,
 },top)
 local minBtn = o("TextButton",{
     Size=UDim2.new(0,18,0,14),Position=UDim2.new(1,-40,0.5,-7),
@@ -70,7 +70,7 @@ minBtn.MouseButton1Click:Connect(function()
 end)
 xBtn.MouseButton1Click:Connect(function()
     win.Visible=false
-    _G.CronosHubPill.Visible=true
+    _G.FabHubPill.Visible=true
 end)
 
 local body = o("Frame",{
@@ -91,7 +91,7 @@ local area = o("Frame",{
     BackgroundColor3=B,BorderSizePixel=0,ClipsDescendants=true,
 },body)
 
--- ── Modal (definido ANTES de Hub:Tab) ────────────────────────────────
+-- ── Modal ─────────────────────────────────────────────────────────────
 local modal = o("Frame",{
     Size=UDim2.new(1,0,1,0),
     BackgroundColor3=Color3.fromRGB(0,0,0),
@@ -147,9 +147,9 @@ local _mCb,_mTxt = nil,nil
 local function closeModal()
     modal.Visible=false _mCb=nil _mTxt=nil
 end
-local function openModal(txt,cb)
-    _mCb=cb _mTxt=txt
-    mTitle.Text=txt
+local function openModal(displayTxt,copyTxt,cb)
+    _mCb=cb _mTxt=copyTxt
+    mTitle.Text=displayTxt
     modal.Visible=true
 end
 
@@ -189,7 +189,6 @@ function Hub:Tab(name)
     local pg=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BorderSizePixel=0,Visible=i==1},area)
 
     local hotbar=o("Frame",{Size=UDim2.new(1,0,0,26),BackgroundColor3=B,BorderSizePixel=0},pg)
-    o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0},hotbar)
 
     local searchW=120
     local search=o("TextBox",{
@@ -243,7 +242,7 @@ function Hub:Tab(name)
     end)
 
     local T={}
-    function T:Button(txt,cb)
+    function T:Button(txt,url)
         local b=o("TextButton",{
             Name=txt,BackgroundColor3=D,BorderSizePixel=0,
             Text=txt,TextColor3=W,TextSize=10,Font=Enum.Font.SourceSans,
@@ -252,7 +251,10 @@ function Hub:Tab(name)
         stroke(b,1)
         b.MouseEnter:Connect(function() b.BackgroundColor3=Color3.fromRGB(25,25,25) end)
         b.MouseLeave:Connect(function() b.BackgroundColor3=D end)
-        b.MouseButton1Click:Connect(function() openModal(txt,cb) end)
+        local copyTxt='loadstring(game:HttpGet("'..url..'"))()'
+        b.MouseButton1Click:Connect(function()
+            openModal(txt,copyTxt,function() loadstring(game:HttpGet(url))() end)
+        end)
         table.insert(allBtns,b)
         countLbl.Text="Scripts: "..#allBtns
         return self
@@ -266,10 +268,10 @@ local pill=o("Frame",{
     BackgroundColor3=B,BorderSizePixel=0,Visible=false,ZIndex=200,
 },sg)
 stroke(pill,1)
-_G.CronosHubPill=pill
+_G.FabHubPill=pill
 local pillBtn=o("TextButton",{
     Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,
-    Text="> cronos",TextSize=9,Font=Enum.Font.SourceSansBold,
+    Text="> fab hub",TextSize=9,Font=Enum.Font.SourceSansBold,
     TextColor3=W,BorderSizePixel=0,ZIndex=201,
 },pill)
 pillBtn.MouseButton1Click:Connect(function() win.Visible=true pill.Visible=false end)
