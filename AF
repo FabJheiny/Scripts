@@ -1,4 +1,4 @@
--- ScriptHub.lua | FAB HUB
+-- ScriptHub.lua | UNIVERSAL HUB
 local Hub = {}
 local LP = game:GetService("Players").LocalPlayer
 local UIS = game:GetService("UserInputService")
@@ -19,7 +19,7 @@ local function stroke(par,t,c)
     o("UIStroke",{Color=c or W,Thickness=t or 1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},par)
 end
 
-local sg = o("ScreenGui",{Name="FabHub",ResetOnSpawn=false,IgnoreGuiInset=true,DisplayOrder=100},PG)
+local sg = o("ScreenGui",{Name="UniversalHub",ResetOnSpawn=false,IgnoreGuiInset=true,DisplayOrder=100},PG)
 
 local win = o("Frame",{
     Size=UDim2.new(0,680,0,310),
@@ -33,7 +33,7 @@ local top = o("Frame",{Size=UDim2.new(1,0,0,24),BackgroundColor3=B,BorderSizePix
 o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0},top)
 o("TextLabel",{
     Size=UDim2.new(1,-60,1,0),Position=UDim2.new(0,8,0,0),
-    BackgroundTransparency=1,Text="FAB HUB",TextColor3=W,
+    BackgroundTransparency=1,Text="> UNIVERSAL HUB <",TextColor3=W,
     TextSize=14,Font=Enum.Font.SourceSansBold,TextXAlignment=Enum.TextXAlignment.Left,
 },top)
 local minBtn = o("TextButton",{
@@ -70,7 +70,7 @@ minBtn.MouseButton1Click:Connect(function()
 end)
 xBtn.MouseButton1Click:Connect(function()
     win.Visible=false
-    _G.FabHubPill.Visible=true
+    _G.UniversalHubPill.Visible=true
 end)
 
 local body = o("Frame",{
@@ -188,7 +188,7 @@ function Hub:Tab(name)
 
     local pg=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BorderSizePixel=0,Visible=i==1},area)
 
-    local hotbar=o("Frame",{Size=UDim2.new(1,0,0,26),BackgroundColor3=B,BorderSizePixel=0},pg)
+    local hotbar=o("Frame",{Size=UDim2.new(1,0,0,20),BackgroundColor3=B,BorderSizePixel=0},pg)
 
     local searchW=120
     local search=o("TextBox",{
@@ -197,7 +197,6 @@ function Hub:Tab(name)
         Text="",TextColor3=W,TextSize=11,Font=Enum.Font.SourceSans,
         ClearTextOnFocus=false,TextXAlignment=Enum.TextXAlignment.Left,
     },hotbar)
-    o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=Color3.fromRGB(80,80,80),BorderSizePixel=0},search)
     o("UIPadding",{PaddingLeft=UDim.new(0,6)},search)
 
     local countLbl=o("TextLabel",{
@@ -209,7 +208,7 @@ function Hub:Tab(name)
 
     local GAP=6 local COLS=6 local ROWH=28
     local scroll=o("ScrollingFrame",{
-        Size=UDim2.new(1,0,1,-26),Position=UDim2.new(0,0,0,26),
+        Size=UDim2.new(1,0,1,-20),Position=UDim2.new(0,0,0,20),
         BackgroundTransparency=1,BorderSizePixel=0,
         ScrollBarThickness=2,ScrollBarImageColor3=G,
         CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y,
@@ -268,10 +267,10 @@ local pill=o("Frame",{
     BackgroundColor3=B,BorderSizePixel=0,Visible=false,ZIndex=200,
 },sg)
 stroke(pill,1)
-_G.FabHubPill=pill
+_G.UniversalHubPill=pill
 local pillBtn=o("TextButton",{
     Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,
-    Text="> fab hub",TextSize=9,Font=Enum.Font.SourceSansBold,
+    Text="> hub",TextSize=9,Font=Enum.Font.SourceSansBold,
     TextColor3=W,BorderSizePixel=0,ZIndex=201,
 },pill)
 pillBtn.MouseButton1Click:Connect(function() win.Visible=true pill.Visible=false end)
