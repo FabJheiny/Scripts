@@ -144,7 +144,6 @@ function Hub:Tab(name)
 
     local pg = o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BorderSizePixel=0,Visible=i==1},area)
 
-    -- Hotbar: searchbar + contador na mesma linha
     local hotbar = o("Frame",{
         Size=UDim2.new(1,0,0,26),
         Position=UDim2.new(0,0,0,0),
@@ -168,7 +167,8 @@ function Hub:Tab(name)
         ClearTextOnFocus=false,
         TextXAlignment=Enum.TextXAlignment.Left,
     },hotbar)
-    stroke(search,1,W)
+    -- linha inferior fina, sem borda completa
+    o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=Color3.fromRGB(80,80,80),BorderSizePixel=0},search)
     o("UIPadding",{PaddingLeft=UDim.new(0,6)},search)
 
     local countLbl = o("TextLabel",{
@@ -183,6 +183,11 @@ function Hub:Tab(name)
     },hotbar)
     o("UIPadding",{PaddingRight=UDim.new(0,6)},countLbl)
 
+    -- Grid relativo: 6 colunas, gap 6px, preenche 100% sem sobra lateral
+    local GAP = 6
+    local COLS = 6
+    local ROWH = 28
+
     local scroll = o("ScrollingFrame",{
         Size=UDim2.new(1,0,1,-26),
         Position=UDim2.new(0,0,0,26),
@@ -190,14 +195,24 @@ function Hub:Tab(name)
         ScrollBarThickness=2,ScrollBarImageColor3=G,
         CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y,
     },pg)
+
+    o("UIPadding",{
+        PaddingTop=UDim.new(0,GAP),
+        PaddingLeft=UDim.new(0,GAP),
+        PaddingRight=UDim.new(0,GAP),
+        PaddingBottom=UDim.new(0,GAP),
+    },scroll)
+
+    -- offset = -(GAP * (COLS-1)) / COLS → com 6 cols e gap 6: -5px
+    local cellOffX = -(GAP * (COLS - 1)) / COLS
+
     o("UIGridLayout",{
-        CellSize=UDim2.new(0,80,0,28),
-        CellPadding=UDim2.new(0,6,0,6),
+        CellSize=UDim2.new(1/COLS, cellOffX, 0, ROWH),
+        CellPadding=UDim2.new(0,GAP,0,GAP),
         SortOrder=Enum.SortOrder.LayoutOrder,
-        HorizontalAlignment=Enum.HorizontalAlignment.Center,
+        HorizontalAlignment=Enum.HorizontalAlignment.Left,
         FillDirectionMaxCells=0,
     },scroll)
-    o("UIPadding",{PaddingTop=UDim.new(0,6),PaddingLeft=UDim.new(0,6),PaddingRight=UDim.new(0,6),PaddingBottom=UDim.new(0,6)},scroll)
 
     tabBtns[i]=tb tabPages[i]=pg if i==1 then cur=1 end
     tb.MouseButton1Click:Connect(function() sw(i) end)
