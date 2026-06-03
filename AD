@@ -167,7 +167,6 @@ function Hub:Tab(name)
         ClearTextOnFocus=false,
         TextXAlignment=Enum.TextXAlignment.Left,
     },hotbar)
-    -- linha inferior fina, sem borda completa
     o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=Color3.fromRGB(80,80,80),BorderSizePixel=0},search)
     o("UIPadding",{PaddingLeft=UDim.new(0,6)},search)
 
@@ -183,7 +182,6 @@ function Hub:Tab(name)
     },hotbar)
     o("UIPadding",{PaddingRight=UDim.new(0,6)},countLbl)
 
-    -- Grid relativo: 6 colunas, gap 6px, preenche 100% sem sobra lateral
     local GAP = 6
     local COLS = 6
     local ROWH = 28
@@ -203,7 +201,6 @@ function Hub:Tab(name)
         PaddingBottom=UDim.new(0,GAP),
     },scroll)
 
-    -- offset = -(GAP * (COLS-1)) / COLS → com 6 cols e gap 6: -5px
     local cellOffX = -(GAP * (COLS - 1)) / COLS
 
     o("UIGridLayout",{
@@ -252,7 +249,7 @@ function Hub:Tab(name)
         stroke(b,1)
         b.MouseEnter:Connect(function() b.BackgroundColor3=Color3.fromRGB(25,25,25) end)
         b.MouseLeave:Connect(function() b.BackgroundColor3=D end)
-        b.MouseButton1Click:Connect(function() if cb then pcall(cb) end end)
+        b.MouseButton1Click:Connect(function() openModal(txt, cb) end)
         table.insert(allBtns,b)
         countLbl.Text = "Scripts: " .. #allBtns
         return self
@@ -260,6 +257,116 @@ function Hub:Tab(name)
     return T
 end
 
+-- ── Modal de confirmação (singleton, reutilizado) ────────────────────
+local modal = o("Frame",{
+    Size=UDim2.new(1,0,1,0),
+    BackgroundColor3=Color3.fromRGB(0,0,0),
+    BackgroundTransparency=0.5,
+    BorderSizePixel=0,
+    Visible=false,
+    ZIndex=50,
+},sg)
+
+local modalClose = o("TextButton",{
+    Size=UDim2.new(1,0,1,0),
+    BackgroundTransparency=1,
+    Text="",
+    ZIndex=51,
+},modal)
+
+local mbox = o("Frame",{
+    Size=UDim2.new(0,220,0,90),
+    Position=UDim2.new(.5,-110,.5,-45),
+    BackgroundColor3=Color3.fromRGB(0,0,0),
+    BorderSizePixel=0,
+    ZIndex=52,
+},modal)
+stroke(mbox,1)
+
+local mTitle = o("TextLabel",{
+    Size=UDim2.new(1,0,0,28),
+    Position=UDim2.new(0,0,0,0),
+    BackgroundColor3=Color3.fromRGB(10,10,10),
+    BorderSizePixel=0,
+    Text="",
+    TextColor3=W,
+    TextSize=11,
+    Font=Enum.Font.SourceSansBold,
+    TextXAlignment=Enum.TextXAlignment.Center,
+    TextWrapped=true,
+    ZIndex=53,
+},mbox)
+o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0,ZIndex=53},mbox)
+o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,0,28),BackgroundColor3=G,BorderSizePixel=0,ZIndex=53},mbox)
+
+local mBtnBar = o("Frame",{
+    Size=UDim2.new(1,0,0,34),
+    Position=UDim2.new(0,0,1,-34),
+    BackgroundTransparency=1,
+    BorderSizePixel=0,
+    ZIndex=53,
+},mbox)
+o("UIListLayout",{
+    FillDirection=Enum.FillDirection.Horizontal,
+    HorizontalAlignment=Enum.HorizontalAlignment.Center,
+    VerticalAlignment=Enum.VerticalAlignment.Center,
+    Padding=UDim.new(0,6),
+    SortOrder=Enum.SortOrder.LayoutOrder,
+},mBtnBar)
+
+local function mBtn(txt,lo)
+    local b = o("TextButton",{
+        Size=UDim2.new(0,60,0,22),
+        BackgroundColor3=D,
+        BorderSizePixel=0,
+        Text=txt,
+        TextColor3=W,
+        TextSize=10,
+        Font=Enum.Font.SourceSansBold,
+        AutoButtonColor=false,
+        LayoutOrder=lo,
+        ZIndex=54,
+    },mBtnBar)
+    stroke(b,1)
+    b.MouseEnter:Connect(function() b.BackgroundColor3=Color3.fromRGB(35,35,35) end)
+    b.MouseLeave:Connect(function() b.BackgroundColor3=D end)
+    return b
+end
+
+local mCopy   = mBtn("Copiar",  1)
+local mCancel = mBtn("Cancelar",2)
+local mExec   = mBtn("Executar",3)
+
+local _mCb, _mTxt = nil, nil
+
+local function openModal(txt, cb)
+    _mCb  = cb
+    _mTxt = txt
+    mTitle.Text = txt
+    modal.Visible = true
+end
+
+local function closeModal()
+    modal.Visible = false
+    _mCb  = nil
+    _mTxt = nil
+end
+
+modalClose.MouseButton1Click:Connect(closeModal)
+mCancel.MouseButton1Click:Connect(closeModal)
+
+mExec.MouseButton1Click:Connect(function()
+    local cb = _mCb
+    closeModal()
+    if cb then pcall(cb) end
+end)
+
+mCopy.MouseButton1Click:Connect(function()
+    if _mTxt and setclipboard then pcall(setclipboard, _mTxt) end
+    closeModal()
+end)
+
+-- ── Pill (botão flutuante para reabrir) ───────────────────────────────
 local pill = o("Frame",{
     Name="Pill",
     Size=UDim2.new(0,54,0,18),
