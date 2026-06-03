@@ -15,12 +15,12 @@ local function o(cls,props,par)
     if par then x.Parent=par end
     return x
 end
-local function stroke(par,t) o("UIStroke",{Color=W,Thickness=t or 1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},par) end
+local function stroke(par,t,c)
+    o("UIStroke",{Color=c or W,Thickness=t or 1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},par)
+end
 
--- ── ScreenGui ────────────────────────────────────────────────────────
 local sg = o("ScreenGui",{Name="CronosHub",ResetOnSpawn=false,IgnoreGuiInset=true,DisplayOrder=100},PG)
 
--- ── Janela principal (horizontal: 680×320) ───────────────────────────
 local win = o("Frame",{
     Size=UDim2.new(0,680,0,310),
     Position=UDim2.new(.5,-340,.5,-155),
@@ -32,7 +32,6 @@ local win = o("Frame",{
 },sg)
 stroke(win,1)
 
--- ── Topbar ───────────────────────────────────────────────────────────
 local top = o("Frame",{Size=UDim2.new(1,0,0,24),BackgroundColor3=B,BorderSizePixel=0},win)
 o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0},top)
 
@@ -48,24 +47,20 @@ local minBtn = o("TextButton",{
     BackgroundColor3=B,BorderSizePixel=0,
     Text="-",TextColor3=W,TextSize=13,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
 },top)
-stroke(minBtn,1)
 
 local xBtn = o("TextButton",{
     Size=UDim2.new(0,18,0,14),Position=UDim2.new(1,-20,0.5,-7),
     BackgroundColor3=B,BorderSizePixel=0,
     Text="x",TextColor3=W,TextSize=10,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
 },top)
-stroke(xBtn,1)
 
--- ── Drag ─────────────────────────────────────────────────────────────
 do local d,ds,sp
     top.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then d=true ds=i.Position sp=win.Position end end)
     top.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then d=false end end)
     UIS.InputChanged:Connect(function(i) if d and i.UserInputType==Enum.UserInputType.MouseMovement then local dt=i.Position-ds win.Position=UDim2.new(sp.X.Scale,sp.X.Offset+dt.X,sp.Y.Scale,sp.Y.Offset+dt.Y) end end)
 end
 
--- ── Minimizar / Fechar ───────────────────────────────────────────────
-local body -- referência ao body, definida abaixo
+local body
 local mini = false
 local fullH, miniH = 310, 24
 
@@ -82,11 +77,9 @@ end)
 
 xBtn.MouseButton1Click:Connect(function()
     win.Visible=false
-    -- pill aparece
     _G.CronosHubPill.Visible=true
 end)
 
--- ── Body (abaixo da topbar) ──────────────────────────────────────────
 body = o("Frame",{
     Size=UDim2.new(1,0,1,-24),
     Position=UDim2.new(0,0,0,24),
@@ -95,7 +88,6 @@ body = o("Frame",{
     ClipsDescendants=true,
 },win)
 
--- ── Coluna de abas (esquerda, 90px) ──────────────────────────────────
 local tcol = o("Frame",{
     Size=UDim2.new(0,90,1,0),
     BackgroundColor3=B,
@@ -111,7 +103,6 @@ local tlist = o("ScrollingFrame",{
 },tcol)
 o("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder},tlist)
 
--- ── Área de conteúdo (direita) ────────────────────────────────────────
 local area = o("Frame",{
     Size=UDim2.new(1,-91,1,0),
     Position=UDim2.new(0,91,0,0),
@@ -120,7 +111,6 @@ local area = o("Frame",{
     ClipsDescendants=true,
 },body)
 
--- ── Estado das abas ───────────────────────────────────────────────────
 local tabBtns,tabPages,cur = {},{},nil
 
 local function sw(i)
@@ -135,11 +125,9 @@ local function sw(i)
     for j,p in ipairs(tabPages) do p.Visible=(j==i) end
 end
 
--- ── API pública ───────────────────────────────────────────────────────
 function Hub:Tab(name)
     local i = #tabBtns+1
 
-    -- botão da aba
     local tb = o("TextButton",{
         Size=UDim2.new(1,0,0,28),
         BackgroundColor3= i==1 and D or B,
@@ -154,47 +142,82 @@ function Hub:Tab(name)
     },tlist)
     o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0},tb)
 
-    -- página
     local pg = o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BorderSizePixel=0,Visible=i==1},area)
 
-    -- searchbar: coluna esquerda dentro do content (70px)
-    local scol = o("Frame",{Size=UDim2.new(0,70,1,0),BackgroundColor3=B,BorderSizePixel=0},pg)
-    o("Frame",{Size=UDim2.new(0,1,1,0),Position=UDim2.new(1,0,0,0),BackgroundColor3=G,BorderSizePixel=0},scol)
-    local search = o("TextBox",{
-        Size=UDim2.new(1,-8,0,18),Position=UDim2.new(0,4,0,6),
-        BackgroundColor3=B,BorderSizePixel=0,
-        PlaceholderText="buscar...",PlaceholderColor3=Color3.fromRGB(70,70,70),
-        Text="",TextColor3=W,TextSize=9,Font=Enum.Font.SourceSans,
-        ClearTextOnFocus=false,TextXAlignment=Enum.TextXAlignment.Left,
-    },scol)
-    o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0},search)
-    o("UIPadding",{PaddingLeft=UDim.new(0,4)},search)
+    -- Hotbar: searchbar + contador na mesma linha
+    local hotbar = o("Frame",{
+        Size=UDim2.new(1,0,0,26),
+        Position=UDim2.new(0,0,0,0),
+        BackgroundColor3=B,
+        BorderSizePixel=0,
+    },pg)
+    o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0},hotbar)
 
-    -- grid scroll (ocupa o resto do content)
+    local searchW = 120
+    local search = o("TextBox",{
+        Size=UDim2.new(0,searchW,1,0),
+        Position=UDim2.new(0,0,0,0),
+        BackgroundColor3=B,
+        BorderSizePixel=0,
+        PlaceholderText="Search Script",
+        PlaceholderColor3=Color3.fromRGB(90,90,90),
+        Text="",
+        TextColor3=W,
+        TextSize=11,
+        Font=Enum.Font.SourceSans,
+        ClearTextOnFocus=false,
+        TextXAlignment=Enum.TextXAlignment.Left,
+    },hotbar)
+    stroke(search,1,W)
+    o("UIPadding",{PaddingLeft=UDim.new(0,6)},search)
+
+    local countLbl = o("TextLabel",{
+        Size=UDim2.new(1,-searchW-8,1,0),
+        Position=UDim2.new(0,searchW+6,0,0),
+        BackgroundTransparency=1,
+        Text="Scripts: 0",
+        TextColor3=DT,
+        TextSize=10,
+        Font=Enum.Font.SourceSans,
+        TextXAlignment=Enum.TextXAlignment.Right,
+    },hotbar)
+    o("UIPadding",{PaddingRight=UDim.new(0,6)},countLbl)
+
     local scroll = o("ScrollingFrame",{
-        Size=UDim2.new(1,-71,1,0),Position=UDim2.new(0,71,0,0),
+        Size=UDim2.new(1,0,1,-26),
+        Position=UDim2.new(0,0,0,26),
         BackgroundTransparency=1,BorderSizePixel=0,
         ScrollBarThickness=2,ScrollBarImageColor3=G,
         CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y,
     },pg)
     o("UIGridLayout",{
-        CellSize=UDim2.new(0,88,0,32),
-        CellPadding=UDim2.new(0,7,0,7),
+        CellSize=UDim2.new(0,80,0,28),
+        CellPadding=UDim2.new(0,6,0,6),
         SortOrder=Enum.SortOrder.LayoutOrder,
-        HorizontalAlignment=Enum.HorizontalAlignment.Left,
+        HorizontalAlignment=Enum.HorizontalAlignment.Center,
+        FillDirectionMaxCells=0,
     },scroll)
-    o("UIPadding",{PaddingTop=UDim.new(0,7),PaddingLeft=UDim.new(0,7),PaddingRight=UDim.new(0,7),PaddingBottom=UDim.new(0,7)},scroll)
+    o("UIPadding",{PaddingTop=UDim.new(0,6),PaddingLeft=UDim.new(0,6),PaddingRight=UDim.new(0,6),PaddingBottom=UDim.new(0,6)},scroll)
 
     tabBtns[i]=tb tabPages[i]=pg if i==1 then cur=1 end
     tb.MouseButton1Click:Connect(function() sw(i) end)
 
-    -- pesquisa: mostra/oculta botões
     local allBtns = {}
+
+    local function updateCount()
+        local visible = 0
+        for _,b in ipairs(allBtns) do
+            if b.Visible then visible += 1 end
+        end
+        countLbl.Text = "Scripts: " .. visible
+    end
+
     search:GetPropertyChangedSignal("Text"):Connect(function()
         local q = search.Text:lower()
         for _,b in ipairs(allBtns) do
             b.Visible = (q=="" or b.Name:lower():find(q,1,true)~=nil)
         end
+        updateCount()
     end)
 
     local T={}
@@ -209,18 +232,19 @@ function Hub:Tab(name)
             Font=Enum.Font.SourceSans,
             AutoButtonColor=false,
             TextWrapped=true,
+            LineHeight=1.1,
         },scroll)
         stroke(b,1)
         b.MouseEnter:Connect(function() b.BackgroundColor3=Color3.fromRGB(25,25,25) end)
         b.MouseLeave:Connect(function() b.BackgroundColor3=D end)
         b.MouseButton1Click:Connect(function() if cb then pcall(cb) end end)
         table.insert(allBtns,b)
+        countLbl.Text = "Scripts: " .. #allBtns
         return self
     end
     return T
 end
 
--- ── Pill (botão flutuante para reabrir) ───────────────────────────────
 local pill = o("Frame",{
     Name="Pill",
     Size=UDim2.new(0,54,0,18),
@@ -249,7 +273,6 @@ pillBtn.MouseButton1Click:Connect(function()
     pill.Visible=false
 end)
 
--- ── RightShift toggle ────────────────────────────────────────────────
 UIS.InputBegan:Connect(function(i,gp)
     if not gp and i.KeyCode==Enum.KeyCode.RightShift then
         local v = not win.Visible
