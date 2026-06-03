@@ -181,26 +181,92 @@ do
     tabBtns[i]=tb tabPages[i]=pg cur=i
     tb.MouseButton1Click:Connect(function() sw(i) end)
 
-    -- FIX: avatar e layout usam _sc para escalar junto com a janela
-    local avSize = math.floor(160 * _sc)
-    local avBox = o("Frame",{
-        Size=UDim2.new(0,avSize,0,avSize),
-        Position=UDim2.new(0,math.floor(16*_sc),0.5,-math.floor(avSize/2 + 30*_sc)),
-        BackgroundColor3=B, BorderSizePixel=0, ClipsDescendants=true,
+    -- Layout responsivo: divide em coluna esquerda (avatar) e direita (info)
+    -- Usa UDim2 relativo para se adaptar a qualquer tamanho de janela
+
+    -- Coluna esquerda: avatar quadrado, ocupa ~38% da largura, centralizado verticalmente
+    local leftCol = o("Frame",{
+        Size=UDim2.new(0.38,0,1,0),
+        Position=UDim2.new(0,0,0,0),
+        BackgroundTransparency=1, BorderSizePixel=0,
     },pg)
-    stroke(avBox,1)
-    o("ImageLabel",{
-        Size=UDim2.new(1,0,1,0), Position=UDim2.new(0,0,0,0),
+
+    local avBox = o("Frame",{
+        Size=UDim2.new(0.72,0,0,0),  -- largura relativa ao leftCol
+        Position=UDim2.new(0.14,0,0.08,0),
+        BackgroundColor3=B, BorderSizePixel=0, ClipsDescendants=true,
+    },leftCol)
+    -- Mantém aspect ratio quadrado via SizeConstraint
+    avBox.AutomaticSize = Enum.AutomaticSize.None
+    -- Usamos AbsoluteSize depois do layout para forçar quadrado
+    local avImg = o("ImageLabel",{
+        Size=UDim2.new(1,0,1,0),
         BackgroundTransparency=1, Image="", ScaleType=Enum.ScaleType.Crop,
         Name="AvImg",
     },avBox)
+
+    -- Força avBox a ser quadrado baseado na largura
+    local function fixAvSize()
+        local w = avBox.AbsoluteSize.X
+        if w > 0 then
+            avBox.Size = UDim2.new(0.72, 0, 0, w)
+        end
+    end
+    avBox:GetPropertyChangedSignal("AbsoluteSize"):Connect(fixAvSize)
+    task.defer(fixAvSize)
+
+    stroke(avBox,1)
+
     task.spawn(function()
         local ok,t = pcall(function()
             return game:GetService("Players"):GetUserThumbnailAsync(
                 LP.UserId, Enum.ThumbnailType.AvatarBust, Enum.ThumbnailSize.Size420x420)
         end)
-        if ok then avBox:FindFirstChild("AvImg").Image=t end
+        if ok then avImg.Image=t end
     end)
+
+    -- "Welcome, Name" abaixo do avatar
+    local welcomeF = o("Frame",{
+        Size=UDim2.new(1,0,0,44),
+        Position=UDim2.new(0,0,1,-48),
+        BackgroundTransparency=1, BorderSizePixel=0,
+    },leftCol)
+    o("UIListLayout",{
+        SortOrder=Enum.SortOrder.LayoutOrder,
+        HorizontalAlignment=Enum.HorizontalAlignment.Center,
+        VerticalAlignment=Enum.VerticalAlignment.Center,
+        Padding=UDim.new(0,1),
+    },welcomeF)
+    local wSize = math.max(10, math.floor(14 * math.max(0.5, _sc)))
+    for k,row in ipairs({"Welcome,", LP.Name}) do
+        o("TextLabel",{
+            Size=UDim2.new(1,0,0,math.floor(22 * math.max(0.5,_sc))),
+            BackgroundTransparency=1, Text=row,
+            TextColor3=W, TextSize=wSize, Font=Enum.Font.Antique,
+            TextXAlignment=Enum.TextXAlignment.Center,
+            TextWrapped=true, LayoutOrder=k,
+        },welcomeF)
+    end
+
+    -- Coluna direita: info em lista, ScrollingFrame para caber em telas pequenas
+    local rightCol = o("ScrollingFrame",{
+        Size=UDim2.new(0.62,-8,1,-8),
+        Position=UDim2.new(0.38,4,0,4),
+        BackgroundTransparency=1, BorderSizePixel=0,
+        ScrollBarThickness=2, ScrollBarImageColor3=G,
+        CanvasSize=UDim2.new(0,0,0,0),
+        AutomaticCanvasSize=Enum.AutomaticSize.Y,
+        ClipsDescendants=true,
+    },pg)
+    o("UIListLayout",{
+        SortOrder=Enum.SortOrder.LayoutOrder,
+        Padding=UDim.new(0,3),
+    },rightCol)
+    o("UIPadding",{
+        PaddingTop=UDim.new(0,6),
+        PaddingLeft=UDim.new(0,4),
+        PaddingBottom=UDim.new(0,6),
+    },rightCol)
 
     local joinStr = "N/A"
     pcall(function()
@@ -213,47 +279,40 @@ do
     local platStr = UIS.TouchEnabled and "Android" or "PC"
     local devStr  = UIS.TouchEnabled and "Mobile"  or "Desktop"
 
-    local STEP = math.floor(16 * _sc)
-    local LH   = math.floor(13 * _sc)
+    local tSize = math.max(9, math.floor(11 * math.max(0.55, _sc)))
     local rows = {
-        "Display:   "..LP.DisplayName,
-        "Username:  "..LP.Name,
-        "User ID:   "..tostring(LP.UserId),
-        "Age:       "..LP.AccountAge.." days",
-        "Joined:    "..joinStr,
-        "Platform:  "..platStr,
-        "Device:    "..devStr,
+        {"Display:",   LP.DisplayName},
+        {"Username:",  LP.Name},
+        {"User ID:",   tostring(LP.UserId)},
+        {"Age:",       LP.AccountAge.." days"},
+        {"Joined:",    joinStr},
+        {"Platform:",  platStr},
+        {"Device:",    devStr},
     }
-    local totalH = #rows * STEP
-    local bodyH  = winH - 24
-    local infoStartY = ((bodyH - totalH) / 2) - math.floor(30 * _sc)
-    local infoX  = math.floor(200 * _sc)
-
-    local infoF = o("Frame",{
-        Size=UDim2.new(1,-infoX,0,totalH),
-        Position=UDim2.new(0,infoX,0,infoStartY),
-        BackgroundTransparency=1, BorderSizePixel=0,
-    },pg)
-    for k,row in ipairs(rows) do
+    for k, row in ipairs(rows) do
+        local rf = o("Frame",{
+            Size=UDim2.new(1,0,0,math.max(14, math.floor(16*math.max(0.55,_sc)))),
+            BackgroundTransparency=1, BorderSizePixel=0,
+            LayoutOrder=k,
+        },rightCol)
+        -- Label (key)
         o("TextLabel",{
-            Size=UDim2.new(1,0,0,LH), Position=UDim2.new(0,0,0,(k-1)*STEP),
-            BackgroundTransparency=1, Text=row,
-            TextColor3=W, TextSize=math.max(9, math.floor(13*_sc)),
+            Size=UDim2.new(0.42,0,1,0),
+            BackgroundTransparency=1, Text=row[1],
+            TextColor3=DT, TextSize=tSize,
             Font=Enum.Font.Code,
             TextXAlignment=Enum.TextXAlignment.Left,
-        },infoF)
-    end
-
-    -- FIX: Welcome centralizado verticalmente na parte inferior
-    local wSize = math.max(12, math.floor(20*_sc))
-    for k,row in ipairs({"Welcome,", LP.Name}) do
+        },rf)
+        -- Value
         o("TextLabel",{
-            Size=UDim2.new(1,0,0,math.floor(28*_sc)),
-            Position=UDim2.new(0,0,0.5,math.floor(54*_sc) + (k-1)*math.floor(28*_sc)),
-            BackgroundTransparency=1, Text=row,
-            TextColor3=W, TextSize=wSize, Font=Enum.Font.Antique,
-            TextXAlignment=Enum.TextXAlignment.Center,
-        },pg)
+            Size=UDim2.new(0.58,0,1,0),
+            Position=UDim2.new(0.42,0,0,0),
+            BackgroundTransparency=1, Text=row[2],
+            TextColor3=W, TextSize=tSize,
+            Font=Enum.Font.Code,
+            TextXAlignment=Enum.TextXAlignment.Left,
+            TextWrapped=true,
+        },rf)
     end
 end
 
@@ -426,7 +485,6 @@ local pill=o("Frame",{
 },sg)
 stroke(pill,1)
 _G.UniversalHubPill=pill
--- FIX: UDim2 correto (4 argumentos)
 local pillBtn=o("TextButton",{
     Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,
     Text="> hub",TextSize=9,Font=Enum.Font.SourceSansBold,
