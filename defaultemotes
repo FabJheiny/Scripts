@@ -1,0 +1,113 @@
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local player = Players.LocalPlayer
+
+-- The ACTUAL, official R6 Animation IDs
+local emotes = {
+    {Name = "Dance 1", ID = "rbxassetid://182435998"},
+    {Name = "Dance 2", ID = "rbxassetid://182436842"},
+    {Name = "Dance 3", ID = "rbxassetid://182436935"},
+    {Name = "Wave", ID = "rbxassetid://128777973"},
+    {Name = "Laugh", ID = "rbxassetid://129423131"},
+    {Name = "Cheer", ID = "rbxassetid://129423030"},
+    {Name = "Point", ID = "rbxassetid://128853357"}
+}
+
+-- Create the main GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "RealR6Emotes"
+screenGui.Parent = CoreGui 
+
+local wheelFrame = Instance.new("Frame")
+wheelFrame.Size = UDim2.new(0, 200, 0, 200)
+wheelFrame.Position = UDim2.new(0.5, -100, 0.5, -100)
+wheelFrame.BackgroundTransparency = 1
+wheelFrame.Visible = false
+wheelFrame.Parent = screenGui
+
+local currentAnimTrack = nil
+local runConnection = nil -- This will track your movement
+local radius = 80
+local center = Vector2.new(100, 100)
+
+for i, emote in ipairs(emotes) do
+    local angle = (i / #emotes) * math.pi * 2
+    local x = center.X + math.cos(angle) * radius
+    local y = center.Y + math.sin(angle) * radius
+
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 65, 0, 30)
+    btn.Position = UDim2.new(0, x - 32.5, 0, y - 15)
+    btn.Text = emote.Name
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.BorderSizePixel = 0
+    btn.Parent = wheelFrame
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        local character = player.Character
+        if not character then return end
+        
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid then
+            local animator = humanoid:FindFirstChildOfClass("Animator") or humanoid:WaitForChild("Animator", 3)
+            
+            if animator then
+                -- Stop current animation and disconnect old movement tracker
+                if currentAnimTrack then
+                    currentAnimTrack:Stop()
+                end
+                if runConnection then
+                    runConnection:Disconnect()
+                end
+                
+                local anim = Instance.new("Animation")
+                anim.AnimationId = emote.ID
+                
+                currentAnimTrack = animator:LoadAnimation(anim)
+                currentAnimTrack.Priority = Enum.AnimationPriority.Action
+                
+                if emote.Name:match("Dance") then
+                    currentAnimTrack.Looped = true
+                end
+                
+                currentAnimTrack:Play()
+
+                -- NEW: Detect movement to stop the emote
+                runConnection = humanoid.Running:Connect(function(speed)
+                    if speed > 0.1 and currentAnimTrack then
+                        currentAnimTrack:Stop()
+                        currentAnimTrack = nil
+                        
+                        -- Disconnect this event so it isn't constantly firing in the background
+                        if runConnection then
+                            runConnection:Disconnect()
+                            runConnection = nil
+                        end
+                    end
+                end)
+            end
+        end
+    end)
+end
+
+-- Toggle Button
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 100, 0, 35)
+toggleBtn.Position = UDim2.new(0, 10, 0, 10)
+toggleBtn.Text = "Emotes"
+toggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.Parent = screenGui
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 6)
+toggleCorner.Parent = toggleBtn
+
+toggleBtn.MouseButton1Click:Connect(function()
+    wheelFrame.Visible = not wheelFrame.Visible
+end)
