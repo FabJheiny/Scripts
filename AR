@@ -31,7 +31,7 @@ local win = o("Frame",{
     Position=UDim2.new(.5,-winW/2,.5,-winH/2),
     BackgroundColor3=B,BorderSizePixel=0,
     Active=true,ClipsDescendants=true,Visible=true,
-    Draggable = true,
+    Draggable=true,
 },sg)
 stroke(win,1)
 
@@ -181,8 +181,11 @@ do
     tabBtns[i]=tb tabPages[i]=pg cur=i
     tb.MouseButton1Click:Connect(function() sw(i) end)
 
+    -- FIX: avatar e layout usam _sc para escalar junto com a janela
+    local avSize = math.floor(160 * _sc)
     local avBox = o("Frame",{
-        Size=UDim2.new(0,160,0,160), Position=UDim2.new(0,16,0.5,-110),
+        Size=UDim2.new(0,avSize,0,avSize),
+        Position=UDim2.new(0,math.floor(16*_sc),0.5,-math.floor(avSize/2 + 30*_sc)),
         BackgroundColor3=B, BorderSizePixel=0, ClipsDescendants=true,
     },pg)
     stroke(avBox,1)
@@ -210,8 +213,8 @@ do
     local platStr = UIS.TouchEnabled and "Android" or "PC"
     local devStr  = UIS.TouchEnabled and "Mobile"  or "Desktop"
 
-    local STEP = 16
-    local LH   = 13
+    local STEP = math.floor(16 * _sc)
+    local LH   = math.floor(13 * _sc)
     local rows = {
         "Display:   "..LP.DisplayName,
         "Username:  "..LP.Name,
@@ -222,27 +225,33 @@ do
         "Device:    "..devStr,
     }
     local totalH = #rows * STEP
-    local infoStartY = ((286 - totalH) / 2) - 30
+    local bodyH  = winH - 24
+    local infoStartY = ((bodyH - totalH) / 2) - math.floor(30 * _sc)
+    local infoX  = math.floor(200 * _sc)
 
     local infoF = o("Frame",{
-        Size=UDim2.new(1,-210,0,totalH), Position=UDim2.new(0,200,0,infoStartY),
+        Size=UDim2.new(1,-infoX,0,totalH),
+        Position=UDim2.new(0,infoX,0,infoStartY),
         BackgroundTransparency=1, BorderSizePixel=0,
     },pg)
     for k,row in ipairs(rows) do
         o("TextLabel",{
             Size=UDim2.new(1,0,0,LH), Position=UDim2.new(0,0,0,(k-1)*STEP),
             BackgroundTransparency=1, Text=row,
-            TextColor3=W, TextSize=13, Font=Enum.Font.Code,
+            TextColor3=W, TextSize=math.max(9, math.floor(13*_sc)),
+            Font=Enum.Font.Code,
             TextXAlignment=Enum.TextXAlignment.Left,
         },infoF)
     end
 
+    -- FIX: Welcome centralizado verticalmente na parte inferior
+    local wSize = math.max(12, math.floor(20*_sc))
     for k,row in ipairs({"Welcome,", LP.Name}) do
         o("TextLabel",{
-            Size=UDim2.new(0,190,0,28),
-            Position=UDim2.new(0,3, 0, 286*0.5 + 54 + (k-1)*28),
+            Size=UDim2.new(1,0,0,math.floor(28*_sc)),
+            Position=UDim2.new(0,0,0.5,math.floor(54*_sc) + (k-1)*math.floor(28*_sc)),
             BackgroundTransparency=1, Text=row,
-            TextColor3=W, TextSize=20, Font=Enum.Font.Antique,
+            TextColor3=W, TextSize=wSize, Font=Enum.Font.Antique,
             TextXAlignment=Enum.TextXAlignment.Center,
         },pg)
     end
@@ -417,8 +426,9 @@ local pill=o("Frame",{
 },sg)
 stroke(pill,1)
 _G.UniversalHubPill=pill
+-- FIX: UDim2 correto (4 argumentos)
 local pillBtn=o("TextButton",{
-    Size=UDim2.new(1,0,0,1,0),BackgroundTransparency=1,
+    Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,
     Text="> hub",TextSize=9,Font=Enum.Font.SourceSansBold,
     TextColor3=W,BorderSizePixel=0,ZIndex=201,
 },pill)
