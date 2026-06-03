@@ -1,4 +1,4 @@
--- ScriptHub.lua | UNIVERSAL HUB
+-- ScriptHub.lua | UNIVERSAL HUB (Delta Fix)
 local Hub = {}
 local LP = game:GetService("Players").LocalPlayer
 local UIS = game:GetService("UserInputService")
@@ -26,7 +26,7 @@ local win = o("Frame",{
     Position=UDim2.new(.5,-340,.5,-155),
     BackgroundColor3=B,BorderSizePixel=0,
     Active=true,ClipsDescendants=true,Visible=true,
-    Draggable = true,   -- <<< Permite arrastar a janela inteira pela barra superior
+    Draggable = true,
 },sg)
 stroke(win,1)
 
@@ -47,10 +47,6 @@ local xBtn = o("TextButton",{
     BackgroundColor3=B,BorderSizePixel=0,Text="x",TextColor3=W,
     TextSize=10,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
 },top)
-
--- ── Drag removido ─────────────────────────────────────────────────────
--- (UIS.InputBegan/InputEnded/InputChanged apagados)
--- Agora o Draggable = true do win já resolve o arrasto.
 
 local mini=false local fullH,miniH=310,24
 minBtn.MouseButton1Click:Connect(function()
@@ -241,7 +237,7 @@ do
     for k,row in ipairs({"Welcome,", LP.Name}) do
         o("TextLabel",{
             Size=UDim2.new(0,190,0,28),
-            Position=UDim2.new(0,3, 0, 286*0.5 + 54 + (k-1)*28),  -- 84 -> 54
+            Position=UDim2.new(0,3, 0, 286*0.5 + 54 + (k-1)*28),
             BackgroundTransparency=1, Text=row,
             TextColor3=W, TextSize=20, Font=Enum.Font.Antique,
             TextXAlignment=Enum.TextXAlignment.Center,
@@ -282,7 +278,7 @@ do
         ClearTextOnFocus=false, MultiLine=true, TextWrapped=true,
     },editorFrame)
 
-    -- Barra de botões
+    -- Barra de botões (sem o botão Paste)
     local btnBar = o("Frame",{
         Size=UDim2.new(1,-16,0,30), Position=UDim2.new(0,8,1,-38),
         BackgroundTransparency=1, BorderSizePixel=0,
@@ -306,17 +302,11 @@ do
         return b
     end
 
-    local pasteBtn = makeBtn("Paste",   1)
-    local copyBtn  = makeBtn("Copy",    2)
-    local clearBtn = makeBtn("Clear",   3)
-    local execBtnE = makeBtn("Execute", 4)
+    -- Botões restantes: Copy (1), Clear (2), Execute (3)
+    local copyBtn  = makeBtn("Copy",    1)
+    local clearBtn = makeBtn("Clear",   2)
+    local execBtnE = makeBtn("Execute", 3)
 
-    pasteBtn.MouseButton1Click:Connect(function()
-        if getclipboard then
-            local ok, txt = pcall(getclipboard)
-            if ok and txt then editor.Text = editor.Text..txt end
-        end
-    end)
     copyBtn.MouseButton1Click:Connect(function()
         if setclipboard then pcall(setclipboard, editor.Text) end
     end)
