@@ -1,0 +1,109 @@
+loadstring(game:HttpGet("https://raw.githubusercontent.com/clemonlang/clemon_roclothes/refs/heads/main/ClemonRC.lua"))() -- Your original script
+loadstring([[ 
+    local player = game.Players.LocalPlayer
+    local playerGui = player:WaitForChild("PlayerGui")
+
+    if playerGui:FindFirstChild("SimpleCButton") then
+        playerGui.SimpleCButton:Destroy()
+    end
+
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "SimpleCButton"
+    screenGui.ResetOnSpawn = false
+    screenGui.IgnoreGuiInset = true
+    screenGui.DisplayOrder = 999
+    screenGui.Parent = playerGui
+
+    local button = Instance.new("TextButton")
+    button.Name = "CButton"
+    button.Size = UDim2.new(0, 58, 0, 58)
+    button.Position = UDim2.new(0.9, 0, 0.8, 0)
+    button.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    button.Text = "C"
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextScaled = true
+    button.Font = Enum.Font.GothamBold
+    button.BorderSizePixel = 0
+    button.Active = true
+    button.Parent = screenGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = button
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 3
+    stroke.Color = Color3.fromRGB(80, 180, 255)
+    stroke.Parent = button
+
+    local UserInputService = game:GetService("UserInputService")
+    local VirtualInputManager = game:GetService("VirtualInputManager")
+
+    local originalPos = button.Position
+
+    local function setPressed(pressed)
+        if pressed then
+            button.BackgroundColor3 = Color3.fromRGB(0, 100, 220)
+            button.TextColor3 = Color3.fromRGB(255, 255, 100)
+            button.Position = originalPos + UDim2.new(0, 0, 0, 4)
+        else
+            button.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+            button.TextColor3 = Color3.fromRGB(255, 255, 255)
+            button.Position = originalPos
+        end
+    end
+
+    -- Click to type C
+    button.MouseButton1Down:Connect(function()
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.C, false, game)
+        setPressed(true)
+    end)
+
+    button.MouseButton1Up:Connect(function()
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.C, false, game)
+        setPressed(false)
+    end)
+
+    -- Draggable
+    local dragging = false
+    local dragStart, startPos
+
+    button.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = button.Position
+            originalPos = button.Position
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            button.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            originalPos = button.Position
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    -- Real C key also highlights
+    UserInputService.InputBegan:Connect(function(input, gp)
+        if gp then return end
+        if input.KeyCode == Enum.KeyCode.C then
+            setPressed(true)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.KeyCode == Enum.KeyCode.C then
+            setPressed(false)
+        end
+    end)
+
+    print("✅ Draggable C Button loaded with ClemonRC")
+]])()
