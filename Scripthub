@@ -1,4 +1,4 @@
--- ScriptHub.lua | Cronos Hub
+-- ScriptHub.lua | Cronos Hub GG
 local Hub = {}
 local LP = game:GetService("Players").LocalPlayer
 local UIS = game:GetService("UserInputService")
