@@ -13,8 +13,7 @@ Hub:Tab("Scripts Fab")
     :Button("Infinite Zoom","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/iz")
     :Button("ShiftLock","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/shiftlock")
     :Button("Emotes R6","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/emoter6")
-    :Button("Wendigo Animation (r15)","https://rawscripts.net/raw/Universal-Script-Wendigo-Animation-75269")
-
+    
 Hub:Tab("Outros Scripts")
     :Button("Infinite Yield","https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source")
     :Button("Emotes","https://rawscripts.net/raw/Universal-Script-7yd7-I-Emote-Script-48024")
@@ -27,6 +26,7 @@ Hub:Tab("Outros Scripts")
     :Button("Tacos","https://rawscripts.net/raw/Universal-Script-Raining-tacos-59989")
     :Button("Fire","https://rawscripts.net/raw/Universal-Script-FIRE-79692")
     :Button("Korblox & Headless","https://rawscripts.net/raw/Universal-Script-R15-Emotes-GUI-Open-Source-229171")
+    :Button("Wendigo Animation (r15)","https://rawscripts.net/raw/Universal-Script-Wendigo-Animation-75269")
 
 Hub:Tab("Games")
     :Button("Slime Rng","https://raw.githubusercontent.com/gumanba/Scripts/main/SlimeRNG")
