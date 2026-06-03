@@ -9,6 +9,11 @@ local D  = Color3.fromRGB(15,15,15)
 local G  = Color3.fromRGB(50,50,50)
 local DT = Color3.fromRGB(180,180,180)
 
+local vp  = workspace.CurrentCamera.ViewportSize
+local _sc = math.min(1, math.min(vp.X / 1366, vp.Y / 768))
+local winW = math.floor(680 * _sc)
+local winH = math.floor(310 * _sc)
+
 local function o(cls,props,par)
     local x=Instance.new(cls)
     for k,v in pairs(props) do x[k]=v end
@@ -22,8 +27,8 @@ end
 local sg = o("ScreenGui",{Name="UniversalHub",ResetOnSpawn=false,IgnoreGuiInset=true,DisplayOrder=100},PG)
 
 local win = o("Frame",{
-    Size=UDim2.new(0,680,0,310),
-    Position=UDim2.new(.5,-340,.5,-155),
+    Size=UDim2.new(0,winW,0,winH),
+    Position=UDim2.new(.5,-winW/2,.5,-winH/2),
     BackgroundColor3=B,BorderSizePixel=0,
     Active=true,ClipsDescendants=true,Visible=true,
     Draggable = true,
@@ -48,10 +53,10 @@ local xBtn = o("TextButton",{
     TextSize=10,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
 },top)
 
-local mini=false local fullH,miniH=310,24
+local mini=false local fullH,miniH=winH,24
 minBtn.MouseButton1Click:Connect(function()
     mini=not mini
-    win.Size=UDim2.new(0,680,0,mini and miniH or fullH)
+    win.Size=UDim2.new(0,winW,0,mini and miniH or fullH)
     minBtn.Text=mini and "+" or "-"
 end)
 xBtn.MouseButton1Click:Connect(function()
@@ -176,7 +181,6 @@ do
     tabBtns[i]=tb tabPages[i]=pg cur=i
     tb.MouseButton1Click:Connect(function() sw(i) end)
 
-    -- Avatar 160×160 movido 30px para cima
     local avBox = o("Frame",{
         Size=UDim2.new(0,160,0,160), Position=UDim2.new(0,16,0.5,-110),
         BackgroundColor3=B, BorderSizePixel=0, ClipsDescendants=true,
@@ -218,7 +222,7 @@ do
         "Device:    "..devStr,
     }
     local totalH = #rows * STEP
-    local infoStartY = ((286 - totalH) / 2) - 30   -- 30px para cima
+    local infoStartY = ((286 - totalH) / 2) - 30
 
     local infoF = o("Frame",{
         Size=UDim2.new(1,-210,0,totalH), Position=UDim2.new(0,200,0,infoStartY),
@@ -233,7 +237,6 @@ do
         },infoF)
     end
 
-    -- Welcome 30px acima
     for k,row in ipairs({"Welcome,", LP.Name}) do
         o("TextLabel",{
             Size=UDim2.new(0,190,0,28),
@@ -261,7 +264,6 @@ do
     tabBtns[i]=tb tabPages[i]=pg
     tb.MouseButton1Click:Connect(function() sw(i) end)
 
-    -- Caixa do editor
     local editorFrame = o("Frame",{
         Size=UDim2.new(1,-16,1,-48), Position=UDim2.new(0,8,0,8),
         BackgroundColor3=B, BorderSizePixel=0,
@@ -278,7 +280,6 @@ do
         ClearTextOnFocus=false, MultiLine=true, TextWrapped=true,
     },editorFrame)
 
-    -- Barra de botões (sem o botão Paste)
     local btnBar = o("Frame",{
         Size=UDim2.new(1,-16,0,30), Position=UDim2.new(0,8,1,-38),
         BackgroundTransparency=1, BorderSizePixel=0,
@@ -302,7 +303,6 @@ do
         return b
     end
 
-    -- Botões restantes: Copy (1), Clear (2), Execute (3)
     local copyBtn  = makeBtn("Copy",    1)
     local clearBtn = makeBtn("Clear",   2)
     local execBtnE = makeBtn("Execute", 3)
@@ -418,7 +418,7 @@ local pill=o("Frame",{
 stroke(pill,1)
 _G.UniversalHubPill=pill
 local pillBtn=o("TextButton",{
-    Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,
+    Size=UDim2.new(1,0,0,1,0),BackgroundTransparency=1,
     Text="> hub",TextSize=9,Font=Enum.Font.SourceSansBold,
     TextColor3=W,BorderSizePixel=0,ZIndex=201,
 },pill)
