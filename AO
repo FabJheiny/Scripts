@@ -210,8 +210,8 @@ do
     local platStr = UIS.TouchEnabled and "Android" or "PC"
     local devStr  = UIS.TouchEnabled and "Mobile"  or "Desktop"
 
-    local STEP = 26
-    local LH   = 22
+    local STEP = 16
+    local LH   = 13
     local rows = {
         "Display:   "..LP.DisplayName,
         "Username:  "..LP.Name,
@@ -247,6 +247,83 @@ do
             TextXAlignment=Enum.TextXAlignment.Center,
         },pg)
     end
+end
+
+-- ── Aba Executor ─────────────────────────────────────────────────────
+do
+    local i = 2
+    local tb = o("TextButton",{
+        Size=UDim2.new(1,0,0,28), BackgroundColor3=B, BorderSizePixel=0,
+        Text="Executor", TextColor3=DT, TextSize=10,
+        Font=Enum.Font.SourceSansBold, AutoButtonColor=false,
+        LayoutOrder=i, TextWrapped=true,
+    },tlist)
+    o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0},tb)
+    local pg = o("Frame",{
+        Size=UDim2.new(1,0,1,0), BackgroundColor3=B, BorderSizePixel=0, Visible=false,
+    },area)
+    tabBtns[i]=tb tabPages[i]=pg
+    tb.MouseButton1Click:Connect(function() sw(i) end)
+
+    -- Caixa do editor
+    local editorFrame = o("Frame",{
+        Size=UDim2.new(1,-16,1,-48), Position=UDim2.new(0,8,0,8),
+        BackgroundColor3=B, BorderSizePixel=0,
+    },pg)
+    stroke(editorFrame,1)
+    local editor = o("TextBox",{
+        Size=UDim2.new(1,-8,1,-8), Position=UDim2.new(0,4,0,4),
+        BackgroundTransparency=1,
+        Text="", PlaceholderText="-- Write your script here",
+        PlaceholderColor3=Color3.fromRGB(80,80,80),
+        TextColor3=W, TextSize=12, Font=Enum.Font.Code,
+        TextXAlignment=Enum.TextXAlignment.Left,
+        TextYAlignment=Enum.TextYAlignment.Top,
+        ClearTextOnFocus=false, MultiLine=true, TextWrapped=false,
+    },editorFrame)
+
+    -- Barra de botões
+    local btnBar = o("Frame",{
+        Size=UDim2.new(1,-16,0,30), Position=UDim2.new(0,8,1,-38),
+        BackgroundTransparency=1, BorderSizePixel=0,
+    },pg)
+    o("UIListLayout",{
+        FillDirection=Enum.FillDirection.Horizontal,
+        HorizontalAlignment=Enum.HorizontalAlignment.Right,
+        VerticalAlignment=Enum.VerticalAlignment.Center,
+        Padding=UDim.new(0,6), SortOrder=Enum.SortOrder.LayoutOrder,
+    },btnBar)
+
+    local function makeBtn(txt, lo)
+        local b = o("TextButton",{
+            Size=UDim2.new(0,70,0,22), BackgroundColor3=B, BorderSizePixel=0,
+            Text=txt, TextColor3=W, TextSize=10, Font=Enum.Font.SourceSansBold,
+            AutoButtonColor=false, LayoutOrder=lo,
+        },btnBar)
+        stroke(b,1)
+        b.MouseEnter:Connect(function() b.BackgroundColor3=D end)
+        b.MouseLeave:Connect(function() b.BackgroundColor3=B end)
+        return b
+    end
+
+    local copyBtn  = makeBtn("Copy",    1)
+    local clearBtn = makeBtn("Clear",   2)
+    local execBtnE = makeBtn("Execute", 3)
+
+    copyBtn.MouseButton1Click:Connect(function()
+        if setclipboard then pcall(setclipboard, editor.Text) end
+    end)
+    clearBtn.MouseButton1Click:Connect(function()
+        editor.Text = ""
+    end)
+    execBtnE.MouseButton1Click:Connect(function()
+        local code = editor.Text
+        if code ~= "" then
+            local fn, err = loadstring(code)
+            if fn then pcall(fn)
+            else warn("[Executor] "..tostring(err)) end
+        end
+    end)
 end
 
 -- ── API pública ───────────────────────────────────────────────────────
