@@ -279,7 +279,7 @@ do
         TextColor3=W, TextSize=12, Font=Enum.Font.Code,
         TextXAlignment=Enum.TextXAlignment.Left,
         TextYAlignment=Enum.TextYAlignment.Top,
-        ClearTextOnFocus=false, MultiLine=true, TextWrapped=false,
+        ClearTextOnFocus=false, MultiLine=true, TextWrapped=true,
     },editorFrame)
 
     -- Barra de botões
@@ -306,10 +306,17 @@ do
         return b
     end
 
-    local copyBtn  = makeBtn("Copy",    1)
-    local clearBtn = makeBtn("Clear",   2)
-    local execBtnE = makeBtn("Execute", 3)
+    local pasteBtn = makeBtn("Paste",   1)
+    local copyBtn  = makeBtn("Copy",    2)
+    local clearBtn = makeBtn("Clear",   3)
+    local execBtnE = makeBtn("Execute", 4)
 
+    pasteBtn.MouseButton1Click:Connect(function()
+        if getclipboard then
+            local ok, txt = pcall(getclipboard)
+            if ok and txt then editor.Text = editor.Text..txt end
+        end
+    end)
     copyBtn.MouseButton1Click:Connect(function()
         if setclipboard then pcall(setclipboard, editor.Text) end
     end)
