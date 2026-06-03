@@ -9,13 +9,10 @@ local D  = Color3.fromRGB(15,15,15)
 local G  = Color3.fromRGB(50,50,50)
 local DT = Color3.fromRGB(180,180,180)
 
--- DPI-aware scale: compara viewport (pontos CSS) com resolução real
 local GS   = game:GetService("GuiService")
 local vp   = workspace.CurrentCamera.ViewportSize
 local real = GS:GetScreenResolution()
--- dpiScale = quantos pixels reais por ponto de viewport
 local dpiScale = math.max(1, math.min(real.X / math.max(vp.X,1), real.Y / math.max(vp.Y,1)))
--- _sc agora é baseado nos pontos de viewport, não em pixels brutos
 local _sc  = math.min(1, math.min(vp.X / 800, vp.Y / 500))
 local winW = math.floor(680 * _sc)
 local winH = math.floor(310 * _sc)
@@ -41,25 +38,34 @@ local win = o("Frame",{
 },sg)
 stroke(win,1)
 
-local top = o("Frame",{Size=UDim2.new(1,0,0,24),BackgroundColor3=B,BorderSizePixel=0,Active=false},win)
-o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0},top)
+-- ── Topbar ────────────────────────────────────────────────────────────
+local topH = 26
+local top = o("Frame",{Size=UDim2.new(1,0,0,topH),BackgroundColor3=B,BorderSizePixel=0,Active=false},win)
+
+-- separador inferior da topbar (branco)
+o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=W,BorderSizePixel=0},top)
+
 o("TextLabel",{
-    Size=UDim2.new(1,-60,1,0),Position=UDim2.new(0,8,0,0),
+    Size=UDim2.new(1,-58,1,0),Position=UDim2.new(0,8,0,0),
     BackgroundTransparency=1,Text="> UNIVERSAL HUB <",TextColor3=W,
     TextSize=14,Font=Enum.Font.SourceSansBold,TextXAlignment=Enum.TextXAlignment.Left,
 },top)
+
+-- separador vertical antes dos botões (branco)
+o("Frame",{Size=UDim2.new(0,1,0.7,0),Position=UDim2.new(1,-54,0.15,0),BackgroundColor3=W,BorderSizePixel=0},top)
+
 local minBtn = o("TextButton",{
-    Size=UDim2.new(0,18,0,14),Position=UDim2.new(1,-40,0.5,-7),
+    Size=UDim2.new(0,22,0,18),Position=UDim2.new(1,-50,0.5,-9),
     BackgroundColor3=B,BorderSizePixel=0,Text="-",TextColor3=W,
-    TextSize=13,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
+    TextSize=15,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
 },top)
 local xBtn = o("TextButton",{
-    Size=UDim2.new(0,18,0,14),Position=UDim2.new(1,-20,0.5,-7),
+    Size=UDim2.new(0,22,0,18),Position=UDim2.new(1,-26,0.5,-9),
     BackgroundColor3=B,BorderSizePixel=0,Text="x",TextColor3=W,
-    TextSize=10,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
+    TextSize=12,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
 },top)
 
-local mini=false local fullH,miniH=winH,24
+local mini=false local fullH,miniH=winH,topH
 minBtn.MouseButton1Click:Connect(function()
     mini=not mini
     win.Size=UDim2.new(0,winW,0,mini and miniH or fullH)
@@ -71,20 +77,26 @@ xBtn.MouseButton1Click:Connect(function()
 end)
 
 local body = o("Frame",{
-    Size=UDim2.new(1,0,1,-24),Position=UDim2.new(0,0,0,24),
+    Size=UDim2.new(1,0,1,-topH),Position=UDim2.new(0,0,0,topH),
     BackgroundColor3=B,BorderSizePixel=0,ClipsDescendants=true,
 },win)
 
-local tcol = o("Frame",{Size=UDim2.new(0,90,1,0),BackgroundColor3=B,BorderSizePixel=0},body)
-o("Frame",{Size=UDim2.new(0,1,1,0),Position=UDim2.new(1,0,0,0),BackgroundColor3=G,BorderSizePixel=0},tcol)
+-- ── Sidebar de abas ───────────────────────────────────────────────────
+local tabColW = 90
+local tcol = o("Frame",{Size=UDim2.new(0,tabColW,1,0),BackgroundColor3=B,BorderSizePixel=0},body)
+
+-- separador direito da sidebar (branco)
+o("Frame",{Size=UDim2.new(0,1,1,0),Position=UDim2.new(1,0,0,0),BackgroundColor3=W,BorderSizePixel=0},tcol)
+
 local tlist = o("ScrollingFrame",{
-    Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,BorderSizePixel=0,
+    Size=UDim2.new(1,-1,1,0),BackgroundTransparency=1,BorderSizePixel=0,
     ScrollBarThickness=0,CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y,
 },tcol)
-o("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder},tlist)
+o("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,4)},tlist)
+o("UIPadding",{PaddingTop=UDim.new(0,4),PaddingLeft=UDim.new(0,4),PaddingRight=UDim.new(0,4)},tlist)
 
 local area = o("Frame",{
-    Size=UDim2.new(1,-91,1,0),Position=UDim2.new(0,91,0,0),
+    Size=UDim2.new(1,-tabColW-1,1,0),Position=UDim2.new(0,tabColW+1,0,0),
     BackgroundColor3=B,BorderSizePixel=0,ClipsDescendants=true,
 },body)
 
@@ -112,7 +124,7 @@ local mTitle = o("TextLabel",{
     Text="",TextColor3=W,TextSize=11,Font=Enum.Font.SourceSansBold,
     TextXAlignment=Enum.TextXAlignment.Center,TextWrapped=true,ZIndex=53,
 },mbox)
-o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0,ZIndex=53},mTitle)
+o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=W,BorderSizePixel=0,ZIndex=53},mTitle)
 
 local mBtnBar = o("Frame",{
     Size=UDim2.new(1,0,0,34),Position=UDim2.new(0,0,1,-34),
@@ -165,34 +177,50 @@ end)
 local tabBtns,tabPages,cur={},{},nil
 local function sw(idx)
     if cur==idx then return end
-    if cur then tabBtns[cur].BackgroundColor3=B tabBtns[cur].TextColor3=DT end
+    if cur then
+        tabBtns[cur].BackgroundColor3=B
+        tabBtns[cur].TextColor3=DT
+    end
     cur=idx
-    tabBtns[idx].BackgroundColor3=D tabBtns[idx].TextColor3=W
+    tabBtns[idx].BackgroundColor3=D
+    tabBtns[idx].TextColor3=W
     for j,p in ipairs(tabPages) do p.Visible=(j==idx) end
+end
+
+-- helper: cria botão de aba com borda (stroke) em vez de separador
+local function makeTabBtn(name, idx)
+    local tb = o("TextButton",{
+        Size=UDim2.new(1,0,0,28),
+        BackgroundColor3=B,BorderSizePixel=0,
+        Text=name,TextColor3=DT,TextSize=10,
+        Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
+        LayoutOrder=idx,TextWrapped=true,
+    },tlist)
+    stroke(tb,1)
+    tb.MouseEnter:Connect(function()
+        if cur~=idx then tb.BackgroundColor3=Color3.fromRGB(10,10,10) end
+    end)
+    tb.MouseLeave:Connect(function()
+        if cur~=idx then tb.BackgroundColor3=B end
+    end)
+    return tb
 end
 
 -- ── Aba Main ──────────────────────────────────────────────────────────
 do
     local i = 1
-    local tb = o("TextButton",{
-        Size=UDim2.new(1,0,0,28), BackgroundColor3=D, BorderSizePixel=0,
-        Text="Main", TextColor3=W, TextSize=10,
-        Font=Enum.Font.SourceSansBold, AutoButtonColor=false,
-        LayoutOrder=i, TextWrapped=true,
-    },tlist)
-    o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0},tb)
+    local tb = makeTabBtn("Main", i)
+    tb.BackgroundColor3=D tb.TextColor3=W  -- ativa por padrão
+
     local pg = o("Frame",{
         Size=UDim2.new(1,0,1,0), BackgroundColor3=B, BorderSizePixel=0, Visible=true,
     },area)
     tabBtns[i]=tb tabPages[i]=pg cur=i
     tb.MouseButton1Click:Connect(function() sw(i) end)
 
-    local bodyH = winH - 24
-
-    -- Avatar: tamanho fixo absoluto, não escala por DPI
-    -- bodyH em pontos de viewport já é o tamanho visual correto
+    local bodyH = winH - topH
     local avSize = math.min(math.floor(bodyH * 0.68), 150)
-    local areaW  = winW - 91
+    local areaW  = winW - tabColW - 1
     local colW   = math.floor(areaW * 0.38)
     local avX    = math.floor((colW - avSize) / 2)
     local avY    = math.max(6, math.floor((bodyH - avSize - 46) / 2))
@@ -215,10 +243,9 @@ do
         if ok then avImg.Image=t end
     end)
 
-    -- Welcome — sempre logo abaixo do avatar, dentro da colW
-    local wY     = avY + avSize + 6
-    local wSize  = math.max(11, math.floor(bodyH * 0.085))
-    local lineH  = math.floor(wSize * 1.55)
+    local wY    = avY + avSize + 6
+    local wSize = math.max(11, math.floor(bodyH * 0.085))
+    local lineH = math.floor(wSize * 1.55)
     for k, txt in ipairs({"Welcome,", LP.Name}) do
         o("TextLabel",{
             Size=UDim2.new(0,colW,0,lineH),
@@ -230,7 +257,6 @@ do
         },pg)
     end
 
-    -- Info — coluna direita, centralizada verticalmente
     local infoX  = colW + 8
     local tSize  = math.max(9, math.floor(bodyH * 0.058))
     local rowH   = math.floor(tSize * 1.85)
@@ -283,13 +309,7 @@ end
 -- ── Aba Executor ─────────────────────────────────────────────────────
 do
     local i = 2
-    local tb = o("TextButton",{
-        Size=UDim2.new(1,0,0,28), BackgroundColor3=B, BorderSizePixel=0,
-        Text="Executor", TextColor3=DT, TextSize=10,
-        Font=Enum.Font.SourceSansBold, AutoButtonColor=false,
-        LayoutOrder=i, TextWrapped=true,
-    },tlist)
-    o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0},tb)
+    local tb = makeTabBtn("Executor", i)
     local pg = o("Frame",{
         Size=UDim2.new(1,0,1,0), BackgroundColor3=B, BorderSizePixel=0, Visible=false,
     },area)
@@ -358,14 +378,7 @@ end
 -- ── API pública ───────────────────────────────────────────────────────
 function Hub:Tab(name)
     local i=#tabBtns+1
-    local tb=o("TextButton",{
-        Size=UDim2.new(1,0,0,28),
-        BackgroundColor3=B,BorderSizePixel=0,
-        Text=name,TextColor3=DT,TextSize=10,
-        Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
-        LayoutOrder=i,TextWrapped=true,
-    },tlist)
-    o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0},tb)
+    local tb = makeTabBtn(name, i)
 
     local pg=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BorderSizePixel=0,Visible=false},area)
 
