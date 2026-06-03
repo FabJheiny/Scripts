@@ -47,16 +47,16 @@ local xBtn = o("TextButton",{
     TextSize=10,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
 },top)
 
--- ── Drag via UIS global — único método confiável no Roblox ────────────
+-- ── Drag via UIS global — menu inteiro arrastável ────────────
 do
     local dragging   = false
     local dragStart  = nil
     local startPos   = nil
 
-    local function isOverTopBar()
+    local function isOverWindow()
         local mp  = UIS:GetMouseLocation()
-        local ap  = top.AbsolutePosition
-        local as  = top.AbsoluteSize
+        local ap  = win.AbsolutePosition
+        local as  = win.AbsoluteSize
         return mp.X >= ap.X and mp.X <= ap.X + as.X
            and mp.Y >= ap.Y and mp.Y <= ap.Y + as.Y
     end
@@ -64,14 +64,14 @@ do
     UIS.InputBegan:Connect(function(input, gp)
         if gp then return end
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            if isOverTopBar() then
-                -- não inicia drag se clicou nos botões
+            if isOverWindow() then
                 local mp = UIS:GetMouseLocation()
                 local minAP = minBtn.AbsolutePosition
                 local xAP   = xBtn.AbsolutePosition
                 local bW, bH = 18, 14
                 local overMin = mp.X>=minAP.X and mp.X<=minAP.X+bW and mp.Y>=minAP.Y and mp.Y<=minAP.Y+bH
                 local overX   = mp.X>=xAP.X   and mp.X<=xAP.X+bW   and mp.Y>=xAP.Y   and mp.Y<=xAP.Y+bH
+                -- Não inicia drag se clicou nos botões da barra superior
                 if not overMin and not overX then
                     dragging  = true
                     dragStart = input.Position
