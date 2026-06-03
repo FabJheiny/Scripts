@@ -26,10 +26,11 @@ local win = o("Frame",{
     Position=UDim2.new(.5,-340,.5,-155),
     BackgroundColor3=B,BorderSizePixel=0,
     Active=true,ClipsDescendants=true,Visible=true,
+    Draggable = true,   -- <<< Permite arrastar a janela inteira pela barra superior
 },sg)
 stroke(win,1)
 
-local top = o("Frame",{Size=UDim2.new(1,0,0,24),BackgroundColor3=B,BorderSizePixel=0,Active=true},win)
+local top = o("Frame",{Size=UDim2.new(1,0,0,24),BackgroundColor3=B,BorderSizePixel=0,Active=false},win)
 o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=G,BorderSizePixel=0},top)
 o("TextLabel",{
     Size=UDim2.new(1,-60,1,0),Position=UDim2.new(0,8,0,0),
@@ -47,15 +48,9 @@ local xBtn = o("TextButton",{
     TextSize=10,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
 },top)
 
--- ── Criar a janela principal ─────────────────────────────────────────
-local win = o("Frame",{
-    Size=UDim2.new(0,680,0,310),
-    Position=UDim2.new(.5,-340,.5,-155),
-    BackgroundColor3=B,BorderSizePixel=0,
-    Active=true,ClipsDescendants=true,Visible=true,
-    Draggable = true,   -- <<< TORNA A JANELA INTEIRA ARRASTÁVEL
-},sg)
-stroke(win,1)
+-- ── Drag removido ─────────────────────────────────────────────────────
+-- (UIS.InputBegan/InputEnded/InputChanged apagados)
+-- Agora o Draggable = true do win já resolve o arrasto.
 
 local mini=false local fullH,miniH=310,24
 minBtn.MouseButton1Click:Connect(function()
@@ -185,7 +180,7 @@ do
     tabBtns[i]=tb tabPages[i]=pg cur=i
     tb.MouseButton1Click:Connect(function() sw(i) end)
 
-    -- ── Avatar quadrado 160×160 ── movido 30px para cima (Y offset de -80 para -110)
+    -- Avatar 160×160 movido 30px para cima
     local avBox = o("Frame",{
         Size=UDim2.new(0,160,0,160), Position=UDim2.new(0,16,0.5,-110),
         BackgroundColor3=B, BorderSizePixel=0, ClipsDescendants=true,
@@ -204,7 +199,6 @@ do
         if ok then avBox:FindFirstChild("AvImg").Image=t end
     end)
 
-    -- Join date
     local joinStr = "N/A"
     pcall(function()
         local ts = os.time() - LP.AccountAge*86400
@@ -216,7 +210,6 @@ do
     local platStr = UIS.TouchEnabled and "Android" or "PC"
     local devStr  = UIS.TouchEnabled and "Mobile"  or "Desktop"
 
-    -- ── Info labels ── centralizadas 30px acima
     local STEP = 26
     local LH   = 22
     local rows = {
@@ -229,7 +222,7 @@ do
         "Device:    "..devStr,
     }
     local totalH = #rows * STEP
-    local infoStartY = ((286 - totalH) / 2) - 30   -- 30px mais para cima
+    local infoStartY = ((286 - totalH) / 2) - 30   -- 30px para cima
 
     local infoF = o("Frame",{
         Size=UDim2.new(1,-210,0,totalH), Position=UDim2.new(0,200,0,infoStartY),
@@ -244,12 +237,11 @@ do
         },infoF)
     end
 
-    -- ── Welcome ── 30px acima (de 227 para 197 como base)
-    local welY = 0.5 + 80/286   -- (mantido só para referência, não usado diretamente)
+    -- Welcome 30px acima
     for k,row in ipairs({"Welcome,", LP.Name}) do
         o("TextLabel",{
             Size=UDim2.new(0,190,0,28),
-            Position=UDim2.new(0,3, 0, 286*0.5 + 54 + (k-1)*28),  -- 84 -> 54 (-30)
+            Position=UDim2.new(0,3, 0, 286*0.5 + 54 + (k-1)*28),  -- 84 -> 54
             BackgroundTransparency=1, Text=row,
             TextColor3=W, TextSize=20, Font=Enum.Font.Antique,
             TextXAlignment=Enum.TextXAlignment.Center,
@@ -344,7 +336,7 @@ function Hub:Tab(name)
     return T
 end
 
--- ── Pill (sem drag) ───────────────────────────────────────────────────
+-- ── Pill ──────────────────────────────────────────────────────────────
 local pill=o("Frame",{
     Name="Pill",Size=UDim2.new(0,54,0,18),Position=UDim2.new(1,-60,1,-400),
     BackgroundColor3=B,BorderSizePixel=0,Visible=false,ZIndex=200,
