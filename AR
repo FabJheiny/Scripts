@@ -7,7 +7,7 @@ local B  = Color3.fromRGB(0,0,0)
 local W  = Color3.fromRGB(255,255,255)
 local D  = Color3.fromRGB(15,15,15)
 local G  = Color3.fromRGB(50,50,50)
-local DT = Color3.fromRGB(180,180,180)
+local DT = Color3.fromRGB(255,255,255)
 
 local GS   = game:GetService("GuiService")
 local vp   = workspace.CurrentCamera.ViewportSize
@@ -39,7 +39,7 @@ local win = o("Frame",{
 stroke(win,1)
 
 -- ── Topbar ────────────────────────────────────────────────────────────
-local topH = 28
+local topH = 26
 local top = o("Frame",{
     Size=UDim2.new(1,0,0,topH),
     BackgroundColor3=B,BorderSizePixel=0,
@@ -47,35 +47,41 @@ local top = o("Frame",{
 },win)
 
 o("TextLabel",{
-    Size=UDim2.new(1,-62,1,0),Position=UDim2.new(0,8,0,0),
+    Size=UDim2.new(1,-56,1,0),Position=UDim2.new(0,10,0,0),
     BackgroundTransparency=1,Text="> UNIVERSAL HUB <",TextColor3=W,
-    TextSize=14,Font=Enum.Font.SourceSansBold,
+    TextSize=20,Font=Enum.Font.SourceSansBold,
     TextXAlignment=Enum.TextXAlignment.Left,
     ZIndex=10,
 },top)
 
--- Separador vertical — ocupa 100% da altura da topbar
 o("Frame",{
     Size=UDim2.new(0,1,1,0),
-    Position=UDim2.new(1,-58,0,0),
+    Position=UDim2.new(1,-54,0,0),
     BackgroundColor3=W,BorderSizePixel=0,
     ZIndex=11,
 },top)
 
 local minBtn = o("TextButton",{
-    Size=UDim2.new(0,26,1,0),Position=UDim2.new(1,-57,0,0),
+    Size=UDim2.new(0,topH,1,0),Position=UDim2.new(1,-53,0,0),
     BackgroundColor3=B,BorderSizePixel=0,Text="-",TextColor3=W,
-    TextSize=22,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
-    ZIndex=11,
-},top)
-local xBtn = o("TextButton",{
-    Size=UDim2.new(0,28,1,0),Position=UDim2.new(1,-28,0,0),
-    BackgroundColor3=B,BorderSizePixel=0,Text="x",TextColor3=W,
-    TextSize=18,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
+    TextSize=24,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
     ZIndex=11,
 },top)
 
--- Divisória inferior da topbar — no win, ZIndex alto, cobre tudo incluindo botões
+o("Frame",{
+    Size=UDim2.new(0,1,1,0),
+    Position=UDim2.new(1,-27,0,0),
+    BackgroundColor3=W,BorderSizePixel=0,
+    ZIndex=12,
+},top)
+
+local xBtn = o("TextButton",{
+    Size=UDim2.new(0,topH,1,0),Position=UDim2.new(1,-27,0,0),
+    BackgroundColor3=B,BorderSizePixel=0,Text="x",TextColor3=W,
+    TextSize=20,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
+    ZIndex=11,
+},top)
+
 local topDivider = o("Frame",{
     Size=UDim2.new(1,0,0,1),
     Position=UDim2.new(0,0,0,topH),
@@ -236,19 +242,19 @@ local function sw(idx)
     if cur==idx then return end
     if cur then
         tabBtns[cur].BackgroundColor3=B
-        tabBtns[cur].TextColor3=DT
+        tabBtns[cur].TextColor3=W
     end
     cur=idx
-    tabBtns[idx].BackgroundColor3=D
+    tabBtns[idx].BackgroundColor3=B
     tabBtns[idx].TextColor3=W
     for j,p in ipairs(tabPages) do p.Visible=(j==idx) end
 end
 
 local function makeTabBtn(name, idx)
     local tb = o("TextButton",{
-        Size=UDim2.new(1,0,0,28),
+        Size=UDim2.new(1,0,0,30),
         BackgroundColor3=B,BorderSizePixel=0,
-        Text=name,TextColor3=DT,TextSize=10,
+        Text=name,TextColor3=W,TextSize=14,
         Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
         LayoutOrder=idx,TextWrapped=true,
     },tlist)
@@ -266,7 +272,7 @@ end
 do
     local i = 1
     local tb = makeTabBtn("Main", i)
-    tb.BackgroundColor3=D tb.TextColor3=W
+    tb.BackgroundColor3=B tb.TextColor3=W
 
     local pg = o("Frame",{
         Size=UDim2.new(1,0,1,0), BackgroundColor3=B, BorderSizePixel=0,
@@ -276,11 +282,11 @@ do
     tb.MouseButton1Click:Connect(function() sw(i) end)
 
     local bodyH = winH - topH - 1
-    local avSize = math.min(math.floor(bodyH * 0.68), 150)
+    local avSize = math.min(math.floor(bodyH * 0.78), 195)
     local areaW  = winW - tabColW - 1
     local colW   = math.floor(areaW * 0.38)
     local avX    = math.floor((colW - avSize) / 2)
-    local avY    = math.max(6, math.floor((bodyH - avSize - 46) / 2))
+    local avY    = math.max(6, math.floor((bodyH - avSize) / 2) - 16)
 
     local avBox = o("Frame",{
         Size=UDim2.new(0,avSize,0,avSize),
@@ -302,9 +308,9 @@ do
         if ok then avImg.Image=t end
     end)
 
-    local wY    = avY + avSize + 6
-    local wSize = math.max(11, math.floor(bodyH * 0.085))
-    local lineH = math.floor(wSize * 1.55)
+    local wY    = avY + avSize + 3
+    local wSize = 20
+    local lineH = 24
     for k, txt in ipairs({"Welcome,", LP.Name}) do
         o("TextLabel",{
             Size=UDim2.new(0,colW,0,lineH),
@@ -317,9 +323,9 @@ do
     end
 
     local infoX  = colW + 8
-    local tSize  = math.max(9, math.floor(bodyH * 0.058))
-    local rowH   = math.floor(tSize * 1.85)
-    local keyW   = math.floor(tSize * 7.2)
+    local tSize  = 15
+    local rowH   = 19
+    local keyW   = math.floor(tSize * 7.0)
 
     local joinStr = "N/A"
     pcall(function()
@@ -343,7 +349,7 @@ do
     }
 
     local totalH = #rows * rowH
-    local infoY  = math.max(6, math.floor((bodyH - totalH) / 2))
+    local infoY  = math.max(4, math.floor((bodyH - totalH) / 2))
 
     for k, row in ipairs(rows) do
         local yp = infoY + (k-1)*rowH
@@ -351,7 +357,7 @@ do
             Size=UDim2.new(0,keyW,0,rowH),
             Position=UDim2.new(0,infoX,0,yp),
             BackgroundTransparency=1, Text=row[1],
-            TextColor3=DT, TextSize=tSize, Font=Enum.Font.Code,
+            TextColor3=W, TextSize=tSize, Font=Enum.Font.Code,
             TextXAlignment=Enum.TextXAlignment.Left,
             Active=false,
         },pg)
@@ -462,7 +468,7 @@ function Hub:Tab(name)
 
     local countLbl=o("TextLabel",{
         Size=UDim2.new(1,-searchW-8,1,0),Position=UDim2.new(0,searchW+6,0,0),
-        BackgroundTransparency=1,Text="Scripts: 0",TextColor3=DT,
+        BackgroundTransparency=1,Text="Scripts: 0",TextColor3=W,
         TextSize=10,Font=Enum.Font.SourceSans,TextXAlignment=Enum.TextXAlignment.Right,
         Active=false,
     },hotbar)
@@ -505,13 +511,13 @@ function Hub:Tab(name)
     local T={}
     function T:Button(txt,url)
         local b=o("TextButton",{
-            Name=txt,BackgroundColor3=D,BorderSizePixel=0,
+            Name=txt,BackgroundColor3=B,BorderSizePixel=0,
             Text=txt,TextColor3=W,TextSize=10,Font=Enum.Font.SourceSans,
             AutoButtonColor=false,TextWrapped=true,LineHeight=1.1,
         },scroll)
         stroke(b,1)
-        b.MouseEnter:Connect(function() b.BackgroundColor3=Color3.fromRGB(25,25,25) end)
-        b.MouseLeave:Connect(function() b.BackgroundColor3=D end)
+        b.MouseEnter:Connect(function() b.BackgroundColor3=Color3.fromRGB(18,18,18) end)
+        b.MouseLeave:Connect(function() b.BackgroundColor3=B end)
         local copyTxt='loadstring(game:HttpGet("'..url..'"))()'
         b.MouseButton1Click:Connect(function()
             openModal(txt,copyTxt,function() loadstring(game:HttpGet(url))() end)
