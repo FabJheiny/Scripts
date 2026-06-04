@@ -362,13 +362,11 @@ local pill = o("Frame",{
 corner(pill,10)
 o("UIStroke",{Color=C.ACCENT,Thickness=1.5,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},pill)
 
--- dot
 local pillDot = o("Frame",{
     BackgroundColor3=C.ACCENT, BorderSizePixel=0, ZIndex=201,
 },pill)
 corner(pillDot,99)
 
--- label
 local pillLbl = o("TextLabel",{
     BackgroundTransparency=1,
     Text="hub", TextColor3=C.TEXT, Font=FONT,
@@ -376,31 +374,23 @@ local pillLbl = o("TextLabel",{
     ZIndex=201,
 },pill)
 
--- botão invisível por cima
 local pillBtn = o("TextButton",{
     Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
     Text="", BorderSizePixel=0, ZIndex=202,
 },pill)
 
--- função que recalcula dot + label proporcionalmente
 local function applyPillScale(v)
     local factor = 0.7+(v-1)*0.06
     local pw = math.floor(64*factor)
     local ph = math.floor(20*factor)
     pill.Size = UDim2.new(0,pw,0,ph)
-
-    -- corner radius acompanha altura
     for _,ch in ipairs(pill:GetChildren()) do
         if ch:IsA("UICorner") then ch.CornerRadius = UDim.new(0, math.floor(ph/2)) end
     end
-
-    -- dot: ~30% da altura, posicionado a ~13% da largura
     local ds = math.floor(ph*0.30)
     local dx = math.floor(pw*0.13)
     pillDot.Size     = UDim2.new(0,ds,0,ds)
     pillDot.Position = UDim2.new(0,dx,0.5,-math.floor(ds/2))
-
-    -- label: ocupa o resto da largura após o dot
     local lx = dx+ds+math.floor(ds*0.5)
     local ts = math.max(7, math.floor(ph*0.45))
     pillLbl.Size     = UDim2.new(0,pw-lx-4,1,0)
@@ -435,7 +425,6 @@ do
     },pg)
     corner(card,6) stroke(card,1,C.BORDER)
 
-    -- Avatar
     local avSize=72
     local avBox=o("Frame",{
         Size=UDim2.new(0,avSize,0,avSize),
@@ -501,7 +490,6 @@ do
         BackgroundColor3=C.BORDER, BorderSizePixel=0,
     },card)
 
-    -- ══ Rejoin / Server Hop (vertical) ══
     local actionBtnW=cardW-12
     local actionBtnH=22
     local actY=divY2+8
@@ -535,7 +523,6 @@ do
         end
     end)
 
-    -- ══ INFO lado direito ══
     local joinStr="N/A"
     pcall(function()
         local ts=os.time()-LP.AccountAge*86400
@@ -730,10 +717,16 @@ function Hub:Tab(name)
         for _,b in ipairs(allBtns) do if b.Visible then v+=1 end end
         countLbl.Text="Scripts: "..v
     end
+
     search:GetPropertyChangedSignal("Text"):Connect(function()
-        local q=search.Text:lower()
-        for _,b in ipairs(allBtns) do
-            b.Visible=(q=="" or b.Name:lower():find(q,1,true)~=nil)
+        local q = search.Text:lower():gsub("%s+", "")
+        for _, b in ipairs(allBtns) do
+            if q == "" then
+                b.Visible = true
+            else
+                local name = b.Name:lower():gsub("%s+", "")
+                b.Visible = string.find(name, q, 1, true) ~= nil
+            end
         end
         updateCount()
     end)
