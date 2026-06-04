@@ -1,0 +1,409 @@
+-- ScriptHub.lua | UNIVERSAL HUB (Delta Fix)
+local Hub = {}
+local LP = game:GetService("Players").LocalPlayer
+local UIS = game:GetService("UserInputService")
+local PG = LP:WaitForChild("PlayerGui")
+local B  = Color3.fromRGB(0,0,0)
+local W  = Color3.fromRGB(255,255,255)
+local D  = Color3.fromRGB(15,15,15)
+local G  = Color3.fromRGB(50,50,50)
+
+local BASE_W, BASE_H = 680, 310
+_G.HubScale = _G.HubScale or 5
+local FONT_MAIN = Enum.Font.Code
+
+local function o(cls,props,par)
+    local x=Instance.new(cls)
+    for k,v in pairs(props) do x[k]=v end
+    if par then x.Parent=par end
+    return x
+end
+local function stroke(par,t,c)
+    o("UIStroke",{Color=c or W,Thickness=t or 1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},par)
+end
+
+local sg = o("ScreenGui",{Name="UniversalHub",ResetOnSpawn=false,IgnoreGuiInset=true,DisplayOrder=100},PG)
+
+local win = o("Frame",{
+    AnchorPoint=Vector2.new(0.5,0.5),
+    Size=UDim2.new(0,BASE_W,0,BASE_H),
+    Position=UDim2.new(0.5,0,0.5,0),
+    BackgroundColor3=B,BorderSizePixel=0,
+    Active=false,ClipsDescendants=true,Visible=true,
+},sg)
+stroke(win,1)
+
+local uiScaleObj = Instance.new("UIScale")
+local function getUIScale(s) return 0.45+(s-1)*0.04 end
+uiScaleObj.Scale = getUIScale(_G.HubScale)
+uiScaleObj.Parent = win
+
+-- Topbar
+local topH = 26
+local top = o("Frame",{
+    Size=UDim2.new(1,0,0,topH),
+    BackgroundColor3=B,BorderSizePixel=0,
+    Active=true,ZIndex=10,
+},win)
+
+-- Aumentei o offset direito de -30 para -36 para dar espaço ao botão maior
+o("TextLabel",{
+    Size=UDim2.new(1,-36,1,0),   -- alterado de -30 para -36
+    Position=UDim2.new(0,10,0,0),
+    BackgroundTransparency=1,Text="> UNIVERSAL HUB <",TextColor3=W,
+    TextSize=20,Font=FONT_MAIN,
+    TextXAlignment=Enum.TextXAlignment.Left,ZIndex=10,
+},top)
+
+-- Linha branca de separação, reposicionada para ficar ao lado do novo botão
+o("Frame",{
+    Size=UDim2.new(0,1,1,0),
+    Position=UDim2.new(1,-33,0,0),   -- alterado de -27 para -33
+    BackgroundColor3=W,BorderSizePixel=0,ZIndex=12,
+},top)
+
+-- Botão "x" maior (largura 32 em vez de 26)
+local xBtn = o("TextButton",{
+    Size=UDim2.new(0,32,1,0),        -- alterado de topH (26) para 32
+    Position=UDim2.new(1,-32,0,0),   -- ajustado de -27 para -32
+    BackgroundColor3=B,BorderSizePixel=0,Text="x",TextColor3=W,
+    TextSize=20,Font=FONT_MAIN,AutoButtonColor=false,ZIndex=11,
+},top)
+
+o("Frame",{
+    Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,0,topH),
+    BackgroundColor3=W,BorderSizePixel=0,ZIndex=20,
+},win)
+
+-- Drag
+do
+    local dragging,dragStart,startPos=false,nil,nil
+    top.InputBegan:Connect(function(inp)
+        if inp.UserInputType==Enum.UserInputType.MouseButton1
+        or inp.UserInputType==Enum.UserInputType.Touch then
+            dragging=true dragStart=inp.Position startPos=win.Position
+        end
+    end)
+    top.InputEnded:Connect(function(inp)
+        if inp.UserInputType==Enum.UserInputType.MouseButton1
+        or inp.UserInputType==Enum.UserInputType.Touch then
+            dragging=false
+        end
+    end)
+    UIS.InputChanged:Connect(function(inp)
+        if dragging and (inp.UserInputType==Enum.UserInputType.MouseMovement
+            or inp.UserInputType==Enum.UserInputType.Touch) then
+            local d=inp.Position-dragStart
+            win.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+d.X,startPos.Y.Scale,startPos.Y.Offset+d.Y)
+        end
+    end)
+end
+
+xBtn.MouseButton1Click:Connect(function()
+    win.Visible=false _G.UniversalHubPill.Visible=true
+end)
+
+local body = o("Frame",{
+    Size=UDim2.new(1,0,1,-topH-1),Position=UDim2.new(0,0,0,topH+1),
+    BackgroundColor3=B,BorderSizePixel=0,ClipsDescendants=true,Active=false,
+},win)
+
+-- Sidebar
+local tabColW=90
+local tcol=o("Frame",{Size=UDim2.new(0,tabColW,1,0),BackgroundColor3=B,BorderSizePixel=0,Active=false},body)
+o("Frame",{Size=UDim2.new(0,1,1,0),Position=UDim2.new(1,0,0,0),BackgroundColor3=W,BorderSizePixel=0},tcol)
+local tlist=o("ScrollingFrame",{
+    Size=UDim2.new(1,-1,1,0),BackgroundTransparency=1,BorderSizePixel=0,
+    ScrollBarThickness=0,CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y,Active=false,
+},tcol)
+o("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,4)},tlist)
+o("UIPadding",{PaddingTop=UDim.new(0,4),PaddingLeft=UDim.new(0,4),PaddingRight=UDim.new(0,4)},tlist)
+
+local area=o("Frame",{
+    Size=UDim2.new(1,-tabColW-1,1,0),Position=UDim2.new(0,tabColW+1,0,0),
+    BackgroundColor3=B,BorderSizePixel=0,ClipsDescendants=true,Active=false,
+},body)
+
+-- Modal
+local modal=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BackgroundTransparency=0.45,BorderSizePixel=0,Visible=false,ZIndex=50},sg)
+local modalBg=o("TextButton",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text="",ZIndex=51},modal)
+local mbox=o("Frame",{Size=UDim2.new(0,220,0,90),Position=UDim2.new(.5,-110,.5,-45),BackgroundColor3=B,BorderSizePixel=0,ZIndex=52},modal)
+stroke(mbox,1)
+local mTitle=o("TextLabel",{
+    Size=UDim2.new(1,0,0,28),Position=UDim2.new(0,0,0,0),
+    BackgroundColor3=Color3.fromRGB(10,10,10),BorderSizePixel=0,
+    Text="",TextColor3=W,TextSize=11,Font=FONT_MAIN,
+    TextXAlignment=Enum.TextXAlignment.Center,TextWrapped=true,ZIndex=53,
+},mbox)
+o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=W,BorderSizePixel=0,ZIndex=53},mTitle)
+local mBtnBar=o("Frame",{Size=UDim2.new(1,0,0,34),Position=UDim2.new(0,0,1,-34),BackgroundTransparency=1,BorderSizePixel=0,ZIndex=53},mbox)
+o("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,HorizontalAlignment=Enum.HorizontalAlignment.Center,VerticalAlignment=Enum.VerticalAlignment.Center,Padding=UDim.new(0,6),SortOrder=Enum.SortOrder.LayoutOrder},mBtnBar)
+local function mBtn(txt,lo)
+    local b=o("TextButton",{Size=UDim2.new(0,62,0,22),BackgroundColor3=D,BorderSizePixel=0,Text=txt,TextColor3=W,TextSize=10,Font=FONT_MAIN,AutoButtonColor=false,LayoutOrder=lo,ZIndex=54},mBtnBar)
+    stroke(b,1)
+    b.MouseEnter:Connect(function() b.BackgroundColor3=Color3.fromRGB(30,30,30) end)
+    b.MouseLeave:Connect(function() b.BackgroundColor3=D end)
+    return b
+end
+local mCopy=mBtn("Copiar",1) local mCancel=mBtn("Cancelar",2) local mExec=mBtn("Executar",3)
+local _mCb,_mTxt=nil,nil
+local function closeModal() modal.Visible=false _mCb=nil _mTxt=nil end
+local function openModal(dT,cT,cb) _mCb=cb _mTxt=cT mTitle.Text=dT modal.Visible=true end
+modalBg.MouseButton1Click:Connect(closeModal)
+mCancel.MouseButton1Click:Connect(closeModal)
+mExec.MouseButton1Click:Connect(function() local cb=_mCb closeModal() if cb then pcall(cb) end end)
+mCopy.MouseButton1Click:Connect(function() if _mTxt and setclipboard then pcall(setclipboard,_mTxt) end closeModal() end)
+
+-- Tabs
+local tabBtns,tabPages,cur={},{},nil
+local function sw(idx)
+    if cur==idx then return end
+    if cur then tabBtns[cur].BackgroundColor3=B tabBtns[cur].TextColor3=W end
+    cur=idx tabBtns[idx].BackgroundColor3=B tabBtns[idx].TextColor3=W
+    for j,p in ipairs(tabPages) do p.Visible=(j==idx) end
+end
+local function makeTabBtn(name,idx)
+    local tb=o("TextButton",{
+        Size=UDim2.new(1,0,0,30),BackgroundColor3=B,BorderSizePixel=0,
+        Text=name,TextColor3=W,TextSize=14,Font=FONT_MAIN,
+        AutoButtonColor=false,LayoutOrder=idx,TextWrapped=true,
+    },tlist)
+    stroke(tb,1)
+    tb.MouseEnter:Connect(function() if cur~=idx then tb.BackgroundColor3=Color3.fromRGB(10,10,10) end end)
+    tb.MouseLeave:Connect(function() if cur~=idx then tb.BackgroundColor3=B end end)
+    return tb
+end
+
+-- Aba Main
+do
+    local i=1
+    local tb=makeTabBtn("Main",i)
+    tb.BackgroundColor3=B tb.TextColor3=W
+    local pg=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BorderSizePixel=0,Visible=true,Active=false},area)
+    tabBtns[i]=tb tabPages[i]=pg cur=i
+    tb.MouseButton1Click:Connect(function() sw(i) end)
+
+    local areaW = BASE_W - tabColW - 1
+    local colW  = math.floor(areaW * 0.38)
+
+    -- Avatar (rosto)
+    local avSize = 116
+    local avX    = math.floor((colW - avSize) / 2)
+    local avBox  = o("Frame",{
+        Size=UDim2.new(0,avSize,0,avSize),
+        Position=UDim2.new(0,math.max(4,avX),0,6),
+        BackgroundColor3=B,BorderSizePixel=0,ClipsDescendants=true,Active=false,
+    },pg)
+    stroke(avBox,1)
+    local avImg=o("ImageLabel",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Image="",ScaleType=Enum.ScaleType.Crop,Active=false},avBox)
+    task.spawn(function()
+        local ok,t=pcall(function()
+            return game:GetService("Players"):GetUserThumbnailAsync(LP.UserId,Enum.ThumbnailType.HeadShot,Enum.ThumbnailSize.Size420x420)
+        end)
+        if ok then avImg.Image=t end
+    end)
+
+    -- Welcome abaixo da foto, um pouco mais baixo
+    local wY = 6 + avSize + 14
+    local lineH = 21
+    for k,txt in ipairs({"Welcome,", LP.Name}) do
+        o("TextLabel",{
+            Size=UDim2.new(0,colW,0,lineH),
+            Position=UDim2.new(0,0,0,wY+(k-1)*lineH),
+            BackgroundTransparency=1,Text=txt,TextColor3=W,
+            TextSize=17,Font=Enum.Font.Antique,
+            TextXAlignment=Enum.TextXAlignment.Center,TextWrapped=true,Active=false,
+        },pg)
+    end
+
+    -- Gui Size (mais baixo)
+    local scaleY = wY + 2*lineH + 12
+    o("TextLabel",{
+        Size=UDim2.new(0,colW,0,15),Position=UDim2.new(0,0,0,scaleY),
+        BackgroundTransparency=1,Text="Gui Size",TextColor3=W,
+        TextSize=11,Font=FONT_MAIN,TextXAlignment=Enum.TextXAlignment.Center,Active=false,
+    },pg)
+
+    local barW=86 local barH=18 local barX=math.floor((colW-barW)/2)
+    local scaleBar=o("Frame",{
+        Size=UDim2.new(0,barW,0,barH),Position=UDim2.new(0,barX,0,scaleY+17),
+        BackgroundColor3=B,BorderSizePixel=0,Active=false,
+    },pg)
+    stroke(scaleBar,1)
+
+    local bsz=barH local dv=1 local nw=barW-2*bsz-2*dv
+
+    local plusBtn=o("TextButton",{
+        Size=UDim2.new(0,bsz,1,0),Position=UDim2.new(0,0,0,0),
+        BackgroundColor3=B,BorderSizePixel=0,Text="+",TextColor3=W,
+        TextSize=14,Font=FONT_MAIN,AutoButtonColor=false,
+    },scaleBar)
+    o("Frame",{Size=UDim2.new(0,dv,1,0),Position=UDim2.new(0,bsz,0,0),BackgroundColor3=W,BorderSizePixel=0},scaleBar)
+
+    -- Número editável (TextBox)
+    local scaleBox=o("TextBox",{
+        Size=UDim2.new(0,nw,1,0),Position=UDim2.new(0,bsz+dv,0,0),
+        BackgroundTransparency=1,Text=tostring(_G.HubScale),
+        TextColor3=W,TextSize=11,Font=FONT_MAIN,
+        TextXAlignment=Enum.TextXAlignment.Center,
+        ClearTextOnFocus=false,
+    },scaleBar)
+
+    o("Frame",{Size=UDim2.new(0,dv,1,0),Position=UDim2.new(0,bsz+dv+nw,0,0),BackgroundColor3=W,BorderSizePixel=0},scaleBar)
+    local minusBtn=o("TextButton",{
+        Size=UDim2.new(0,bsz,1,0),Position=UDim2.new(0,bsz+dv+nw+dv,0,0),
+        BackgroundColor3=B,BorderSizePixel=0,Text="-",TextColor3=W,
+        TextSize=14,Font=FONT_MAIN,AutoButtonColor=false,
+    },scaleBar)
+
+    -- Máximo alterado de 15 para 25
+    local function applyScaleVal(v)
+        v = math.clamp(math.floor(v), 1, 25)   -- alterado: era 15
+        _G.HubScale = v
+        scaleBox.Text = tostring(v)
+        uiScaleObj.Scale = getUIScale(v)
+    end
+
+    plusBtn.MouseButton1Click:Connect(function() applyScaleVal(_G.HubScale+1) end)
+    minusBtn.MouseButton1Click:Connect(function() applyScaleVal(_G.HubScale-1) end)
+
+    -- Ao perder foco valida o número digitado (respeitando o novo máximo)
+    scaleBox.FocusLost:Connect(function()
+        local n = tonumber(scaleBox.Text)
+        if n then applyScaleVal(n)
+        else scaleBox.Text = tostring(_G.HubScale) end
+    end)
+
+    for _,btn in ipairs({plusBtn,minusBtn}) do
+        btn.MouseEnter:Connect(function() btn.BackgroundColor3=D end)
+        btn.MouseLeave:Connect(function() btn.BackgroundColor3=B end)
+    end
+
+    -- Info do player
+    local joinStr="N/A"
+    pcall(function()
+        local ts=os.time()-LP.AccountAge*86400
+        local d=os.date("*t",ts)
+        local mo={"January","February","March","April","May","June","July","August","September","October","November","December"}
+        joinStr=mo[d.month].." "..d.day.." "..d.year
+    end)
+    local execStr="Unknown"
+    if syn and syn.request then execStr="Synapse X"
+    elseif KRNL_LOADED then execStr="Krnl"
+    elseif Delta then execStr="Delta"
+    elseif fluxus then execStr="Fluxus"
+    elseif is_sirhurt_closure then execStr="SirHurt"
+    elseif getexecutorname then pcall(function() execStr=getexecutorname() end) end
+
+    local rows={
+        "Display: "..LP.DisplayName,
+        "Username: "..LP.Name,
+        "User ID: "..tostring(LP.UserId),
+        "AccountAge: "..LP.AccountAge.." days",
+        "Join Date: "..joinStr,
+        "Executor: "..execStr,
+        "Platform: "..(UIS.TouchEnabled and "Android" or "PC"),
+        "Device: "..(UIS.TouchEnabled and "Mobile" or "Desktop"),
+    }
+
+    local infoX=colW+8 local tSize=14 local rowH=19
+    for k,row in ipairs(rows) do
+        o("TextLabel",{
+            Size=UDim2.new(1,-(infoX+4),0,rowH),
+            Position=UDim2.new(0,infoX,0,6+(k-1)*rowH),
+            BackgroundTransparency=1,Text=row,TextColor3=W,
+            TextSize=tSize,Font=FONT_MAIN,
+            TextXAlignment=Enum.TextXAlignment.Left,
+            TextWrapped=false,Active=false,
+        },pg)
+    end
+end
+
+-- Aba Executor
+do
+    local i=2
+    local tb=makeTabBtn("Executor",i)
+    local pg=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BorderSizePixel=0,Visible=false,Active=false},area)
+    tabBtns[i]=tb tabPages[i]=pg
+    tb.MouseButton1Click:Connect(function() sw(i) end)
+    local ef=o("Frame",{Size=UDim2.new(1,-16,1,-48),Position=UDim2.new(0,8,0,8),BackgroundColor3=B,BorderSizePixel=0,Active=false},pg)
+    stroke(ef,1)
+    local editor=o("TextBox",{
+        Size=UDim2.new(1,-8,1,-8),Position=UDim2.new(0,4,0,4),
+        BackgroundTransparency=1,
+        Text='print("Hello, World!")',
+        TextColor3=W,TextSize=12,Font=FONT_MAIN,
+        TextXAlignment=Enum.TextXAlignment.Left,TextYAlignment=Enum.TextYAlignment.Top,
+        ClearTextOnFocus=false,MultiLine=true,TextWrapped=true,
+    },ef)
+    local bb=o("Frame",{Size=UDim2.new(1,-16,0,30),Position=UDim2.new(0,8,1,-38),BackgroundTransparency=1,BorderSizePixel=0,Active=false},pg)
+    o("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,HorizontalAlignment=Enum.HorizontalAlignment.Right,VerticalAlignment=Enum.VerticalAlignment.Center,Padding=UDim.new(0,6),SortOrder=Enum.SortOrder.LayoutOrder},bb)
+    local function mkBtn(txt,lo)
+        local b=o("TextButton",{Size=UDim2.new(0,70,0,22),BackgroundColor3=B,BorderSizePixel=0,Text=txt,TextColor3=W,TextSize=10,Font=FONT_MAIN,AutoButtonColor=false,LayoutOrder=lo},bb)
+        stroke(b,1)
+        b.MouseEnter:Connect(function() b.BackgroundColor3=D end)
+        b.MouseLeave:Connect(function() b.BackgroundColor3=B end)
+        return b
+    end
+    local cBtn=mkBtn("Copy",1) local clBtn=mkBtn("Clear",2) local eBtn=mkBtn("Execute",3)
+    cBtn.MouseButton1Click:Connect(function() if setclipboard then pcall(setclipboard,editor.Text) end end)
+    clBtn.MouseButton1Click:Connect(function() editor.Text="" end)
+    eBtn.MouseButton1Click:Connect(function()
+        local code=editor.Text
+        if code~="" then local fn,err=loadstring(code) if fn then pcall(fn) else warn("[Executor] "..tostring(err)) end end
+    end)
+end
+
+-- API Hub:Tab
+function Hub:Tab(name)
+    local i=#tabBtns+1
+    local tb=makeTabBtn(name,i)
+    local pg=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BorderSizePixel=0,Visible=false,Active=false},area)
+    local hotbar=o("Frame",{Size=UDim2.new(1,0,0,20),BackgroundColor3=B,BorderSizePixel=0,Active=false},pg)
+    local searchW=120
+    local search=o("TextBox",{Size=UDim2.new(0,searchW,1,0),BackgroundColor3=B,BorderSizePixel=0,PlaceholderText="Search Script",PlaceholderColor3=Color3.fromRGB(90,90,90),Text="",TextColor3=W,TextSize=11,Font=FONT_MAIN,ClearTextOnFocus=false,TextXAlignment=Enum.TextXAlignment.Left},hotbar)
+    o("UIPadding",{PaddingLeft=UDim.new(0,6)},search)
+    local countLbl=o("TextLabel",{Size=UDim2.new(1,-searchW-8,1,0),Position=UDim2.new(0,searchW+6,0,0),BackgroundTransparency=1,Text="Scripts: 0",TextColor3=W,TextSize=10,Font=FONT_MAIN,TextXAlignment=Enum.TextXAlignment.Right,Active=false},hotbar)
+    o("UIPadding",{PaddingRight=UDim.new(0,6)},countLbl)
+    local GAP=6 local COLS=6 local ROWH=28
+    local scroll=o("ScrollingFrame",{Size=UDim2.new(1,0,1,-20),Position=UDim2.new(0,0,0,20),BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=2,ScrollBarImageColor3=G,CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y},pg)
+    o("UIPadding",{PaddingTop=UDim.new(0,GAP),PaddingLeft=UDim.new(0,GAP),PaddingRight=UDim.new(0,GAP),PaddingBottom=UDim.new(0,GAP)},scroll)
+    o("UIGridLayout",{CellSize=UDim2.new(1/COLS,-(GAP*(COLS-1))/COLS,0,ROWH),CellPadding=UDim2.new(0,GAP,0,GAP),SortOrder=Enum.SortOrder.LayoutOrder,HorizontalAlignment=Enum.HorizontalAlignment.Left},scroll)
+    tabBtns[i]=tb tabPages[i]=pg
+    tb.MouseButton1Click:Connect(function() sw(i) end)
+    local allBtns={}
+    local function updateCount() local v=0 for _,b in ipairs(allBtns) do if b.Visible then v+=1 end end countLbl.Text="Scripts: "..v end
+    search:GetPropertyChangedSignal("Text"):Connect(function()
+        local q=search.Text:lower()
+        for _,b in ipairs(allBtns) do b.Visible=(q=="" or b.Name:lower():find(q,1,true)~=nil) end
+        updateCount()
+    end)
+    local T={}
+    function T:Button(txt,url)
+        local b=o("TextButton",{Name=txt,BackgroundColor3=B,BorderSizePixel=0,Text=txt,TextColor3=W,TextSize=10,Font=FONT_MAIN,AutoButtonColor=false,TextWrapped=true,LineHeight=1.1},scroll)
+        stroke(b,1)
+        b.MouseEnter:Connect(function() b.BackgroundColor3=Color3.fromRGB(18,18,18) end)
+        b.MouseLeave:Connect(function() b.BackgroundColor3=B end)
+        local copyTxt='loadstring(game:HttpGet("'..url..'"))()'
+        b.MouseButton1Click:Connect(function() openModal(txt,copyTxt,function() loadstring(game:HttpGet(url))() end) end)
+        table.insert(allBtns,b) countLbl.Text="Scripts: "..#allBtns
+        return self
+    end
+    return T
+end
+
+-- Pill
+local pill=o("Frame",{Name="Pill",Size=UDim2.new(0,54,0,18),Position=UDim2.new(1,-60,1,-400),BackgroundColor3=B,BorderSizePixel=0,Visible=false,ZIndex=200},sg)
+stroke(pill,1)
+_G.UniversalHubPill=pill
+local pillBtn=o("TextButton",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text="> hub",TextSize=9,Font=FONT_MAIN,TextColor3=W,BorderSizePixel=0,ZIndex=201},pill)
+pillBtn.MouseButton1Click:Connect(function() win.Visible=true pill.Visible=false end)
+
+UIS.InputBegan:Connect(function(inp,gp)
+    if not gp and inp.KeyCode==Enum.KeyCode.RightShift then
+        local v=not win.Visible win.Visible=v
+        if v then pill.Visible=false end
+    end
+end)
+
+return Hub
