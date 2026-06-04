@@ -33,64 +33,120 @@ local win = o("Frame",{
     Size=UDim2.new(0,winW,0,winH),
     Position=UDim2.new(.5,-winW/2,.5,-winH/2),
     BackgroundColor3=B,BorderSizePixel=0,
-    Active=true,ClipsDescendants=true,Visible=true,
-    Draggable=true,
+    Active=false,ClipsDescendants=true,Visible=true,
+    Draggable=false,
 },sg)
 stroke(win,1)
 
 -- ── Topbar ────────────────────────────────────────────────────────────
-local topH = 26
-local top = o("Frame",{Size=UDim2.new(1,0,0,topH),BackgroundColor3=B,BorderSizePixel=0,Active=false},win)
-
--- separador inferior da topbar (branco)
-o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=W,BorderSizePixel=0},top)
+local topH = 28
+local top = o("Frame",{
+    Size=UDim2.new(1,0,0,topH),
+    BackgroundColor3=B,BorderSizePixel=0,
+    Active=true, ZIndex=10,
+},win)
 
 o("TextLabel",{
-    Size=UDim2.new(1,-58,1,0),Position=UDim2.new(0,8,0,0),
+    Size=UDim2.new(1,-62,1,0),Position=UDim2.new(0,8,0,0),
     BackgroundTransparency=1,Text="> UNIVERSAL HUB <",TextColor3=W,
-    TextSize=14,Font=Enum.Font.SourceSansBold,TextXAlignment=Enum.TextXAlignment.Left,
+    TextSize=14,Font=Enum.Font.SourceSansBold,
+    TextXAlignment=Enum.TextXAlignment.Left,
+    ZIndex=10,
 },top)
 
--- separador vertical antes dos botões (branco)
-o("Frame",{Size=UDim2.new(0,1,0.7,0),Position=UDim2.new(1,-54,0.15,0),BackgroundColor3=W,BorderSizePixel=0},top)
+-- Separador vertical — ocupa 100% da altura da topbar
+o("Frame",{
+    Size=UDim2.new(0,1,1,0),
+    Position=UDim2.new(1,-58,0,0),
+    BackgroundColor3=W,BorderSizePixel=0,
+    ZIndex=11,
+},top)
 
 local minBtn = o("TextButton",{
-    Size=UDim2.new(0,22,0,18),Position=UDim2.new(1,-50,0.5,-9),
+    Size=UDim2.new(0,26,1,0),Position=UDim2.new(1,-57,0,0),
     BackgroundColor3=B,BorderSizePixel=0,Text="-",TextColor3=W,
-    TextSize=15,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
+    TextSize=22,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
+    ZIndex=11,
 },top)
 local xBtn = o("TextButton",{
-    Size=UDim2.new(0,22,0,18),Position=UDim2.new(1,-26,0.5,-9),
+    Size=UDim2.new(0,28,1,0),Position=UDim2.new(1,-28,0,0),
     BackgroundColor3=B,BorderSizePixel=0,Text="x",TextColor3=W,
-    TextSize=12,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
+    TextSize=18,Font=Enum.Font.SourceSansBold,AutoButtonColor=false,
+    ZIndex=11,
 },top)
 
+-- Divisória inferior da topbar — no win, ZIndex alto, cobre tudo incluindo botões
+local topDivider = o("Frame",{
+    Size=UDim2.new(1,0,0,1),
+    Position=UDim2.new(0,0,0,topH),
+    BackgroundColor3=W,BorderSizePixel=0,
+    ZIndex=20,
+},win)
+
+-- ── Drag manual (só topbar) ───────────────────────────────────────────
+do
+    local dragging, dragStart, startPos = false, nil, nil
+    top.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1
+        or inp.UserInputType == Enum.UserInputType.Touch then
+            dragging  = true
+            dragStart = inp.Position
+            startPos  = win.Position
+        end
+    end)
+    top.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1
+        or inp.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    UIS.InputChanged:Connect(function(inp)
+        if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement
+            or inp.UserInputType == Enum.UserInputType.Touch) then
+            local delta = inp.Position - dragStart
+            win.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
+
+-- ── Minimizar / Fechar ────────────────────────────────────────────────
 local mini=false local fullH,miniH=winH,topH
+
 minBtn.MouseButton1Click:Connect(function()
-    mini=not mini
-    win.Size=UDim2.new(0,winW,0,mini and miniH or fullH)
-    minBtn.Text=mini and "+" or "-"
+    mini = not mini
+    win.Size = UDim2.new(0,winW,0, mini and miniH or fullH)
+    minBtn.Text = mini and "+" or "-"
+    topDivider.Visible = not mini
 end)
+
 xBtn.MouseButton1Click:Connect(function()
     win.Visible=false
     _G.UniversalHubPill.Visible=true
 end)
 
 local body = o("Frame",{
-    Size=UDim2.new(1,0,1,-topH),Position=UDim2.new(0,0,0,topH),
+    Size=UDim2.new(1,0,1,-topH-1),Position=UDim2.new(0,0,0,topH+1),
     BackgroundColor3=B,BorderSizePixel=0,ClipsDescendants=true,
+    Active=false,
 },win)
 
 -- ── Sidebar de abas ───────────────────────────────────────────────────
 local tabColW = 90
-local tcol = o("Frame",{Size=UDim2.new(0,tabColW,1,0),BackgroundColor3=B,BorderSizePixel=0},body)
+local tcol = o("Frame",{
+    Size=UDim2.new(0,tabColW,1,0),
+    BackgroundColor3=B,BorderSizePixel=0,
+    Active=false,
+},body)
 
--- separador direito da sidebar (branco)
 o("Frame",{Size=UDim2.new(0,1,1,0),Position=UDim2.new(1,0,0,0),BackgroundColor3=W,BorderSizePixel=0},tcol)
 
 local tlist = o("ScrollingFrame",{
     Size=UDim2.new(1,-1,1,0),BackgroundTransparency=1,BorderSizePixel=0,
     ScrollBarThickness=0,CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y,
+    Active=false,
 },tcol)
 o("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,4)},tlist)
 o("UIPadding",{PaddingTop=UDim.new(0,4),PaddingLeft=UDim.new(0,4),PaddingRight=UDim.new(0,4)},tlist)
@@ -98,6 +154,7 @@ o("UIPadding",{PaddingTop=UDim.new(0,4),PaddingLeft=UDim.new(0,4),PaddingRight=U
 local area = o("Frame",{
     Size=UDim2.new(1,-tabColW-1,1,0),Position=UDim2.new(0,tabColW+1,0,0),
     BackgroundColor3=B,BorderSizePixel=0,ClipsDescendants=true,
+    Active=false,
 },body)
 
 -- ── Modal ─────────────────────────────────────────────────────────────
@@ -187,7 +244,6 @@ local function sw(idx)
     for j,p in ipairs(tabPages) do p.Visible=(j==idx) end
 end
 
--- helper: cria botão de aba com borda (stroke) em vez de separador
 local function makeTabBtn(name, idx)
     local tb = o("TextButton",{
         Size=UDim2.new(1,0,0,28),
@@ -210,15 +266,16 @@ end
 do
     local i = 1
     local tb = makeTabBtn("Main", i)
-    tb.BackgroundColor3=D tb.TextColor3=W  -- ativa por padrão
+    tb.BackgroundColor3=D tb.TextColor3=W
 
     local pg = o("Frame",{
-        Size=UDim2.new(1,0,1,0), BackgroundColor3=B, BorderSizePixel=0, Visible=true,
+        Size=UDim2.new(1,0,1,0), BackgroundColor3=B, BorderSizePixel=0,
+        Visible=true, Active=false,
     },area)
     tabBtns[i]=tb tabPages[i]=pg cur=i
     tb.MouseButton1Click:Connect(function() sw(i) end)
 
-    local bodyH = winH - topH
+    local bodyH = winH - topH - 1
     local avSize = math.min(math.floor(bodyH * 0.68), 150)
     local areaW  = winW - tabColW - 1
     local colW   = math.floor(areaW * 0.38)
@@ -229,11 +286,13 @@ do
         Size=UDim2.new(0,avSize,0,avSize),
         Position=UDim2.new(0,math.max(6,avX),0,avY),
         BackgroundColor3=B, BorderSizePixel=0, ClipsDescendants=true,
+        Active=false,
     },pg)
     stroke(avBox,1)
     local avImg = o("ImageLabel",{
         Size=UDim2.new(1,0,1,0),
         BackgroundTransparency=1, Image="", ScaleType=Enum.ScaleType.Crop,
+        Active=false,
     },avBox)
     task.spawn(function()
         local ok,t = pcall(function()
@@ -253,7 +312,7 @@ do
             BackgroundTransparency=1, Text=txt,
             TextColor3=W, TextSize=wSize, Font=Enum.Font.Antique,
             TextXAlignment=Enum.TextXAlignment.Center,
-            TextWrapped=true,
+            TextWrapped=true, Active=false,
         },pg)
     end
 
@@ -294,6 +353,7 @@ do
             BackgroundTransparency=1, Text=row[1],
             TextColor3=DT, TextSize=tSize, Font=Enum.Font.Code,
             TextXAlignment=Enum.TextXAlignment.Left,
+            Active=false,
         },pg)
         o("TextLabel",{
             Size=UDim2.new(1,-(infoX+keyW+2),0,rowH),
@@ -301,24 +361,25 @@ do
             BackgroundTransparency=1, Text=row[2],
             TextColor3=W, TextSize=tSize, Font=Enum.Font.Code,
             TextXAlignment=Enum.TextXAlignment.Left,
-            TextWrapped=true,
+            TextWrapped=true, Active=false,
         },pg)
     end
 end
 
--- ── Aba Executor ─────────────────────────────────────────────────────
+-- ── Aba Executor ──────────────────────────────────────────────────────
 do
     local i = 2
     local tb = makeTabBtn("Executor", i)
     local pg = o("Frame",{
-        Size=UDim2.new(1,0,1,0), BackgroundColor3=B, BorderSizePixel=0, Visible=false,
+        Size=UDim2.new(1,0,1,0), BackgroundColor3=B, BorderSizePixel=0,
+        Visible=false, Active=false,
     },area)
     tabBtns[i]=tb tabPages[i]=pg
     tb.MouseButton1Click:Connect(function() sw(i) end)
 
     local editorFrame = o("Frame",{
         Size=UDim2.new(1,-16,1,-48), Position=UDim2.new(0,8,0,8),
-        BackgroundColor3=B, BorderSizePixel=0,
+        BackgroundColor3=B, BorderSizePixel=0, Active=false,
     },pg)
     stroke(editorFrame,1)
     local editor = o("TextBox",{
@@ -334,7 +395,7 @@ do
 
     local btnBar = o("Frame",{
         Size=UDim2.new(1,-16,0,30), Position=UDim2.new(0,8,1,-38),
-        BackgroundTransparency=1, BorderSizePixel=0,
+        BackgroundTransparency=1, BorderSizePixel=0, Active=false,
     },pg)
     o("UIListLayout",{
         FillDirection=Enum.FillDirection.Horizontal,
@@ -380,9 +441,15 @@ function Hub:Tab(name)
     local i=#tabBtns+1
     local tb = makeTabBtn(name, i)
 
-    local pg=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BorderSizePixel=0,Visible=false},area)
+    local pg=o("Frame",{
+        Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BorderSizePixel=0,
+        Visible=false, Active=false,
+    },area)
 
-    local hotbar=o("Frame",{Size=UDim2.new(1,0,0,20),BackgroundColor3=B,BorderSizePixel=0},pg)
+    local hotbar=o("Frame",{
+        Size=UDim2.new(1,0,0,20),BackgroundColor3=B,BorderSizePixel=0,
+        Active=false,
+    },pg)
 
     local searchW=120
     local search=o("TextBox",{
@@ -397,6 +464,7 @@ function Hub:Tab(name)
         Size=UDim2.new(1,-searchW-8,1,0),Position=UDim2.new(0,searchW+6,0,0),
         BackgroundTransparency=1,Text="Scripts: 0",TextColor3=DT,
         TextSize=10,Font=Enum.Font.SourceSans,TextXAlignment=Enum.TextXAlignment.Right,
+        Active=false,
     },hotbar)
     o("UIPadding",{PaddingRight=UDim.new(0,6)},countLbl)
 
