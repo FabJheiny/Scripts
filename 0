@@ -32,7 +32,7 @@ Hub:Tab("Games")
     :Button("Slime Rng","https://raw.githubusercontent.com/gumanba/Scripts/main/SlimeRNG")
     :Button("Zombie Arena","https://raw.githubusercontent.com/gumanba/Scripts/main/SurviveZombieArena")
 
-Hub:Tab("Transformação")
+Hub:Tab("Morph")
     :Button("Hand Green (r6)","https://raw.githubusercontent.com/ian49972/SCRIPTS/refs/heads/main/hand")
     :Button("Fridge Hack (r6)","https://raw.githubusercontent.com/ian49972/SCRIPTS/refs/heads/main/Fridge")
     :Button("Oculus (r6)","https://raw.githubusercontent.com/ian49972/SCRIPTS/refs/heads/main/Oculus")
