@@ -28,9 +28,10 @@ Hub:Tab("Outros Scripts")
     :Button("Korblox & Headless","https://rawscripts.net/raw/Universal-Script-R15-Emotes-GUI-Open-Source-229171")
     :Button("Wendigo Animation (r15)","https://rawscripts.net/raw/Universal-Script-Wendigo-Animation-75269")
 
-Hub:Tab("Games")
+Hub:Tab("GamesHub")
     :Button("Slime Rng","https://raw.githubusercontent.com/gumanba/Scripts/main/SlimeRNG")
     :Button("Zombie Arena","https://raw.githubusercontent.com/gumanba/Scripts/main/SurviveZombieArena")
+    :Button("99 Noites","https://rawscripts.net/raw/Universal-Script-99-Noites-na-Floresta-87445")
 
 Hub:Tab("Morph")
     :Button("Hand Green (r6)","https://raw.githubusercontent.com/ian49972/SCRIPTS/refs/heads/main/hand")
