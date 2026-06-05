@@ -1,0 +1,73 @@
+-- chooser.lua
+local LP = game:GetService("Players").LocalPlayer
+local UIS = game:GetService("UserInputService")
+local PG = LP:WaitForChild("PlayerGui")
+
+local B = Color3.fromRGB(0,0,0)
+local W = Color3.fromRGB(255,255,255)
+local G = Color3.fromRGB(30,30,30)
+
+local HUB_URLS = {
+    v1 = "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/1.5",
+    v2 = "URL_DA_SUA_SEGUNDA_HUB_AQUI",
+}
+
+local function o(cls,props,par)
+    local x=Instance.new(cls)
+    for k,v in pairs(props) do x[k]=v end
+    if par then x.Parent=par end
+    return x
+end
+
+local sg = o("ScreenGui",{Name="HubChooser",ResetOnSpawn=false,IgnoreGuiInset=true,DisplayOrder=999},PG)
+
+local bg = o("Frame",{
+    Size=UDim2.new(1,0,1,0),
+    BackgroundColor3=B,BackgroundTransparency=0.4,
+    BorderSizePixel=0,
+},sg)
+
+local box = o("Frame",{
+    AnchorPoint=Vector2.new(0.5,0.5),
+    Size=UDim2.new(0,220,0,130),
+    Position=UDim2.new(0.5,0,0.5,0),
+    BackgroundColor3=B,BorderSizePixel=0,
+},sg)
+o("UIStroke",{Color=W,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},box)
+
+o("TextLabel",{
+    Size=UDim2.new(1,0,0,30),
+    BackgroundColor3=Color3.fromRGB(10,10,10),BorderSizePixel=0,
+    Text="ESCOLHA A HUB",TextColor3=W,TextSize=13,Font=Enum.Font.Code,
+    TextXAlignment=Enum.TextXAlignment.Center,
+},box)
+o("UIStroke",{Color=W,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},box:FindFirstChildWhichIsA("TextLabel"))
+
+local function makeBtn(txt,posY,url)
+    local b = o("TextButton",{
+        Size=UDim2.new(1,-20,0,28),
+        Position=UDim2.new(0,10,0,posY),
+        BackgroundColor3=Color3.fromRGB(10,10,10),BorderSizePixel=0,
+        Text=txt,TextColor3=W,TextSize=11,Font=Enum.Font.Code,
+        AutoButtonColor=false,
+    },box)
+    o("UIStroke",{Color=W,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},b)
+    b.MouseEnter:Connect(function() b.BackgroundColor3=Color3.fromRGB(25,25,25) end)
+    b.MouseLeave:Connect(function() b.BackgroundColor3=Color3.fromRGB(10,10,10) end)
+    b.MouseButton1Click:Connect(function()
+        sg:Destroy()
+        local Hub = loadstring(game:HttpGet(url))()
+        -- o loader já vai rodar as tabs depois, então retornamos Hub
+        _G._ChosenHub = Hub
+        _G._HubLoaded = true
+    end)
+    return b
+end
+
+makeBtn("Hub V1 (Dark/Purple)", 38, HUB_URLS.v1)
+makeBtn("Hub V2 (Black/White)",  74, HUB_URLS.v2)
+
+-- Fechar sem escolher (ESC)
+UIS.InputBegan:Connect(function(inp,gp)
+    if not gp and inp.KeyCode==Enum.KeyCode.Escape then sg:Destroy() end
+end)
