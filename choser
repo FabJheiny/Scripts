@@ -56,17 +56,15 @@ local function makeBtn(txt,posY,url)
     b.MouseButton1Click:Connect(function()
         sg:Destroy()
         local Hub = loadstring(game:HttpGet(url))()
-        -- o loader já vai rodar as tabs depois, então retornamos Hub
         _G._ChosenHub = Hub
         _G._HubLoaded = true
     end)
     return b
 end
 
-makeBtn("Hub V1 (Dark/Purple)", 38, HUB_URLS.v1)
-makeBtn("Hub V2 (Black/White)",  74, HUB_URLS.v2)
+makeBtn("HubClassic (Black/White)", 38, HUB_URLS.v1)
+makeBtn("HubModern (Dark/Purple)",  74, HUB_URLS.v2)
 
--- Fechar sem escolher (ESC)
 UIS.InputBegan:Connect(function(inp,gp)
     if not gp and inp.KeyCode==Enum.KeyCode.Escape then sg:Destroy() end
 end)
