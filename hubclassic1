@@ -420,7 +420,7 @@ function Hub:Tab(name)
     local pg=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BorderSizePixel=0,Visible=false,Active=false},area)
     local hotbar=o("Frame",{Size=UDim2.new(1,0,0,20),BackgroundColor3=B,BorderSizePixel=0,Active=false},pg)
     local searchW=120
-    local search=o("TextBox",{Size=UDim2.new(0,searchW,1,0),BackgroundColor3=B,BorderSizePixel=0,PlaceholderText="Search Script",PlaceholderColor3=Color3.fromRGB(90,90,90),Text="",TextColor3=W,TextSize=11,Font=FONT_MAIN,ClearTextOnFocus=false,TextXAlignment=Enum.TextXAlignment.Left},hotbar)
+    local search=o("TextBox",{Size=UDim2.new(0,searchW,1,0),BackgroundColor3=B,BorderSizePixel=0,PlaceholderText="Search...",PlaceholderColor3=Color3.fromRGB(90,90,90),Text="",TextColor3=W,TextSize=11,Font=FONT_MAIN,ClearTextOnFocus=false,TextXAlignment=Enum.TextXAlignment.Left},hotbar)
     o("UIPadding",{PaddingLeft=UDim.new(0,6)},search)
     local countLbl=o("TextLabel",{Size=UDim2.new(1,-searchW-8,1,0),Position=UDim2.new(0,searchW+6,0,0),BackgroundTransparency=1,Text="Scripts: 0",TextColor3=W,TextSize=10,Font=FONT_MAIN,TextXAlignment=Enum.TextXAlignment.Right,Active=false},hotbar)
     o("UIPadding",{PaddingRight=UDim.new(0,6)},countLbl)
