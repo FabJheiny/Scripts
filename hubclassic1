@@ -1,4 +1,3 @@
--- ScriptHub.lua | UNIVERSAL HUB (Delta Fix)
 local Hub = {}
 local LP = game:GetService("Players").LocalPlayer
 local UIS = game:GetService("UserInputService")
