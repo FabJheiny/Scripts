@@ -1,4 +1,4 @@
-local Hub = loadstring(game:HttpGet("https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/1.5"))()
+local Hub = loadstring(game:HttpGet("https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/2.5"))()
 
 Hub:Tab("Scripts Fab")
     :Button("Aimbot","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/Aimbot")
