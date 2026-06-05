@@ -1,5 +1,8 @@
 local Hub = loadstring(game:HttpGet("https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/2.5"))()
 
+repeat task.wait(0.1) until _G._HubLoaded
+local Hub = _G._ChosenHub
+
 Hub:Tab("Scripts Fab")
     :Button("Aimbot","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/Aimbot")
     :Button("Calculator","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/Calculator")
