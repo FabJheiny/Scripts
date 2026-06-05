@@ -1,4 +1,3 @@
--- chooser.lua
 local LP = game:GetService("Players").LocalPlayer
 local UIS = game:GetService("UserInputService")
 local PG = LP:WaitForChild("PlayerGui")
@@ -8,8 +7,8 @@ local W = Color3.fromRGB(255,255,255)
 local G = Color3.fromRGB(30,30,30)
 
 local HUB_URLS = {
-    v1 = "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/1.5",
-    v2 = "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/2",
+    v1 = "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/hubclassic1",
+    v2 = "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/hubmodern2",
 }
 
 local function o(cls,props,par)
