@@ -668,10 +668,10 @@ function Hub:Tab(name)
         BackgroundTransparency=1, BorderSizePixel=0, Active=false,
     },pg)
 
-    local searchFrame=o("Frame",{
-        Size=UDim2.new(0,130,1,0), BackgroundColor3=C.BG2, BorderSizePixel=0,
-    },hotbar)
-    corner(searchFrame,4) stroke(searchFrame,1,C.BORDER)
+local searchFrame=o("Frame",{
+    Size=UDim2.new(0,130,1,0), BackgroundColor3=C.BG2,
+    BackgroundTransparency=1, BorderSizePixel=0,
+},hotbar)
 
     o("TextBox",{
         Size=UDim2.new(1,-8,1,0), Position=UDim2.new(0,4,0,0),
