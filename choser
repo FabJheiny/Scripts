@@ -2,9 +2,12 @@ local LP = game:GetService("Players").LocalPlayer
 local UIS = game:GetService("UserInputService")
 local PG = LP:WaitForChild("PlayerGui")
 
-local B = Color3.fromRGB(0,0,0)
-local W = Color3.fromRGB(255,255,255)
-local G = Color3.fromRGB(30,30,30)
+local B      = Color3.fromRGB(0,0,0)
+local W      = Color3.fromRGB(255,255,255)
+local ACCENT = Color3.fromRGB(120,90,255)
+local BG_WIN = Color3.fromRGB(14,14,18)
+local BORDER = Color3.fromRGB(55,55,70)
+local TEXT   = Color3.fromRGB(220,220,230)
 
 local HUB_URLS = {
     v1 = "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/hubclassic1",
@@ -20,50 +23,81 @@ end
 
 local sg = o("ScreenGui",{Name="HubChooser",ResetOnSpawn=false,IgnoreGuiInset=true,DisplayOrder=999},PG)
 
-local bg = o("Frame",{
+o("Frame",{
     Size=UDim2.new(1,0,1,0),
-    BackgroundColor3=B,BackgroundTransparency=0.4,
+    BackgroundColor3=B,BackgroundTransparency=0.5,
     BorderSizePixel=0,
 },sg)
 
 local box = o("Frame",{
     AnchorPoint=Vector2.new(0.5,0.5),
-    Size=UDim2.new(0,220,0,130),
+    Size=UDim2.new(0,280,0,140),
     Position=UDim2.new(0.5,0,0.5,0),
-    BackgroundColor3=B,BorderSizePixel=0,
+   BackgroundColor3=Color3.fromRGB(0,0,0),
+    BackgroundTransparency=0.2,
+    BorderSizePixel=0,
 },sg)
-o("UIStroke",{Color=W,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},box)
+o("UICorner",{CornerRadius=UDim.new(0,20)},box)
+
+local btnC = o("TextButton",{
+    Size=UDim2.new(1,-32,0,36),
+    Position=UDim2.new(0,16,0,18),
+    BackgroundColor3=B,
+    BorderSizePixel=0,Text="",AutoButtonColor=false,
+},box)
+o("UIStroke",{Color=W,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},btnC)
 
 o("TextLabel",{
-    Size=UDim2.new(1,0,0,30),
-    BackgroundColor3=Color3.fromRGB(10,10,10),BorderSizePixel=0,
-    Text="ESCOLHA A HUB",TextColor3=W,TextSize=13,Font=Enum.Font.Code,
-    TextXAlignment=Enum.TextXAlignment.Center,
+    Size=UDim2.new(1,-10,1,0),
+    Position=UDim2.new(0,10,0,0),
+    BackgroundTransparency=1,
+    Text="> CLASSIC HUB <",
+    TextColor3=W,TextSize=14,Font=Enum.Font.Code,
+    TextXAlignment=Enum.TextXAlignment.Left,
+},btnC)
+
+local btnM = o("TextButton",{
+    Size=UDim2.new(1,-32,0,36),
+    Position=UDim2.new(0,16,0,86),
+    BackgroundColor3=BG_WIN,
+    BorderSizePixel=0,Text="",AutoButtonColor=false,
 },box)
-o("UIStroke",{Color=W,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},box:FindFirstChildWhichIsA("TextLabel"))
+o("UICorner",{CornerRadius=UDim.new(0,4)},btnM)
+o("UIStroke",{Color=BORDER,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},btnM)
 
-local function makeBtn(txt,posY,url)
-    local b = o("TextButton",{
-        Size=UDim2.new(1,-20,0,28),
-        Position=UDim2.new(0,10,0,posY),
-        BackgroundColor3=Color3.fromRGB(10,10,10),BorderSizePixel=0,
-        Text=txt,TextColor3=W,TextSize=11,Font=Enum.Font.Code,
-        AutoButtonColor=false,
-    },box)
-    o("UIStroke",{Color=W,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},b)
-    b.MouseEnter:Connect(function() b.BackgroundColor3=Color3.fromRGB(25,25,25) end)
-    b.MouseLeave:Connect(function() b.BackgroundColor3=Color3.fromRGB(10,10,10) end)
-    b.MouseButton1Click:Connect(function()
-        sg:Destroy()
-        local Hub = loadstring(game:HttpGet(url))()
-        _G._ChosenHub = Hub
-        _G._HubLoaded = true
-    end)
-    return b
-end
+local barM = o("Frame",{
+    Size=UDim2.new(0,3,0,16),
+    Position=UDim2.new(0,8,0.5,-8),
+    BackgroundColor3=ACCENT,BorderSizePixel=0,
+},btnM)
+o("UICorner",{CornerRadius=UDim.new(0,2)},barM)
 
-makeBtn("HubClassic (Black/White)", 38, HUB_URLS.v1)
-makeBtn("HubModern (Dark/Purple)",  74, HUB_URLS.v2)
+o("TextLabel",{
+    Size=UDim2.new(1,-20,1,0),
+    Position=UDim2.new(0,18,0,0),
+    BackgroundTransparency=1,
+    Text="MODERN HUB",
+    TextColor3=TEXT,TextSize=14,Font=Enum.Font.Code,
+    TextXAlignment=Enum.TextXAlignment.Left,
+},btnM)
+
+btnC.MouseEnter:Connect(function() btnC.BackgroundColor3=Color3.fromRGB(16,16,16) end)
+btnC.MouseLeave:Connect(function() btnC.BackgroundColor3=B end)
+btnM.MouseEnter:Connect(function() btnM.BackgroundColor3=Color3.fromRGB(20,18,26) end)
+btnM.MouseLeave:Connect(function() btnM.BackgroundColor3=BG_WIN end
+btnC.MouseButton1Click:Connect(function()
+    sg:Destroy()
+    local Hub = loadstring(game:HttpGet(HUB_URLS.v1))()
+    _G._ChosenHub = Hub
+    _G._HubLoaded = true
+end)
+
+btnM.MouseButton1Click:Connect(function()
+    sg:Destroy()
+    local Hub = loadstring(game:HttpGet(HUB_URLS.v2))()
+    _G._ChosenHub = Hub
+    _G._HubLoaded = true
+end)
 
 UIS.InputBegan:Connect(function(inp,gp)
     if not gp and inp.KeyCode==Enum.KeyCode.Escape then sg:Destroy() end
