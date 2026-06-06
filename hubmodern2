@@ -37,21 +37,13 @@ local function corner(par, r)
     o("UICorner", {CornerRadius=UDim.new(0, r or 4)}, par)
 end
 
+-- ScreenGui
 local sg = o("ScreenGui", {
     Name="UniversalHub", ResetOnSpawn=false,
     IgnoreGuiInset=true, DisplayOrder=100,
 }, PG)
 
-local clickSound = o("Sound", {
-    SoundId = "rbxassetid://6042053626",
-    Volume = 0.35,
-    PlaybackSpeed = 1.5,
-}, sg)
-local function playClick()
-    clickSound.TimePosition = 0
-    clickSound:Play()
-end
-
+-- Janela
 local win = o("Frame", {
     AnchorPoint=Vector2.new(0.5, 0.5),
     Size=UDim2.new(0, BASE_W, 0, BASE_H),
@@ -68,6 +60,7 @@ local function getUIScale(s) return 0.45 + (s-1)*0.04 end
 uiScaleObj.Scale = getUIScale(_G.HubScale)
 uiScaleObj.Parent = win
 
+-- ══ TOPBAR ══
 local topH = 30
 local top = o("Frame", {
     Size=UDim2.new(1, 0, 0, topH),
@@ -126,6 +119,7 @@ o("Frame", {
     BorderSizePixel=0, ZIndex=20,
 }, win)
 
+-- ══ DRAG (janela) ══
 do
     local dragging, dragStart, startPos = false, nil, nil
     top.InputBegan:Connect(function(inp)
@@ -155,11 +149,11 @@ do
 end
 
 xBtn.MouseButton1Click:Connect(function()
-    playClick()
     win.Visible = false
     _G.UniversalHubPill.Visible = true
 end)
 
+-- ══ BODY ══
 local body = o("Frame", {
     Size=UDim2.new(1, 0, 1, -topH-1),
     Position=UDim2.new(0, 0, 0, topH+1),
@@ -171,6 +165,7 @@ local R = 6
 o("Frame", {Size=UDim2.new(0,R,0,R), Position=UDim2.new(0,0,1,-R),  BackgroundColor3=C.BG, BorderSizePixel=0, ZIndex=0}, win)
 o("Frame", {Size=UDim2.new(0,R,0,R), Position=UDim2.new(1,-R,1,-R), BackgroundColor3=C.BG, BorderSizePixel=0, ZIndex=0}, win)
 
+-- ══ SIDEBAR ══
 local tabColW = 96
 local tcol = o("Frame", {
     Size=UDim2.new(0,tabColW,1,0),
@@ -192,6 +187,7 @@ local tlist = o("ScrollingFrame", {
 o("UIListLayout", {SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,3)}, tlist)
 o("UIPadding", {PaddingTop=UDim.new(0,8), PaddingLeft=UDim.new(0,6), PaddingRight=UDim.new(0,6)}, tlist)
 
+-- ══ AREA ══
 local area = o("Frame", {
     Size=UDim2.new(1,-tabColW-1,1,0),
     Position=UDim2.new(0,tabColW+1,0,0),
@@ -199,6 +195,7 @@ local area = o("Frame", {
     BorderSizePixel=0, ClipsDescendants=true, Active=false,
 }, body)
 
+-- ══ MODAL ══
 local modal = o("Frame", {
     Size=UDim2.new(1,0,1,0),
     BackgroundColor3=Color3.fromRGB(0,0,0),
@@ -248,14 +245,13 @@ local function mBtn(txt, lo)
     corner(b,4) stroke(b,1,C.BORDER)
     b.MouseEnter:Connect(function() b.BackgroundColor3=C.ACCENT2 stroke(b,1,C.ACCENT) end)
     b.MouseLeave:Connect(function() b.BackgroundColor3=C.BG3    stroke(b,1,C.BORDER) end)
-    b.MouseButton1Click:Connect(playClick)
     return b
 end
 local mCopy=mBtn("Copiar",1) local mCancel=mBtn("Cancelar",2) local mExec=mBtn("Executar",3)
 local _mCb,_mTxt=nil,nil
 local function closeModal() modal.Visible=false _mCb=nil _mTxt=nil end
 local function openModal(dT,cT,cb) _mCb=cb _mTxt=cT mTitle.Text=dT modal.Visible=true end
-modalBg.MouseButton1Click:Connect(function() playClick() closeModal() end)
+modalBg.MouseButton1Click:Connect(closeModal)
 mCancel.MouseButton1Click:Connect(closeModal)
 mExec.MouseButton1Click:Connect(function() local cb=_mCb closeModal() if cb then pcall(cb) end end)
 mCopy.MouseButton1Click:Connect(function()
@@ -263,6 +259,7 @@ mCopy.MouseButton1Click:Connect(function()
     closeModal()
 end)
 
+-- ══ TABS ══
 local tabBtns,tabPages,cur={},{},nil
 local function sw(idx)
     if cur==idx then return end
@@ -293,10 +290,10 @@ local function makeTabBtn(name,idx)
     tb.MouseLeave:Connect(function()
         if cur~=idx then tb.BackgroundTransparency=1 tb.TextColor3=C.MUTED end
     end)
-    tb.MouseButton1Click:Connect(playClick)
     return tb
 end
 
+-- ══ HELPER: stepper ══
 local function makeStepBar(parent, posX, posY, barW, barH, initVal, minV, maxV, labelTxt, onChanged)
     o("TextLabel",{
         Size=UDim2.new(0,barW,0,12),
@@ -341,8 +338,8 @@ local function makeStepBar(parent, posX, posY, barW, barH, initVal, minV, maxV, 
         v=math.clamp(math.floor(v),minV,maxV)
         cv=v box.Text=tostring(v) onChanged(v)
     end
-    plus.MouseButton1Click:Connect(function() playClick() apply(cv+1) end)
-    minus.MouseButton1Click:Connect(function() playClick() apply(cv-1) end)
+    plus.MouseButton1Click:Connect(function() apply(cv+1) end)
+    minus.MouseButton1Click:Connect(function() apply(cv-1) end)
     box.FocusLost:Connect(function()
         local n=tonumber(box.Text)
         if n then apply(n) else box.Text=tostring(cv) end
@@ -353,6 +350,7 @@ local function makeStepBar(parent, posX, posY, barW, barH, initVal, minV, maxV, 
     end
 end
 
+-- ══ PILL (declarado antes do Main para o stepper referenciar) ══
 local pill = o("Frame",{
     Name="Pill",
     Size=UDim2.new(0,64,0,20),
@@ -402,6 +400,7 @@ end
 applyPillScale(_G.HubPillScale)
 _G.UniversalHubPill = pill
 
+-- ══ ABA MAIN ══
 do
     local i=1
     local tb=makeTabBtn("Main",i)
@@ -505,7 +504,7 @@ do
         corner(b,4) stroke(b,1,C.BORDER)
         b.MouseEnter:Connect(function() b.BackgroundColor3=C.ACCENT2 stroke(b,1,C.ACCENT) end)
         b.MouseLeave:Connect(function() b.BackgroundColor3=C.BG3    stroke(b,1,C.BORDER) end)
-        b.MouseButton1Click:Connect(function() playClick() pcall(cb) end)
+        b.MouseButton1Click:Connect(function() pcall(cb) end)
     end
 
     makeActionBtn("Rejoin", actY, function()
@@ -577,6 +576,7 @@ do
     end
 end
 
+-- ══ ABA EXECUTOR ══
 do
     local i=2
     local tb=makeTabBtn("Executor",i)
@@ -634,7 +634,6 @@ do
         corner(b,4) stroke(b,1,accent and C.ACCENT or C.BORDER)
         b.MouseEnter:Connect(function() b.BackgroundColor3=accent and C.ACCENT or C.BG3 end)
         b.MouseLeave:Connect(function() b.BackgroundColor3=accent and C.ACCENT2 or C.BG2 end)
-        b.MouseButton1Click:Connect(playClick)
         return b
     end
 
@@ -655,6 +654,7 @@ do
     end)
 end
 
+-- ══ API Hub:Tab ══
 function Hub:Tab(name)
     local i=#tabBtns+1
     local tb=makeTabBtn(name,i)
@@ -668,10 +668,10 @@ function Hub:Tab(name)
         BackgroundTransparency=1, BorderSizePixel=0, Active=false,
     },pg)
 
-    local searchFrame=o("Frame",{
-        Size=UDim2.new(0,130,1,0), BackgroundColor3=C.BG2,
-        BackgroundTransparency=1, BorderSizePixel=0,
-    },hotbar)
+local searchFrame=o("Frame",{
+    Size=UDim2.new(0,130,1,0), BackgroundColor3=C.BG2,
+    BackgroundTransparency=1, BorderSizePixel=0,
+},hotbar)
 
     o("TextBox",{
         Size=UDim2.new(1,-8,1,0), Position=UDim2.new(0,4,0,0),
@@ -742,7 +742,6 @@ function Hub:Tab(name)
         b.MouseLeave:Connect(function() b.BackgroundColor3=C.BG2    stroke(b,1,C.BORDER) end)
         local copyTxt='loadstring(game:HttpGet("'..url..'"))()'
         b.MouseButton1Click:Connect(function()
-            playClick()
             openModal(txt,copyTxt,function() loadstring(game:HttpGet(url))() end)
         end)
         table.insert(allBtns,b)
@@ -752,6 +751,7 @@ function Hub:Tab(name)
     return T
 end
 
+-- ══ DRAG (pill) ══
 do
     local dragging, dragStart, startPos = false, nil, nil
     local dragMoved = false
@@ -787,7 +787,6 @@ do
 
     pillBtn.MouseButton1Click:Connect(function()
         if dragMoved then return end
-        playClick()
         win.Visible=true pill.Visible=false
     end)
 end
