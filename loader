@@ -3,7 +3,7 @@ local Hub = loadstring(game:HttpGet("https://raw.githubusercontent.com/FabJheiny
 repeat task.wait(0.1) until _G._HubLoaded
 local Hub = _G._ChosenHub
 
-Hub:Tab("Scripts Fab")
+Hub:Tab("Universal")
     :Button("Aimbot","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/Aimbot")
     :Button("Calculator","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/Calculator")
     :Button("Radio","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/rd")
@@ -17,7 +17,7 @@ Hub:Tab("Scripts Fab")
     :Button("ShiftLock","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/shiftlock")
     :Button("Emotes R6","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/emoter6")
     
-Hub:Tab("Outros Scripts")
+Hub:Tab("Others")
     :Button("Dex Explorer","https://raw.githubusercontent.com/infyiff/backup/main/dex.lua")
     :Button("Infinite Yield","https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source")
     :Button("Emotes","https://rawscripts.net/raw/Universal-Script-7yd7-I-Emote-Script-48024")
@@ -37,7 +37,7 @@ Hub:Tab("GamesHub")
     :Button("99 Noites","https://rawscripts.net/raw/Universal-Script-99-Noites-na-Floresta-87445")
     :Button("Pickaxe Tycoon","https://raw.githubusercontent.com/gumanba/Scripts/main/PickaxeTycoon")
 
-Hub:Tab("Morph")
+Hub:Tab("Morphs")
     :Button("Hand Green (r6)","https://raw.githubusercontent.com/ian49972/SCRIPTS/refs/heads/main/hand")
     :Button("Fridge Hack (r6)","https://raw.githubusercontent.com/ian49972/SCRIPTS/refs/heads/main/Fridge")
     :Button("Oculus (r6)","https://raw.githubusercontent.com/ian49972/SCRIPTS/refs/heads/main/Oculus")
