@@ -603,7 +603,7 @@ do
         Size=UDim2.new(1,-12,1,-8), Position=UDim2.new(0,8,0,4),
         BackgroundTransparency=1,
         Text='print("Hello, World!")',
-        PlaceholderText="print("UniversalHub")",
+        PlaceholderText="-- insira seu script aqui",
         PlaceholderColor3=C.MUTED, TextColor3=C.TEXT,
         TextSize=11, Font=FONT,
         TextXAlignment=Enum.TextXAlignment.Left,
