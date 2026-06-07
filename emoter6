@@ -1,8 +1,9 @@
 local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local UIS = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- ── Listas de emotes ─────────────────────────────────────────────────
 local R6Buttons = {
 	{name = "HeadThrow",     text = "Head Throw",     id = "35154961",  loop = true},
 	{name = "FloatingHead",  text = "Floating Head",  id = "121572214", loop = false},
@@ -57,143 +58,159 @@ local R15Buttons = {
 	{name = "DownSlash",   text = "Down Slash",   id = "746398327", loop = true},
 }
 
--- ── Menu (PlayerGui) ──────────────────────────────────────────────────
-local gui = Instance.new("ScreenGui")
-gui.Name = "Emotes r6"
-gui.ResetOnSpawn = false
-gui.Parent = playerGui
+local B    = Color3.fromRGB(0,   0,   0)
+local W    = Color3.fromRGB(255, 255, 255)
+local D    = Color3.fromRGB(15,  15,  15)
+local G    = Color3.fromRGB(50,  50,  50)
+local FONT = Enum.Font.Code
 
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 240, 0, 280)
-frame.Position = UDim2.new(0.5, -120, 0.5, -140)
-frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-frame.BackgroundTransparency = 0
-frame.BorderSizePixel = 0
-frame.Active = true
-frame.Draggable = true
-frame.ClipsDescendants = true
+local function o(cls, props, par)
+	local x = Instance.new(cls)
+	for k, v in pairs(props) do x[k] = v end
+	if par then x.Parent = par end
+	return x
+end
+local function stroke(par, t, c)
+	o("UIStroke", {
+		Color = c or W, Thickness = t or 1,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+	}, par)
+end
 
-local frameStroke = Instance.new("UIStroke", frame)
-frameStroke.Color = Color3.fromRGB(255, 255, 255)
-frameStroke.Thickness = 1
-frameStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+local topH   = 24
+local menuW  = 240
+local fullH  = 280
 
--- Barra superior
-local topBar = Instance.new("Frame", frame)
-topBar.Size = UDim2.new(1, 0, 0, 24)
-topBar.Position = UDim2.new(0, 0, 0, 0)
-topBar.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-topBar.BackgroundTransparency = 0
-topBar.BorderSizePixel = 0
+local gui = o("ScreenGui", {
+	Name = "EmotesGui",
+	ResetOnSpawn = false,
+	IgnoreGuiInset = true,
+}, playerGui)
 
-local topSep = Instance.new("Frame", topBar)
-topSep.Size = UDim2.new(1, 0, 0, 1)
-topSep.Position = UDim2.new(0, 0, 1, -1)
-topSep.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-topSep.BackgroundTransparency = 0
-topSep.BorderSizePixel = 0
+local win = o("Frame", {
+	Size = UDim2.new(0, menuW, 0, fullH),
+	Position = UDim2.new(0.5, -120, 0.5, -140),
+	BackgroundColor3 = B, BorderSizePixel = 0,
+	Active = true, ClipsDescendants = true,
+}, gui)
+stroke(win, 1)
 
-local titulo = Instance.new("TextLabel", topBar)
-titulo.Size = UDim2.new(1, -100, 1, 0)
-titulo.Position = UDim2.new(0, 10, 0, 0)
-titulo.BackgroundTransparency = 1
-titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
-titulo.TextSize = 10
-titulo.TextXAlignment = Enum.TextXAlignment.Left
-titulo.Text = "Emotes R6"
-titulo.Font = Enum.Font.SourceSansBold
+local top = o("Frame", {
+	Size = UDim2.new(1, 0, 0, topH),
+	BackgroundColor3 = B, BorderSizePixel = 0,
+	Active = true, ZIndex = 10,
+}, win)
 
-local recolherBtn = Instance.new("TextButton", topBar)
-recolherBtn.Size = UDim2.new(0, 18, 0, 14)
-recolherBtn.Position = UDim2.new(1, -42, 0.5, -7)
-recolherBtn.Text = "-"
-recolherBtn.TextSize = 12
-recolherBtn.Font = Enum.Font.SourceSansBold
-recolherBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-recolherBtn.BackgroundTransparency = 0
-recolherBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-recolherBtn.BorderSizePixel = 0
-recolherBtn.AutoButtonColor = false
+local titulo = o("TextLabel", {
+	Size = UDim2.new(1, -70, 1, 0), Position = UDim2.new(0, 8, 0, 0),
+	BackgroundTransparency = 1, Text = "> EMOTES R6 <",
+	TextColor3 = W, TextSize = 10, Font = FONT,
+	TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10,
+}, top)
 
-local closeBtn = Instance.new("TextButton", topBar)
-closeBtn.Size = UDim2.new(0, 18, 0, 14)
-closeBtn.Position = UDim2.new(1, -20, 0.5, -7)
-closeBtn.Text = "x"
-closeBtn.TextSize = 10
-closeBtn.Font = Enum.Font.SourceSansBold
-closeBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-closeBtn.BackgroundTransparency = 0
-closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.BorderSizePixel = 0
-closeBtn.AutoButtonColor = false
+o("Frame", {Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-66,0,0), BackgroundColor3=W, BorderSizePixel=0, ZIndex=12}, top)
+o("Frame", {Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-33,0,0), BackgroundColor3=W, BorderSizePixel=0, ZIndex=12}, top)
 
--- Área com scroll
-local scrollFrame = Instance.new("ScrollingFrame", frame)
-scrollFrame.Size = UDim2.new(1, -4, 1, -28)
-scrollFrame.Position = UDim2.new(0, 2, 0, 26)
-scrollFrame.BackgroundTransparency = 1
-scrollFrame.BorderSizePixel = 0
-scrollFrame.ScrollBarThickness = 4
-scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
-scrollFrame.ScrollingDirection = Enum.ScrollingDirection.Y
-scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+local MinBtn = o("TextButton", {
+	Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-65,0,0),
+	BackgroundColor3=B, BorderSizePixel=0,
+	Text="-", TextColor3=W, TextSize=18, Font=FONT,
+	AutoButtonColor=false, ZIndex=11,
+}, top)
+local XBtn = o("TextButton", {
+	Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-32,0,0),
+	BackgroundColor3=B, BorderSizePixel=0,
+	Text="x", TextColor3=W, TextSize=14, Font=FONT,
+	AutoButtonColor=false, ZIndex=11,
+}, top)
+for _, b in ipairs({MinBtn, XBtn}) do
+	b.MouseEnter:Connect(function() b.BackgroundColor3 = D end)
+	b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
+end
 
-local gradeContent = Instance.new("Frame", scrollFrame)
-gradeContent.Name = "GradeContent"
-gradeContent.Size = UDim2.new(1, 0, 0, 0)
-gradeContent.BackgroundTransparency = 1
-gradeContent.BorderSizePixel = 0
+o("Frame", {
+	Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,0,topH),
+	BackgroundColor3=W, BorderSizePixel=0, ZIndex=20,
+}, win)
 
-local gridLayout = Instance.new("UIGridLayout", gradeContent)
-gridLayout.CellSize = UDim2.new(0, 68, 0, 28)
-gridLayout.CellPadding = UDim2.new(0, 6, 0, 6)
-gridLayout.FillDirection = Enum.FillDirection.Horizontal
-gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-gridLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+do
+	local dragging, dragStart, startPos = false, nil, nil
+	top.InputBegan:Connect(function(inp)
+		if inp.UserInputType == Enum.UserInputType.MouseButton1
+		or inp.UserInputType == Enum.UserInputType.Touch then
+			dragging  = true
+			dragStart = inp.Position
+			startPos  = win.Position
+		end
+	end)
+	top.InputEnded:Connect(function(inp)
+		if inp.UserInputType == Enum.UserInputType.MouseButton1
+		or inp.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+	UIS.InputChanged:Connect(function(inp)
+		if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement
+			or inp.UserInputType == Enum.UserInputType.Touch) then
+			local d = inp.Position - dragStart
+			win.Position = UDim2.new(
+				startPos.X.Scale, startPos.X.Offset + d.X,
+				startPos.Y.Scale, startPos.Y.Offset + d.Y
+			)
+		end
+	end)
+end
+
+local scrollFrame = o("ScrollingFrame", {
+	Size = UDim2.new(1, -4, 1, -topH - 2),
+	Position = UDim2.new(0, 2, 0, topH + 2),
+	BackgroundTransparency = 1, BorderSizePixel = 0,
+	ScrollBarThickness = 2, ScrollBarImageColor3 = G,
+	ScrollingDirection = Enum.ScrollingDirection.Y,
+	CanvasSize = UDim2.new(0, 0, 0, 0),
+}, win)
+
+local gradeContent = o("Frame", {
+	Name = "GradeContent",
+	Size = UDim2.new(1, 0, 0, 0),
+	BackgroundTransparency = 1, BorderSizePixel = 0,
+}, scrollFrame)
+
+local gridLayout = o("UIGridLayout", {
+	CellSize = UDim2.new(0, 68, 0, 28),
+	CellPadding = UDim2.new(0, 6, 0, 6),
+	FillDirection = Enum.FillDirection.Horizontal,
+	HorizontalAlignment = Enum.HorizontalAlignment.Center,
+	VerticalAlignment = Enum.VerticalAlignment.Center,
+	SortOrder = Enum.SortOrder.LayoutOrder,
+}, gradeContent)
 
 gridLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-	local altura = gridLayout.AbsoluteContentSize.Y
-	gradeContent.Size = UDim2.new(1, 0, 0, altura)
-	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, altura)
+	local h = gridLayout.AbsoluteContentSize.Y
+	gradeContent.Size = UDim2.new(1, 0, 0, h)
+	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, h)
 end)
 
--- ── Função para criar botão (agora ativo = branco) ─────────────────
 local function criarBotaoEmote(emote, parent)
-	local btn = Instance.new("TextButton", parent)
-	btn.Size = UDim2.new(1, 0, 1, 0)
-	btn.Text = emote.text or emote.nome
-	btn.TextSize = 8
-	btn.Font = Enum.Font.SourceSansBold
-	btn.TextColor3 = Color3.fromRGB(255, 255, 255)   -- texto branco padrão
-	btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30) -- fundo escuro inativo
-	btn.BorderSizePixel = 0
-	btn.AutoButtonColor = false
-
-	local stroke = Instance.new("UIStroke", btn)
-	stroke.Color = Color3.fromRGB(120, 120, 120)
-	stroke.Thickness = 1
-	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	local btn = o("TextButton", {
+		Size = UDim2.new(1, 0, 1, 0),
+		Text = emote.text or emote.nome,
+		TextSize = 8, Font = FONT,
+		TextColor3 = W,
+		BackgroundColor3 = B,
+		BorderSizePixel = 0,
+		AutoButtonColor = false,
+	}, parent)
+	stroke(btn, 1)
 
 	local ativo = false
 	local track = nil
-	local corOff = Color3.fromRGB(30, 30, 30)      -- fundo escuro
-	local corOn = Color3.fromRGB(255, 255, 255)    -- fundo branco ao ativar
-	local textoOff = Color3.fromRGB(255, 255, 255) -- texto branco
-	local textoOn = Color3.fromRGB(0, 0, 0)        -- texto preto (contraste)
 
-	-- Hover
 	btn.MouseEnter:Connect(function()
-		if not ativo then
-			btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-		end
-		stroke.Color = Color3.fromRGB(255, 255, 255)
+		if not ativo then btn.BackgroundColor3 = D end
 	end)
 	btn.MouseLeave:Connect(function()
-		if not ativo then
-			btn.BackgroundColor3 = corOff
-		end
-		stroke.Color = Color3.fromRGB(120, 120, 120)
+		if not ativo then btn.BackgroundColor3 = B end
 	end)
 
 	local function novaTrack()
@@ -210,13 +227,10 @@ local function criarBotaoEmote(emote, parent)
 	end
 
 	local function desativar()
-		if track then
-			track:Stop()
-			track = nil
-		end
+		if track then track:Stop() track = nil end
 		ativo = false
-		btn.BackgroundColor3 = corOff
-		btn.TextColor3 = textoOff
+		btn.BackgroundColor3 = B
+		btn.TextColor3 = W
 	end
 
 	btn.MouseButton1Click:Connect(function()
@@ -224,14 +238,10 @@ local function criarBotaoEmote(emote, parent)
 			ativo = not ativo
 			if ativo then
 				track = novaTrack()
-				if not track then
-					ativo = false
-					return
-				end
-				btn.BackgroundColor3 = corOn
-				btn.TextColor3 = textoOn
+				if not track then ativo = false return end
+				btn.BackgroundColor3 = G
+				btn.TextColor3 = W
 				track:Play(emote.fade or 0.1, emote.weight or 1, emote.speed or 1)
-
 				task.spawn(function()
 					while ativo do
 						if not track or not track.IsPlaying then
@@ -239,8 +249,7 @@ local function criarBotaoEmote(emote, parent)
 							if track then
 								track:Play(emote.fade or 0.1, emote.weight or 1, emote.speed or 1)
 							else
-								desativar()
-								break
+								desativar() break
 							end
 						end
 						task.wait()
@@ -256,47 +265,35 @@ local function criarBotaoEmote(emote, parent)
 				track = novaTrack()
 				if track then
 					ativo = true
-					btn.BackgroundColor3 = corOn
-					btn.TextColor3 = textoOn
+					btn.BackgroundColor3 = G
+					btn.TextColor3 = W
 					track:Play(emote.fade or 0.1, emote.weight or 1, emote.speed or 1)
-					track.Stopped:Connect(function()
-						desativar()
-					end)
+					track.Stopped:Connect(function() desativar() end)
 				end
 			end
 		end
 	end)
 
-	player.CharacterAdded:Connect(function()
-		desativar()
-	end)
-
+	player.CharacterAdded:Connect(function() desativar() end)
 	return btn
 end
 
--- ── Carregar emotes conforme RigType ──────────────────────────────────
 local function carregarEmotes(rigType)
 	for _, child in ipairs(gradeContent:GetChildren()) do
-		if child:IsA("TextButton") then
-			child:Destroy()
-		end
+		if child:IsA("TextButton") then child:Destroy() end
 	end
-
 	local lista = (rigType == Enum.HumanoidRigType.R15) and R15Buttons or R6Buttons
 	for _, emote in ipairs(lista) do
 		criarBotaoEmote(emote, gradeContent)
 	end
-
-	titulo.Text = (rigType == Enum.HumanoidRigType.R15) and "Emotes R15" or "Emotes R6"
+	titulo.Text = (rigType == Enum.HumanoidRigType.R15) and "> EMOTES R15 <" or "> EMOTES R6 <"
 end
 
 local function atualizarRigType()
 	local char = player.Character
 	if char then
 		local humanoid = char:FindFirstChildOfClass("Humanoid")
-		if humanoid then
-			carregarEmotes(humanoid.RigType)
-		end
+		if humanoid then carregarEmotes(humanoid.RigType) end
 	end
 end
 
@@ -315,61 +312,49 @@ local alturaInicial = gridLayout.AbsoluteContentSize.Y
 gradeContent.Size = UDim2.new(1, 0, 0, alturaInicial)
 scrollFrame.CanvasSize = UDim2.new(0, 0, 0, alturaInicial)
 
--- ── Pill (CoreGui) ────────────────────────────────────────────────────
-local CoreGui = game:GetService("CoreGui")
-
-local pillGui = Instance.new("ScreenGui")
-pillGui.Name = "EmotesPill"
-pillGui.ResetOnSpawn = false
-pillGui.DisplayOrder = 9999
+local pillGui = o("ScreenGui", {
+	Name = "EmotesPill",
+	ResetOnSpawn = false,
+	IgnoreGuiInset = true,
+	DisplayOrder = 9999,
+})
 local ok = pcall(function() pillGui.Parent = CoreGui end)
 if not ok then pillGui.Parent = playerGui end
 
-local pill = Instance.new("Frame", pillGui)
-pill.Name = "PremiumCalcPill"
-pill.Size = UDim2.new(0, 50, 0, 18)
-pill.Position = UDim2.new(1, -56, 1, -168)
-pill.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-pill.BorderSizePixel = 0
-pill.Visible = false
+local pill = o("Frame", {
+	Size = UDim2.new(0, 60, 0, 18),
+	Position = UDim2.new(1, -66, 1, -168),
+	BackgroundColor3 = B, BorderSizePixel = 0,
+	Visible = false, ZIndex = 200,
+}, pillGui)
+stroke(pill, 1)
 
-local pillStroke = Instance.new("UIStroke", pill)
-pillStroke.Color = Color3.fromRGB(255, 255, 255)
-pillStroke.Thickness = 1
-pillStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+local pillBtn = o("TextButton", {
+	Size = UDim2.new(1, 0, 1, 0),
+	BackgroundTransparency = 1,
+	Text = "> emotes", TextSize = 9, Font = FONT,
+	TextColor3 = W, BorderSizePixel = 0,
+	ZIndex = 201,
+}, pill)
 
-local pillBtn = Instance.new("TextButton", pill)
-pillBtn.Size = UDim2.new(1, 0, 1, 0)
-pillBtn.Text = "> emote"
-pillBtn.TextSize = 9
-pillBtn.Font = Enum.Font.SourceSansBold
-pillBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-pillBtn.BackgroundTransparency = 1
-pillBtn.BorderSizePixel = 0
-pillBtn.AutoButtonColor = false
+local minimized = false
+MinBtn.MouseButton1Click:Connect(function()
+	minimized = not minimized
+	if minimized then
+		win.Size    = UDim2.new(0, menuW, 0, topH)
+		MinBtn.Text = "+"
+	else
+		win.Size    = UDim2.new(0, menuW, 0, fullH)
+		MinBtn.Text = "-"
+	end
+end)
 
-closeBtn.MouseButton1Click:Connect(function()
-	frame.Visible = false
+XBtn.MouseButton1Click:Connect(function()
+	win.Visible  = false
 	pill.Visible = true
 end)
 
 pillBtn.MouseButton1Click:Connect(function()
-	frame.Visible = true
+	win.Visible  = true
 	pill.Visible = false
-end)
-
--- Recolher
-local recolhido = false
-local fullHeight = 280
-local miniHeight = 24
-
-recolherBtn.MouseButton1Click:Connect(function()
-	recolhido = not recolhido
-	if recolhido then
-		frame.Size = UDim2.new(0, 240, 0, miniHeight)
-		recolherBtn.Text = "+"
-	else
-		frame.Size = UDim2.new(0, 240, 0, fullHeight)
-		recolherBtn.Text = "-"
-	end
 end)
