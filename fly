@@ -48,9 +48,6 @@ local State = {
     GuiExists = true
 }
 
--- ──────────────────────────────────────────────
--- Helpers (estilo fling)
--- ──────────────────────────────────────────────
 local B    = Config.UI.B
 local W    = Config.UI.W
 local D    = Config.UI.D
@@ -92,9 +89,6 @@ local function mkDiv(parent, pos, sz)
     }, parent)
 end
 
--- ──────────────────────────────────────────────
--- CameraController (sem mudanças)
--- ──────────────────────────────────────────────
 local CameraController = {}
 CameraController.__index = CameraController
 
@@ -143,9 +137,6 @@ function CameraController:cleanup()
     end
 end
 
--- ──────────────────────────────────────────────
--- MovementController (sem mudanças)
--- ──────────────────────────────────────────────
 local MovementController = {}
 MovementController.__index = MovementController
 
@@ -266,9 +257,6 @@ function MovementController:cleanup()
     end
 end
 
--- ──────────────────────────────────────────────
--- UI — tema fling
--- ──────────────────────────────────────────────
 local UI = {}
 UI.__index = UI
 
@@ -293,10 +281,8 @@ end
 
 function UI:build(movementController, screenGui)
     local topH = 24
-    -- Altura: topH(24) + div(1) + row1(25) + div(1) + row2(25) + div(1) + row3(25) = 102
     local fullH = 102
 
-    -- ── Janela principal ──
     local win = o("Frame", {
         Size = UDim2.new(0, 160, 0, fullH),
         Position = self.Config.UI.DefaultPosition,
@@ -308,7 +294,7 @@ function UI:build(movementController, screenGui)
     stroke(win, 1)
     self.MainFrame = win
 
-    -- ── Pill ScreenGui (CoreGui) ──
+    -- Pill
     local pillSg = o("ScreenGui", {
         Name = self.Config.UI.Name .. "Pill",
         DisplayOrder = 9999,
@@ -317,11 +303,10 @@ function UI:build(movementController, screenGui)
     local ok = pcall(function() pillSg.Parent = self.Services.CoreGui end)
     if not ok then pillSg.Parent = self.Services.Players.LocalPlayer:WaitForChild("PlayerGui") end
 
-    -- Pill em -170 (entre float -150 e fling -190)
     local pill = o("Frame", {
         Name = "ReopenPill",
-        Size = UDim2.new(0, 54, 0, 18),
-        Position = UDim2.new(1, -60, 1, -170),
+        Size = UDim2.new(0, 60, 0, 18),
+        Position = UDim2.new(1, -66, 1, -46),
         BackgroundColor3 = B,
         BorderSizePixel = 0,
         Visible = false,
@@ -341,7 +326,6 @@ function UI:build(movementController, screenGui)
     }, pill)
     self.Pill = pill
 
-    -- ── Topbar ──
     local top = o("Frame", {
         Size = UDim2.new(1, 0, 0, topH),
         BackgroundColor3 = B,
@@ -362,7 +346,6 @@ function UI:build(movementController, screenGui)
         ZIndex = 10,
     }, top)
 
-    -- Separadores verticais topbar
     mkDiv(top, UDim2.new(1, -66, 0, 0), UDim2.new(0, 1, 1, 0))
     mkDiv(top, UDim2.new(1, -33, 0, 0), UDim2.new(0, 1, 1, 0))
 
@@ -389,10 +372,8 @@ function UI:build(movementController, screenGui)
         b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
     end
 
-    -- Separador horizontal abaixo do topbar
     mkDiv(win, UDim2.new(0, 0, 0, topH), UDim2.new(1, 0, 0, 1))
 
-    -- ── Body ──
     local body = o("Frame", {
         Size = UDim2.new(1, 0, 1, -topH - 1),
         Position = UDim2.new(0, 0, 0, topH + 1),
@@ -401,14 +382,12 @@ function UI:build(movementController, screenGui)
         ClipsDescendants = true,
     }, win)
 
-    -- Row 0 — Noclip (y=0..25)
     local noclipBtn = mkBtn("NOCLIP: OFF", body,
         UDim2.new(1, 0, 0, 25), UDim2.new(0, 0, 0, 0))
     noclipBtn.Name = "NoclipBtn"
 
     mkDiv(body, UDim2.new(0, 0, 0, 25), UDim2.new(1, 0, 0, 1))
 
-    -- Row 1 — ↑ | + | Fly  (y=26..50)
     local upBtn = mkBtn("↑", body, UDim2.new(0, 32, 0, 25), UDim2.new(0, 0, 0, 26))
     mkDiv(body, UDim2.new(0, 32, 0, 26), UDim2.new(0, 1, 0, 25))
 
@@ -420,7 +399,6 @@ function UI:build(movementController, screenGui)
 
     mkDiv(body, UDim2.new(0, 0, 0, 51), UDim2.new(1, 0, 0, 1))
 
-    -- Row 2 — ↓ | - | speed  (y=52..76)
     local downBtn = mkBtn("↓", body, UDim2.new(0, 32, 0, 25), UDim2.new(0, 0, 0, 52))
     mkDiv(body, UDim2.new(0, 32, 0, 52), UDim2.new(0, 1, 0, 25))
 
@@ -431,7 +409,6 @@ function UI:build(movementController, screenGui)
         UDim2.new(0, 78, 0, 25), UDim2.new(0, 82, 0, 52))
     speedDisplay.Name = "SpeedDisplay"
 
-    -- ── Drag — topbar only, via UIS ──
     do
         local dragging, dragStart, startPos = false, nil, nil
         top.InputBegan:Connect(function(inp)
@@ -460,7 +437,6 @@ function UI:build(movementController, screenGui)
         end)
     end
 
-    -- ── Lógica dos botões ──
     XBtn.MouseButton1Click:Connect(function()
         win.Visible = false
         pill.Visible = true
@@ -533,9 +509,6 @@ function UI:cleanup()
     end
 end
 
--- ──────────────────────────────────────────────
--- MainController
--- ──────────────────────────────────────────────
 local MainController = {}
 MainController.__index = MainController
 
