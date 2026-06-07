@@ -36,7 +36,7 @@ if not ok then pillGui.Parent = playerGui end
 local pill = Instance.new("Frame", pillGui)
 pill.Name = "AFKBlackScreenPill"
 pill.Size = UDim2.new(0, 60, 0, 18)
-pill.Position = UDim2.new(1, -66, 1, -146)
+pill.Position = UDim2.new(1, -66, 1, -102)
 pill.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 pill.BorderSizePixel = 0
 
