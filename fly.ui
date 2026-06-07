@@ -22,16 +22,13 @@ local Config = {
     UI = {
         Name = "flygui",
         DisplayOrder = 2147483647,
-        Size = UDim2.new(0, 160, 0, 77),
         DefaultPosition = UDim2.new(0.05, 0, 0.4, 0),
         TextSize = 10,
-        Font = Enum.Font.GothamSemibold,
-        BackgroundColor = Color3.fromRGB(0, 0, 0),
-        TextColor = Color3.fromRGB(255, 255, 255),
-        TextColorActive = Color3.fromRGB(0, 0, 0),
-        ActiveColor = Color3.fromRGB(255, 255, 255),
-        DividerColor = Color3.fromRGB(50, 50, 50),
-        BorderColor = Color3.fromRGB(255, 255, 255)
+        Font = Enum.Font.Code,
+        B = Color3.fromRGB(0, 0, 0),
+        W = Color3.fromRGB(255, 255, 255),
+        D = Color3.fromRGB(15, 15, 15),
+        G = Color3.fromRGB(50, 50, 50),
     },
     Physics = {
         CollisionParts = {"torso", "root", "leg", "head"},
@@ -51,6 +48,53 @@ local State = {
     GuiExists = true
 }
 
+-- ──────────────────────────────────────────────
+-- Helpers (estilo fling)
+-- ──────────────────────────────────────────────
+local B    = Config.UI.B
+local W    = Config.UI.W
+local D    = Config.UI.D
+local G    = Config.UI.G
+local FONT = Config.UI.Font
+
+local function o(cls, props, par)
+    local x = Instance.new(cls)
+    for k, v in pairs(props) do x[k] = v end
+    if par then x.Parent = par end
+    return x
+end
+
+local function stroke(par, t, c)
+    o("UIStroke", {Color = c or W, Thickness = t or 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border}, par)
+end
+
+local function mkBtn(txt, parent, sz, pos)
+    local b = o("TextButton", {
+        Size = sz, Position = pos,
+        BackgroundColor3 = B, BorderSizePixel = 0,
+        Text = txt, TextColor3 = W,
+        TextSize = Config.UI.TextSize, Font = FONT,
+        AutoButtonColor = false,
+    }, parent)
+    stroke(b, 1)
+    b.MouseEnter:Connect(function() b.BackgroundColor3 = D end)
+    b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
+    return b
+end
+
+local function mkDiv(parent, pos, sz)
+    o("Frame", {
+        Position = pos,
+        Size = sz,
+        BackgroundColor3 = W,
+        BorderSizePixel = 0,
+        ZIndex = 12,
+    }, parent)
+end
+
+-- ──────────────────────────────────────────────
+-- CameraController (sem mudanças)
+-- ──────────────────────────────────────────────
 local CameraController = {}
 CameraController.__index = CameraController
 
@@ -99,6 +143,9 @@ function CameraController:cleanup()
     end
 end
 
+-- ──────────────────────────────────────────────
+-- MovementController (sem mudanças)
+-- ──────────────────────────────────────────────
 local MovementController = {}
 MovementController.__index = MovementController
 
@@ -219,6 +266,9 @@ function MovementController:cleanup()
     end
 end
 
+-- ──────────────────────────────────────────────
+-- UI — tema fling
+-- ──────────────────────────────────────────────
 local UI = {}
 UI.__index = UI
 
@@ -232,196 +282,226 @@ function UI.new(services, config, state)
 end
 
 function UI:createScreenGui()
-    -- Menu in PlayerGui
-    local sg = Instance.new("ScreenGui")
-    sg.Name = self.Config.UI.Name
-    sg.DisplayOrder = self.Config.UI.DisplayOrder
-    sg.IgnoreGuiInset = true
-    sg.ResetOnSpawn = false
-    sg.Parent = self.Services.Players.LocalPlayer:WaitForChild("PlayerGui")
+    local sg = o("ScreenGui", {
+        Name = self.Config.UI.Name,
+        DisplayOrder = self.Config.UI.DisplayOrder,
+        IgnoreGuiInset = true,
+        ResetOnSpawn = false,
+    }, self.Services.Players.LocalPlayer:WaitForChild("PlayerGui"))
     return sg
 end
 
-function UI:createMainFrame(parent)
-    local main = Instance.new("Frame", parent)
-    main.Size = self.Config.UI.Size
-    main.Position = self.Config.UI.DefaultPosition
-    main.BackgroundTransparency = 0
-    main.BackgroundColor3 = self.Config.UI.BackgroundColor
-    main.BorderSizePixel = 1
-    main.BorderColor3 = self.Config.UI.BorderColor
-    main.Active = true
-    return main
-end
+function UI:build(movementController, screenGui)
+    local topH = 24
+    -- Altura: topH(24) + div(1) + row1(25) + div(1) + row2(25) + div(1) + row3(25) = 102
+    local fullH = 102
 
-function UI:createDivider(parent, position, size)
-    local divider = Instance.new("Frame", parent)
-    divider.Position = position
-    divider.Size = size
-    divider.BackgroundColor3 = self.Config.UI.DividerColor
-    divider.BorderSizePixel = 0
-    divider.Active = false
-    return divider
-end
+    -- ── Janela principal ──
+    local win = o("Frame", {
+        Size = UDim2.new(0, 160, 0, fullH),
+        Position = self.Config.UI.DefaultPosition,
+        BackgroundColor3 = B,
+        BorderSizePixel = 0,
+        Active = true,
+        ClipsDescendants = true,
+    }, screenGui)
+    stroke(win, 1)
+    self.MainFrame = win
 
-function UI:enableDrag(obj, mainFrame)
-    obj.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or
-           input.UserInputType == Enum.UserInputType.Touch then
-            self.State.Dragging = true
-            self.State.DragStart = input.Position
-            self.State.StartPos = mainFrame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    self.State.Dragging = false
-                end
-            end)
-        end
-    end)
-    obj.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or
-           input.UserInputType == Enum.UserInputType.Touch then
-            self.State.DragInput = input
-        end
-    end)
-end
-
-function UI:createButton(text, position, size, parent)
-    local button = Instance.new("TextButton", parent)
-    button.Text = text
-    button.Position = position
-    button.Size = size
-    button.BorderSizePixel = 0
-    button.BackgroundColor3 = self.Config.UI.BackgroundColor
-    button.TextColor3 = self.Config.UI.TextColor
-    button.Font = self.Config.UI.Font
-    button.TextSize = self.Config.UI.TextSize
-    button.AutoButtonColor = false
-    table.insert(self.Buttons, button)
-    return button
-end
-
-function UI:createReopenPill(mainFrame)
-    -- Pill in CoreGui
-    local pillSg = Instance.new("ScreenGui")
-    pillSg.Name = self.Config.UI.Name .. "Pill"
-    pillSg.DisplayOrder = 9999
-    pillSg.ResetOnSpawn = false
+    -- ── Pill ScreenGui (CoreGui) ──
+    local pillSg = o("ScreenGui", {
+        Name = self.Config.UI.Name .. "Pill",
+        DisplayOrder = 9999,
+        ResetOnSpawn = false,
+    })
     local ok = pcall(function() pillSg.Parent = self.Services.CoreGui end)
     if not ok then pillSg.Parent = self.Services.Players.LocalPlayer:WaitForChild("PlayerGui") end
 
-    local pill = Instance.new("Frame", pillSg)
-    pill.Name = "ReopenPill"
-    pill.Position = UDim2.new(1, -56, 1, -58)
-    pill.Size = UDim2.new(0, 50, 0, 18)
-    pill.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    pill.BorderSizePixel = 0
-    pill.Visible = false
+    -- Pill em -170 (entre float -150 e fling -190)
+    local pill = o("Frame", {
+        Name = "ReopenPill",
+        Size = UDim2.new(0, 54, 0, 18),
+        Position = UDim2.new(1, -60, 1, -170),
+        BackgroundColor3 = B,
+        BorderSizePixel = 0,
+        Visible = false,
+        ZIndex = 200,
+    }, pillSg)
+    stroke(pill, 1)
 
-    local stroke = Instance.new("UIStroke", pill)
-    stroke.Color = Color3.fromRGB(255, 255, 255)
-    stroke.Thickness = 1
+    local pillBtn = o("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = "> fly",
+        TextSize = 9,
+        Font = FONT,
+        TextColor3 = W,
+        BorderSizePixel = 0,
+        ZIndex = 201,
+    }, pill)
+    self.Pill = pill
 
-    local btn = Instance.new("TextButton", pill)
-    btn.Size = UDim2.new(1, 0, 1, 0)
-    btn.Position = UDim2.new(0, 0, 0, 0)
-    btn.Text = "> fly"
-    btn.TextSize = 9
-    btn.Font = Enum.Font.SourceSansBold
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.BackgroundTransparency = 1
-    btn.BorderSizePixel = 0
-    btn.AutoButtonColor = false
+    -- ── Topbar ──
+    local top = o("Frame", {
+        Size = UDim2.new(1, 0, 0, topH),
+        BackgroundColor3 = B,
+        BorderSizePixel = 0,
+        Active = true,
+        ZIndex = 10,
+    }, win)
 
-    btn.MouseButton1Click:Connect(function()
-        mainFrame.Visible = true
-        pill.Visible = false
-    end)
+    o("TextLabel", {
+        Size = UDim2.new(1, -70, 1, 0),
+        Position = UDim2.new(0, 8, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "> FLY <",
+        TextColor3 = W,
+        TextSize = 11,
+        Font = FONT,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 10,
+    }, top)
 
-    return pill
-end
+    -- Separadores verticais topbar
+    mkDiv(top, UDim2.new(1, -66, 0, 0), UDim2.new(0, 1, 1, 0))
+    mkDiv(top, UDim2.new(1, -33, 0, 0), UDim2.new(0, 1, 1, 0))
 
-function UI:build(movementController, screenGui)
-    local main = self:createMainFrame(screenGui)
-    self:enableDrag(main, main)
-    self.Services.UserInputService.InputChanged:Connect(function(input)
-        if input == self.State.DragInput and self.State.Dragging then
-            local delta = input.Position - self.State.DragStart
-            main.Position = UDim2.new(
-                self.State.StartPos.X.Scale,
-                self.State.StartPos.X.Offset + delta.X,
-                self.State.StartPos.Y.Scale,
-                self.State.StartPos.Y.Offset + delta.Y
-            )
-        end
-    end)
+    local minimized = false
 
-    local pill = self:createReopenPill(main)
+    local MinBtn = o("TextButton", {
+        Size = UDim2.new(0, 32, 1, 0),
+        Position = UDim2.new(1, -65, 0, 0),
+        BackgroundColor3 = B, BorderSizePixel = 0,
+        Text = "-", TextColor3 = W,
+        TextSize = 18, Font = FONT,
+        AutoButtonColor = false, ZIndex = 11,
+    }, top)
+    local XBtn = o("TextButton", {
+        Size = UDim2.new(0, 32, 1, 0),
+        Position = UDim2.new(1, -32, 0, 0),
+        BackgroundColor3 = B, BorderSizePixel = 0,
+        Text = "x", TextColor3 = W,
+        TextSize = 14, Font = FONT,
+        AutoButtonColor = false, ZIndex = 11,
+    }, top)
+    for _, b in ipairs({MinBtn, XBtn}) do
+        b.MouseEnter:Connect(function() b.BackgroundColor3 = D end)
+        b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
+    end
 
-    local closeBtn = self:createButton("X", UDim2.new(0, 0, 0, 0), UDim2.new(0, 32, 0, 25), main)
-    self:enableDrag(closeBtn, main)
-    closeBtn.MouseButton1Click:Connect(function()
-        main.Visible = false
+    -- Separador horizontal abaixo do topbar
+    mkDiv(win, UDim2.new(0, 0, 0, topH), UDim2.new(1, 0, 0, 1))
+
+    -- ── Body ──
+    local body = o("Frame", {
+        Size = UDim2.new(1, 0, 1, -topH - 1),
+        Position = UDim2.new(0, 0, 0, topH + 1),
+        BackgroundColor3 = B,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+    }, win)
+
+    -- Row 0 — Noclip (y=0..25)
+    local noclipBtn = mkBtn("NOCLIP: OFF", body,
+        UDim2.new(1, 0, 0, 25), UDim2.new(0, 0, 0, 0))
+    noclipBtn.Name = "NoclipBtn"
+
+    mkDiv(body, UDim2.new(0, 0, 0, 25), UDim2.new(1, 0, 0, 1))
+
+    -- Row 1 — ↑ | + | Fly  (y=26..50)
+    local upBtn = mkBtn("↑", body, UDim2.new(0, 32, 0, 25), UDim2.new(0, 0, 0, 26))
+    mkDiv(body, UDim2.new(0, 32, 0, 26), UDim2.new(0, 1, 0, 25))
+
+    local plusBtn = mkBtn("+", body, UDim2.new(0, 48, 0, 25), UDim2.new(0, 33, 0, 26))
+    mkDiv(body, UDim2.new(0, 81, 0, 26), UDim2.new(0, 1, 0, 25))
+
+    local flyBtn = mkBtn("FLY: OFF", body, UDim2.new(0, 78, 0, 25), UDim2.new(0, 82, 0, 26))
+    flyBtn.Name = "FlyBtn"
+
+    mkDiv(body, UDim2.new(0, 0, 0, 51), UDim2.new(1, 0, 0, 1))
+
+    -- Row 2 — ↓ | - | speed  (y=52..76)
+    local downBtn = mkBtn("↓", body, UDim2.new(0, 32, 0, 25), UDim2.new(0, 0, 0, 52))
+    mkDiv(body, UDim2.new(0, 32, 0, 52), UDim2.new(0, 1, 0, 25))
+
+    local minusBtn = mkBtn("-", body, UDim2.new(0, 48, 0, 25), UDim2.new(0, 33, 0, 52))
+    mkDiv(body, UDim2.new(0, 81, 0, 52), UDim2.new(0, 1, 0, 25))
+
+    local speedDisplay = mkBtn(tostring(self.State.FlySpeed), body,
+        UDim2.new(0, 78, 0, 25), UDim2.new(0, 82, 0, 52))
+    speedDisplay.Name = "SpeedDisplay"
+
+    -- ── Drag — topbar only, via UIS ──
+    do
+        local dragging, dragStart, startPos = false, nil, nil
+        top.InputBegan:Connect(function(inp)
+            if inp.UserInputType == Enum.UserInputType.MouseButton1
+            or inp.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = inp.Position
+                startPos = win.Position
+            end
+        end)
+        top.InputEnded:Connect(function(inp)
+            if inp.UserInputType == Enum.UserInputType.MouseButton1
+            or inp.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
+            end
+        end)
+        self.Services.UserInputService.InputChanged:Connect(function(inp)
+            if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement
+            or inp.UserInputType == Enum.UserInputType.Touch) then
+                local d = inp.Position - dragStart
+                win.Position = UDim2.new(
+                    startPos.X.Scale, startPos.X.Offset + d.X,
+                    startPos.Y.Scale, startPos.Y.Offset + d.Y
+                )
+            end
+        end)
+    end
+
+    -- ── Lógica dos botões ──
+    XBtn.MouseButton1Click:Connect(function()
+        win.Visible = false
         pill.Visible = true
     end)
 
-    self:createDivider(main, UDim2.new(0, 32, 0, 0), UDim2.new(0, 1, 0, 25))
+    MinBtn.MouseButton1Click:Connect(function()
+        minimized = not minimized
+        if minimized then
+            win.Size = UDim2.new(0, 160, 0, topH)
+            MinBtn.Text = "+"
+        else
+            win.Size = UDim2.new(0, 160, 0, fullH)
+            MinBtn.Text = "-"
+        end
+    end)
 
-    local noclipBtn = self:createButton("Noclip: OFF", UDim2.new(0, 33, 0, 0), UDim2.new(0, 127, 0, 25), main)
-    self:enableDrag(noclipBtn, main)
-
-    self:createDivider(main, UDim2.new(0, 0, 0, 25), UDim2.new(0, 160, 0, 1))
-
-    local upBtn = self:createButton("↑", UDim2.new(0, 0, 0, 26), UDim2.new(0, 32, 0, 25), main)
-    self:enableDrag(upBtn, main)
-
-    self:createDivider(main, UDim2.new(0, 32, 0, 26), UDim2.new(0, 1, 0, 25))
-
-    local plusBtn = self:createButton("+", UDim2.new(0, 33, 0, 26), UDim2.new(0, 48, 0, 25), main)
-    self:enableDrag(plusBtn, main)
-
-    self:createDivider(main, UDim2.new(0, 81, 0, 26), UDim2.new(0, 1, 0, 25))
-
-    local flyBtn = self:createButton("Fly: OFF", UDim2.new(0, 82, 0, 26), UDim2.new(0, 78, 0, 25), main)
-    self:enableDrag(flyBtn, main)
-
-    self:createDivider(main, UDim2.new(0, 0, 0, 51), UDim2.new(0, 160, 0, 1))
-
-    local downBtn = self:createButton("↓", UDim2.new(0, 0, 0, 52), UDim2.new(0, 32, 0, 25), main)
-    self:enableDrag(downBtn, main)
-
-    self:createDivider(main, UDim2.new(0, 32, 0, 52), UDim2.new(0, 1, 0, 25))
-
-    local minusBtn = self:createButton("-", UDim2.new(0, 33, 0, 52), UDim2.new(0, 48, 0, 25), main)
-    self:enableDrag(minusBtn, main)
-
-    self:createDivider(main, UDim2.new(0, 81, 0, 52), UDim2.new(0, 1, 0, 25))
-
-    local speedDisplay = self:createButton("2", UDim2.new(0, 82, 0, 52), UDim2.new(0, 78, 0, 25), main)
-    self:enableDrag(speedDisplay, main)
+    pillBtn.MouseButton1Click:Connect(function()
+        win.Visible = true
+        pill.Visible = false
+    end)
 
     flyBtn.MouseButton1Click:Connect(function()
         self.State.Flying = not self.State.Flying
-        flyBtn.Text = self.State.Flying and "Fly: ON" or "Fly: OFF"
         if self.State.Flying then
-            flyBtn.BackgroundColor3 = self.Config.UI.ActiveColor
-            flyBtn.TextColor3 = self.Config.UI.TextColorActive
+            flyBtn.Text = "> FLY: ON"
+            flyBtn.BackgroundColor3 = G
         else
-            flyBtn.BackgroundColor3 = self.Config.UI.BackgroundColor
-            flyBtn.TextColor3 = self.Config.UI.TextColor
+            flyBtn.Text = "FLY: OFF"
+            flyBtn.BackgroundColor3 = B
             movementController:resetPhysics(self.Services.Players.LocalPlayer.Character)
         end
     end)
 
     noclipBtn.MouseButton1Click:Connect(function()
         self.State.Noclip = not self.State.Noclip
-        noclipBtn.Text = self.State.Noclip and "Noclip: ON" or "Noclip: OFF"
         if self.State.Noclip then
-            noclipBtn.BackgroundColor3 = self.Config.UI.ActiveColor
-            noclipBtn.TextColor3 = self.Config.UI.TextColorActive
+            noclipBtn.Text = "> NOCLIP: ON"
+            noclipBtn.BackgroundColor3 = G
         else
-            noclipBtn.BackgroundColor3 = self.Config.UI.BackgroundColor
-            noclipBtn.TextColor3 = self.Config.UI.TextColor
+            noclipBtn.Text = "NOCLIP: OFF"
+            noclipBtn.BackgroundColor3 = B
             movementController:restoreNaturalCollision(self.Services.Players.LocalPlayer.Character)
         end
     end)
@@ -432,7 +512,7 @@ function UI:build(movementController, screenGui)
     end)
 
     minusBtn.MouseButton1Click:Connect(function()
-        self.State.FlySpeed = math.max(1, self.State.FlySpeed - 1)
+        self.State.FlySpeed = math.max(Config.Fly.MinSpeed, self.State.FlySpeed - 1)
         speedDisplay.Text = tostring(self.State.FlySpeed)
     end)
 
@@ -441,10 +521,7 @@ function UI:build(movementController, screenGui)
     downBtn.MouseButton1Down:Connect(function() self.State.VerticalVector = -1 end)
     downBtn.MouseButton1Up:Connect(function() self.State.VerticalVector = 0 end)
 
-    self.MainFrame = main
     self.ScreenGui = screenGui
-    self.Pill = pill
-
     return self
 end
 
@@ -456,6 +533,9 @@ function UI:cleanup()
     end
 end
 
+-- ──────────────────────────────────────────────
+-- MainController
+-- ──────────────────────────────────────────────
 local MainController = {}
 MainController.__index = MainController
 
