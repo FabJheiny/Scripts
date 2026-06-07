@@ -68,11 +68,11 @@ UI.Button.Parent = UI.Container
 
 UI.Crosshair.Name = 'Crosshair'
 UI.Crosshair.Parent = UI.MainGui
-UI.Crosshair.Size = UDim2.new(0, 30, 0, 30)
+UI.Crosshair.Size = UDim2.new(0, 120, 0, 120)
 UI.Crosshair.Position = UDim2.new(0.5, 0, 0.45, 0)
 UI.Crosshair.AnchorPoint = Vector2.new(0.5, 0.5)
 UI.Crosshair.BackgroundTransparency = 1
-UI.Crosshair.Image = 'rbxassetid://85514680408407'
+UI.Crosshair.Image = 'rbxassetid://118086769581805'
 UI.Crosshair.Visible = false
 UI.Crosshair.ZIndex = 10
 
