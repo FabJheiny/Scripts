@@ -1,117 +1,149 @@
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
+local UIS = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- ── Menu (PlayerGui) ──────────────────────────────────────────────────
-local gui = Instance.new("ScreenGui")
-gui.Name = "PremiumCalc"
-gui.ResetOnSpawn = false
-gui.Parent = playerGui
+local B    = Color3.fromRGB(0,   0,   0)
+local W    = Color3.fromRGB(255, 255, 255)
+local D    = Color3.fromRGB(15,  15,  15)
+local G    = Color3.fromRGB(50,  50,  50)
+local FONT = Enum.Font.Code
 
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 160, 0, 272)
-frame.Position = UDim2.new(0.5, -80, 0.5, -136)
-frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-frame.BackgroundTransparency = 0
-frame.BorderSizePixel = 0
-frame.Active = true
-frame.Draggable = true
-frame.ClipsDescendants = true
+local function o(cls, props, par)
+    local x = Instance.new(cls)
+    for k, v in pairs(props) do x[k] = v end
+    if par then x.Parent = par end
+    return x
+end
+local function stroke(par, t, c)
+    o("UIStroke", {
+        Color = c or W, Thickness = t or 1,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+    }, par)
+end
+local function mkBtn(txt, parent, sz, pos)
+    local b = o("TextButton", {
+        Size = sz, Position = pos,
+        BackgroundColor3 = B, BorderSizePixel = 0,
+        Text = txt, TextColor3 = W, TextSize = 10, Font = FONT,
+        AutoButtonColor = false,
+    }, parent)
+    stroke(b, 1)
+    b.MouseEnter:Connect(function() b.BackgroundColor3 = D end)
+    b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
+    return b
+end
 
-local frameStroke = Instance.new("UIStroke", frame)
-frameStroke.Color = Color3.fromRGB(255, 255, 255)
-frameStroke.Thickness = 1
-frameStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+local topH      = 24
+local menuW     = 160
+local fullH     = 272
+local miniH     = topH
 
-local topBar = Instance.new("Frame", frame)
-topBar.Size = UDim2.new(1, 0, 0, 24)
-topBar.Position = UDim2.new(0, 0, 0, 0)
-topBar.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-topBar.BackgroundTransparency = 0
-topBar.BorderSizePixel = 0
+local gui = o("ScreenGui", {
+    Name = "PremiumCalc",
+    ResetOnSpawn = false,
+    IgnoreGuiInset = true,
+}, playerGui)
 
-local topSep = Instance.new("Frame", topBar)
-topSep.Size = UDim2.new(1, 0, 0, 1)
-topSep.Position = UDim2.new(0, 0, 1, -1)
-topSep.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-topSep.BackgroundTransparency = 0
-topSep.BorderSizePixel = 0
+local win = o("Frame", {
+    Size = UDim2.new(0, menuW, 0, fullH),
+    Position = UDim2.new(0.5, -80, 0.5, -136),
+    BackgroundColor3 = B, BorderSizePixel = 0,
+    Active = true, ClipsDescendants = true,
+}, gui)
+stroke(win, 1)
 
-local titulo = Instance.new("TextLabel", topBar)
-titulo.Size = UDim2.new(1, -100, 1, 0)
-titulo.Position = UDim2.new(0, 10, 0, 0)
-titulo.BackgroundTransparency = 1
-titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
-titulo.TextSize = 10
-titulo.TextXAlignment = Enum.TextXAlignment.Left
-titulo.Text = "PremiumCalc"
-titulo.Font = Enum.Font.SourceSansBold
+local top = o("Frame", {
+    Size = UDim2.new(1, 0, 0, topH),
+    BackgroundColor3 = B, BorderSizePixel = 0,
+    Active = true, ZIndex = 10,
+}, win)
 
-local recolherBtn = Instance.new("TextButton", topBar)
-recolherBtn.Size = UDim2.new(0, 18, 0, 14)
-recolherBtn.Position = UDim2.new(1, -42, 0.5, -7)
-recolherBtn.Text = "-"
-recolherBtn.TextSize = 12
-recolherBtn.Font = Enum.Font.SourceSansBold
-recolherBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-recolherBtn.BackgroundTransparency = 0
-recolherBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-recolherBtn.BorderSizePixel = 0
-recolherBtn.AutoButtonColor = false
+o("TextLabel", {
+    Size = UDim2.new(1, -70, 1, 0), Position = UDim2.new(0, 8, 0, 0),
+    BackgroundTransparency = 1, Text = "> CALC <",
+    TextColor3 = W, TextSize = 10, Font = FONT,
+    TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10,
+}, top)
 
-local closeBtn = Instance.new("TextButton", topBar)
-closeBtn.Size = UDim2.new(0, 18, 0, 14)
-closeBtn.Position = UDim2.new(1, -20, 0.5, -7)
-closeBtn.Text = "x"
-closeBtn.TextSize = 10
-closeBtn.Font = Enum.Font.SourceSansBold
-closeBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-closeBtn.BackgroundTransparency = 0
-closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.BorderSizePixel = 0
-closeBtn.AutoButtonColor = false
+o("Frame", {Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-66,0,0), BackgroundColor3=W, BorderSizePixel=0, ZIndex=12}, top)
+o("Frame", {Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-33,0,0), BackgroundColor3=W, BorderSizePixel=0, ZIndex=12}, top)
 
-local display = Instance.new("TextLabel", frame)
-display.Size = UDim2.new(1, -12, 0, 26)
-display.Position = UDim2.new(0, 6, 0, 28)
-display.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-display.BackgroundTransparency = 0
-display.TextColor3 = Color3.fromRGB(255, 255, 255)
-display.TextSize = 14
-display.TextXAlignment = Enum.TextXAlignment.Right
-display.Text = "0"
-display.Font = Enum.Font.SourceSansBold
-display.BorderSizePixel = 0
+local MinBtn = o("TextButton", {
+    Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-65,0,0),
+    BackgroundColor3=B, BorderSizePixel=0,
+    Text="-", TextColor3=W, TextSize=18, Font=FONT,
+    AutoButtonColor=false, ZIndex=11,
+}, top)
+local XBtn = o("TextButton", {
+    Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-32,0,0),
+    BackgroundColor3=B, BorderSizePixel=0,
+    Text="x", TextColor3=W, TextSize=14, Font=FONT,
+    AutoButtonColor=false, ZIndex=11,
+}, top)
+for _, b in ipairs({MinBtn, XBtn}) do
+    b.MouseEnter:Connect(function() b.BackgroundColor3 = D end)
+    b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
+end
 
-local displayCorner = Instance.new("UICorner", display)
-displayCorner.CornerRadius = UDim.new(0, 6)
+o("Frame", {
+    Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,0,topH),
+    BackgroundColor3=W, BorderSizePixel=0, ZIndex=20,
+}, win)
 
-local displayPadding = Instance.new("UIPadding", display)
-displayPadding.PaddingRight = UDim.new(0, 8)
+do
+    local dragging, dragStart, startPos = false, nil, nil
+    top.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1
+        or inp.UserInputType == Enum.UserInputType.Touch then
+            dragging  = true
+            dragStart = inp.Position
+            startPos  = win.Position
+        end
+    end)
+    top.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1
+        or inp.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    UIS.InputChanged:Connect(function(inp)
+        if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement
+            or inp.UserInputType == Enum.UserInputType.Touch) then
+            local d = inp.Position - dragStart
+            win.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + d.X,
+                startPos.Y.Scale, startPos.Y.Offset + d.Y
+            )
+        end
+    end)
+end
 
-local btnContainer = Instance.new("Frame", frame)
-btnContainer.Size = UDim2.new(1, 0, 1, -60)
-btnContainer.Position = UDim2.new(0, 0, 0, 60)
-btnContainer.BackgroundTransparency = 1
-btnContainer.ClipsDescendants = true
+local body = o("Frame", {
+    Size = UDim2.new(1, 0, 1, -topH - 1),
+    Position = UDim2.new(0, 0, 0, topH + 1),
+    BackgroundColor3 = B, BorderSizePixel = 0,
+    ClipsDescendants = true,
+}, win)
 
-local recolhido = false
-local fullHeight = 272
-local miniHeight = 60
+local display = o("TextLabel", {
+    Size = UDim2.new(1, -12, 0, 26),
+    Position = UDim2.new(0, 6, 0, 4),
+    BackgroundColor3 = D, BorderSizePixel = 0,
+    TextColor3 = W, TextSize = 14, Font = FONT,
+    TextXAlignment = Enum.TextXAlignment.Right,
+    Text = "0",
+}, body)
+stroke(display, 1)
+o("UIPadding", {PaddingRight = UDim.new(0, 8)}, display)
 
-recolherBtn.MouseButton1Click:Connect(function()
-    recolhido = not recolhido
-    if recolhido then
-        frame.Size = UDim2.new(0, 160, 0, miniHeight)
-        btnContainer.Visible = false
-        recolherBtn.Text = "+"
-    else
-        frame.Size = UDim2.new(0, 160, 0, fullHeight)
-        btnContainer.Visible = true
-        recolherBtn.Text = "-"
-    end
-end)
+local btnContainer = o("Frame", {
+    Size = UDim2.new(1, 0, 1, -36),
+    Position = UDim2.new(0, 0, 0, 36),
+    BackgroundTransparency = 1,
+    ClipsDescendants = true,
+}, body)
 
 local current = "0"
 
@@ -130,46 +162,31 @@ end
 
 local function calcular()
     local expr = current
-
     expr = expr:gsub("(%d+%.?%d*)([%+%-])(%d+%.?%d*)%%", function(base, op, percent)
         local baseNum = tonumber(base)
         local percentNum = tonumber(percent)
         local percentValue = baseNum * percentNum / 100
-        if op == "+" then
-            return tostring(baseNum + percentValue)
-        elseif op == "-" then
-            return tostring(baseNum - percentValue)
-        end
+        if op == "+" then return tostring(baseNum + percentValue)
+        elseif op == "-" then return tostring(baseNum - percentValue) end
     end)
-
     expr = expr:gsub("(%d+%.?%d*)%%([%*%/]?)(%d+%.?%d*)", function(percent, op, num)
         local percentNum = tonumber(percent)
         local numValue = tonumber(num)
         local percentValue = numValue * percentNum / 100
-        if op == "*" or op == "" then
-            return tostring(percentValue)
-        elseif op == "/" then
-            return tostring(percentNum / 100 / numValue)
-        end
+        if op == "*" or op == "" then return tostring(percentValue)
+        elseif op == "/" then return tostring(percentNum / 100 / numValue) end
     end)
-
     expr = expr:gsub("(%d+%.?%d*)([%*/])(%d+%.?%d*)%%", function(num, op, percent)
         local numValue = tonumber(num)
         local percentNum = tonumber(percent)
         local percentValue = numValue * percentNum / 100
-        if op == "*" then
-            return tostring(percentValue)
-        elseif op == "/" then
-            return tostring(numValue / (percentNum / 100))
-        end
+        if op == "*" then return tostring(percentValue)
+        elseif op == "/" then return tostring(numValue / (percentNum / 100)) end
     end)
-
     expr = expr:gsub("(%d+%.?%d*)%%", function(num)
         return tostring(tonumber(num) / 100)
     end)
-
     expr = expr:gsub("×", "*"):gsub("÷", "/"):gsub(",", ".")
-
     local success, result = pcall(function()
         return loadstring("return " .. expr)()
     end)
@@ -189,69 +206,69 @@ end
 local BTN    = 36
 local STEP   = 38
 local STARTX = 6
-local STARTY  = 4
+local STARTY = 4
 
-local function createButton(texto, x, y, isOperator, isEqual, isDanger, wide)
-    local btn = Instance.new("TextButton", btnContainer)
-    local w = wide and (BTN * 2 + (STEP - BTN)) or BTN
-    btn.Size = UDim2.new(0, w, 0, BTN)
-    btn.Position = UDim2.new(0, STARTX + (x * STEP), 0, STARTY + (y * STEP))
-    btn.Text = texto
-    btn.Font = Enum.Font.SourceSansBold
-    btn.BorderSizePixel = 0
-    btn.AutoButtonColor = false
-    btn.ZIndex = 2
+local function createButton(texto, x, y, isOperator, isEqual, isDanger)
+    local b = o("TextButton", {
+        Size = UDim2.new(0, BTN, 0, BTN),
+        Position = UDim2.new(0, STARTX + x * STEP, 0, STARTY + y * STEP),
+        BackgroundColor3 = B, BorderSizePixel = 0,
+        Text = texto, Font = FONT,
+        AutoButtonColor = false, ZIndex = 2,
+    }, btnContainer)
 
     if isEqual then
-        local btnCorner = Instance.new("UICorner", btn)
-        btnCorner.CornerRadius = UDim.new(0, 8)
-        btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        btn.TextColor3 = Color3.fromRGB(0, 0, 0)
-        btn.TextSize = 15
+        b.BackgroundColor3 = W
+        b.TextColor3 = B
+        b.TextSize = 15
+        stroke(b, 1)
+        b.MouseEnter:Connect(function() b.BackgroundColor3 = Color3.fromRGB(200,200,200) end)
+        b.MouseLeave:Connect(function() b.BackgroundColor3 = W end)
     elseif isDanger then
-        btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        btn.TextColor3 = Color3.fromRGB(255, 80, 80)
-        btn.TextSize = 10
+        b.TextColor3 = Color3.fromRGB(255, 80, 80)
+        b.TextSize = 10
+        stroke(b, 1, Color3.fromRGB(255, 80, 80))
+        b.MouseEnter:Connect(function() b.BackgroundColor3 = D end)
+        b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
     elseif isOperator then
-        btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.TextSize = 15
+        b.TextColor3 = W
+        b.TextSize = 15
+        stroke(b, 1)
+        b.MouseEnter:Connect(function() b.BackgroundColor3 = D end)
+        b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
     else
-        btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.TextSize = 11
+        b.TextColor3 = W
+        b.TextSize = 11
+        stroke(b, 1)
+        b.MouseEnter:Connect(function() b.BackgroundColor3 = D end)
+        b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
     end
 
-    btn.MouseButton1Click:Connect(function()
+    b.MouseButton1Click:Connect(function()
         if texto == "AC" then
-            current = "0"
-            atualizar(current)
+            current = "0" atualizar(current)
         elseif texto == "DEL" then
             deletarUltimo()
         elseif texto == "=" then
             calcular()
         elseif texto == "%" then
             if current ~= "0" and current ~= "Erro" then
-                current = current .. "%"
-                atualizar(current)
+                current = current .. "%" atualizar(current)
             end
         elseif texto == "+" or texto == "-" or texto == "×" or texto == "÷" then
             local ultimo = current:sub(-1)
             if ultimo ~= "+" and ultimo ~= "-" and ultimo ~= "×" and ultimo ~= "÷" and ultimo ~= "%" then
-                current = current .. texto
-                atualizar(current)
+                current = current .. texto atualizar(current)
             end
         elseif texto == "." then
             local ultimoNumero = current:match("[%d,]+$") or ""
             if not ultimoNumero:find("%.") then
-                current = current .. "."
-                atualizar(current)
+                current = current .. "." atualizar(current)
             end
         elseif texto == "," then
             local ultimoNumero = current:match("[%d%.]+$") or ""
             if not ultimoNumero:find(",") then
-                current = current .. ","
-                atualizar(current)
+                current = current .. "," atualizar(current)
             end
         else
             adicionar(texto)
@@ -260,63 +277,66 @@ local function createButton(texto, x, y, isOperator, isEqual, isDanger, wide)
 end
 
 local layout = {
-    {"AC",  "DEL",  "%",   "÷"},
-    {"7",   "8",    "9",   "×"},
-    {"4",   "5",    "6",   "-"},
-    {"1",   "2",    "3",   "+"},
+    {"AC",  "DEL", "%",  "÷"},
+    {"7",   "8",   "9",  "×"},
+    {"4",   "5",   "6",  "-"},
+    {"1",   "2",   "3",  "+"},
 }
-
 for y, linha in ipairs(layout) do
     for x, texto in ipairs(linha) do
         local isOperator = (texto == "+" or texto == "-" or texto == "×" or texto == "÷" or texto == "%")
         local isDanger   = (texto == "AC" or texto == "DEL")
-        createButton(texto, x-1, y-1, isOperator, false, isDanger, false)
+        createButton(texto, x-1, y-1, isOperator, false, isDanger)
     end
 end
+createButton("0", 0, 4, false, false, false)
+createButton(".", 1, 4, false, false, false)
+createButton(",", 2, 4, false, false, false)
+createButton("=", 3, 4, false, true,  false)
 
-createButton("0",  0, 4, false, false, false, false)
-createButton(".",  1, 4, false, false, false, false)
-createButton(",",  2, 4, false, false, false, false)
-createButton("=",  3, 4, false, true,  false, false)
-
--- ── Pill (CoreGui) ────────────────────────────────────────────────────
-local pillGui = Instance.new("ScreenGui")
-pillGui.Name = "PremiumCalcPill"
-pillGui.ResetOnSpawn = false
-pillGui.DisplayOrder = 9999
+local pillGui = o("ScreenGui", {
+    Name = "PremiumCalcPill",
+    ResetOnSpawn = false,
+    IgnoreGuiInset = true,
+    DisplayOrder = 9999,
+})
 local ok = pcall(function() pillGui.Parent = CoreGui end)
 if not ok then pillGui.Parent = playerGui end
 
-local pill = Instance.new("Frame", pillGui)
-pill.Name = "PremiumCalcPill"
-pill.Size = UDim2.new(0, 50, 0, 18)
-pill.Position = UDim2.new(1, -56, 1, -124)
-pill.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-pill.BorderSizePixel = 0
-pill.Visible = false
+local pill = o("Frame", {
+    Size = UDim2.new(0, 60, 0, 18),
+    Position = UDim2.new(1, -66, 1, -124),
+    BackgroundColor3 = B, BorderSizePixel = 0,
+    Visible = false, ZIndex = 200,
+}, pillGui)
+stroke(pill, 1)
 
-local pillStroke = Instance.new("UIStroke", pill)
-pillStroke.Color = Color3.fromRGB(255, 255, 255)
-pillStroke.Thickness = 1
-pillStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+local pillBtn = o("TextButton", {
+    Size = UDim2.new(1, 0, 1, 0),
+    BackgroundTransparency = 1,
+    Text = "> calc", TextSize = 9, Font = FONT,
+    TextColor3 = W, BorderSizePixel = 0,
+    ZIndex = 201,
+}, pill)
 
-local pillBtn = Instance.new("TextButton", pill)
-pillBtn.Size = UDim2.new(1, 0, 1, 0)
-pillBtn.Text = "> calc"
-pillBtn.TextSize = 9
-pillBtn.Font = Enum.Font.SourceSansBold
-pillBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-pillBtn.BackgroundTransparency = 1
-pillBtn.BorderSizePixel = 0
-pillBtn.AutoButtonColor = false
+local minimized = false
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    if minimized then
+        win.Size    = UDim2.new(0, menuW, 0, topH)
+        MinBtn.Text = "+"
+    else
+        win.Size    = UDim2.new(0, menuW, 0, fullH)
+        MinBtn.Text = "-"
+    end
+end)
 
--- ── Conexões ──────────────────────────────────────────────────────────
-closeBtn.MouseButton1Click:Connect(function()
-    frame.Visible = false
+XBtn.MouseButton1Click:Connect(function()
+    win.Visible  = false
     pill.Visible = true
 end)
 
 pillBtn.MouseButton1Click:Connect(function()
-    frame.Visible = true
+    win.Visible  = true
     pill.Visible = false
 end)
