@@ -1,4 +1,4 @@
-local Hub = loadstring(game:HttpGet("https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/choser"))()
+local Hub = loadstring(game:HttpGet("https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/hub"))()
 
 repeat task.wait(0.1) until _G._HubLoaded
 local Hub = _G._ChosenHub
