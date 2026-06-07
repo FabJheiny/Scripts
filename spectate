@@ -1,0 +1,158 @@
+local Players   = game:GetService("Players")
+local CoreGui   = game:GetService("CoreGui")
+local Player    = Players.LocalPlayer
+
+local B    = Color3.fromRGB(0,0,0)
+local W    = Color3.fromRGB(255,255,255)
+local D    = Color3.fromRGB(15,15,15)
+local FONT = Enum.Font.Code
+
+local function o(cls,props,par)
+    local x=Instance.new(cls)
+    for k,v in pairs(props) do x[k]=v end
+    if par then x.Parent=par end
+    return x
+end
+local function stroke(par,t,c)
+    o("UIStroke",{Color=c or W,Thickness=t or 1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},par)
+end
+
+-- ScreenGui
+local sg=o("ScreenGui",{
+    Name="SpectateGui",ResetOnSpawn=false,
+    IgnoreGuiInset=true,DisplayOrder=2147483647,
+})
+local ok=pcall(function() sg.Parent=CoreGui end)
+if not ok then sg.Parent=Player:WaitForChild("PlayerGui") end
+
+-- Bar
+local bar=o("Frame",{
+    Name="Bar",
+    Parent=sg,
+    Position=UDim2.new(-1,-100,0.88,-50),
+    Size=UDim2.new(0,200,0,50),
+    BackgroundColor3=B,
+    BackgroundTransparency=0,
+    BorderSizePixel=0,
+})
+stroke(bar,1)
+
+local prev=o("TextButton",{
+    Name="Previous",Parent=bar,
+    Size=UDim2.new(0.25,0,1,0),
+    Position=UDim2.new(0,0,0,0),
+    Text="<",
+    BackgroundColor3=B,BorderSizePixel=0,
+    Font=FONT,TextColor3=W,TextSize=14,
+    AutoButtonColor=false,
+})
+stroke(prev,1)
+prev.MouseEnter:Connect(function() prev.BackgroundColor3=D end)
+prev.MouseLeave:Connect(function() prev.BackgroundColor3=B end)
+
+local nex=o("TextButton",{
+    Name="Next",Parent=bar,
+    Size=UDim2.new(0.25,0,1,0),
+    Position=UDim2.new(0.75,0,0,0),
+    Text=">",
+    BackgroundColor3=B,BorderSizePixel=0,
+    Font=FONT,TextColor3=W,TextSize=14,
+    AutoButtonColor=false,
+})
+stroke(nex,1)
+nex.MouseEnter:Connect(function() nex.BackgroundColor3=D end)
+nex.MouseLeave:Connect(function() nex.BackgroundColor3=B end)
+
+local title=o("TextLabel",{
+    Name="Title",Parent=bar,
+    Position=UDim2.new(0.275,0,0,0),
+    Size=UDim2.new(0.45,0,1,0),
+    Text="",
+    BackgroundTransparency=1,BorderSizePixel=0,
+    Font=FONT,TextColor3=W,
+    TextSize=14,TextScaled=true,
+})
+
+-- Pill
+local PillGui=o("ScreenGui",{
+    Name="SpectatePillGui",ResetOnSpawn=false,
+    IgnoreGuiInset=true,DisplayOrder=9999,
+})
+local ok2=pcall(function() PillGui.Parent=CoreGui end)
+if not ok2 then PillGui.Parent=Player:WaitForChild("PlayerGui") end
+
+local pill=o("Frame",{
+    Name="PillSpectate",
+    Size=UDim2.new(0,60,0,18),
+    Position=UDim2.new(1,-66,1,-278),
+    BackgroundColor3=B,BorderSizePixel=0,
+    ZIndex=200,
+},PillGui)
+stroke(pill,1)
+local pillBtn=o("TextButton",{
+    Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,
+    Text="> spectate",TextSize=9,Font=FONT,
+    TextColor3=W,BorderSizePixel=0,ZIndex=201,
+},pill)
+
+-- Lógica
+local cam = workspace.CurrentCamera
+local players = Players:GetPlayers()
+local currentIndex = 1
+
+-- Atualiza lista de players a cada 10 segundos
+task.spawn(function()
+    while true do
+        task.wait(10)
+        players = Players:GetPlayers()
+        -- Corrige índice caso a lista tenha encolhido
+        if currentIndex > #players then
+            currentIndex = #players
+        end
+    end
+end)
+
+local function updateCameraAndTitle(index)
+    if #players == 0 then return end
+    local player = players[index]
+    if player and player.Character then
+        cam.CameraSubject = player.Character.Humanoid
+        title.Text = string.format("%s (@%s)", player.DisplayName, player.Name)
+    end
+end
+
+updateCameraAndTitle(currentIndex)
+
+local debounce = false
+pillBtn.MouseButton1Click:Connect(function()
+    if debounce == false then
+        debounce = true
+        -- Sem animação: posição direta
+        bar.Position = UDim2.new(.5,-100,0.88,-50)
+        pcall(function()
+            local player = Players:GetPlayerFromCharacter(cam.CameraSubject.Parent)
+            title.Text = string.format("%s (@%s)", player.DisplayName, player.Name)
+        end)
+    else
+        debounce = false
+        pcall(function() cam.CameraSubject = Player.Character.Humanoid end)
+        -- Sem animação: posição direta
+        bar.Position = UDim2.new(-1,-100,0.88,-50)
+    end
+end)
+
+prev.MouseButton1Click:Connect(function()
+    currentIndex = currentIndex - 1
+    if currentIndex < 1 then
+        currentIndex = #players
+    end
+    updateCameraAndTitle(currentIndex)
+end)
+
+nex.MouseButton1Click:Connect(function()
+    currentIndex = currentIndex + 1
+    if currentIndex > #players then
+        currentIndex = 1
+    end
+    updateCameraAndTitle(currentIndex)
+end)
