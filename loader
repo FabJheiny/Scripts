@@ -35,7 +35,6 @@ Hub:Tab("GamesHub")
     :Button("Zombie Arena","https://raw.githubusercontent.com/gumanba/Scripts/main/SurviveZombieArena")
     :Button("99 Noites","https://rawscripts.net/raw/Universal-Script-99-Noites-na-Floresta-87445")
     :Button("Pickaxe Tycoon","https://raw.githubusercontent.com/gumanba/Scripts/main/PickaxeTycoon")
-    :Button("Brainrot Sniper","https://raw.githubusercontent.com/gumanba/Scripts/main/FindandsnipeBrainrot")
 
 Hub:Tab("Morphs")
     :Button("Hand Green (r6)","https://raw.githubusercontent.com/ian49972/SCRIPTS/refs/heads/main/hand")
