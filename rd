@@ -1,335 +1,303 @@
--- Jheiny Radio
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
-local Player = Players.LocalPlayer
+local UIS     = game:GetService("UserInputService")
+local Player  = Players.LocalPlayer
 
-local gui = Player.PlayerGui:FindFirstChild("SoundGui")
-if gui then gui:Destroy() end
+local old = Player.PlayerGui:FindFirstChild("RadioGui")
+if old then old:Destroy() end
 
-local SoundGui = Instance.new("ScreenGui")
-local Frame    = Instance.new("Frame")
-local drag     = Instance.new("UIDragDetector")
-local c00lflag = Instance.new("Sound")
+local B    = Color3.fromRGB(0,   0,   0)
+local W    = Color3.fromRGB(255, 255, 255)
+local D    = Color3.fromRGB(15,  15,  15)
+local G    = Color3.fromRGB(50,  50,  50)
+local FONT = Enum.Font.Code
 
-local TopBar  = Instance.new("Frame")
-local TopSep  = Instance.new("Frame")
-local Title   = Instance.new("TextLabel")
-local MinBtn  = Instance.new("TextButton")
-local ExitBtn = Instance.new("TextButton")
-
-c00lflag.Name   = "c00lsound23sas"
-c00lflag.Parent = Frame
-
--- ── Menu (PlayerGui) ──────────────────────────────────────────────────
-SoundGui.Name           = "SoundGui"
-SoundGui.Parent         = Player:WaitForChild("PlayerGui")
-SoundGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-SoundGui.ResetOnSpawn   = false
-
-local W, H = 360, 130
-
-Frame.Parent           = SoundGui
-Frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-Frame.BorderSizePixel  = 0
-Frame.Position         = UDim2.new(0, 400, 0, 300)
-Frame.Size             = UDim2.new(0, W, 0, H)
-Frame.ClipsDescendants = true
-Frame.Active           = true
-
-local FrameStroke = Instance.new("UIStroke", Frame)
-FrameStroke.Color           = Color3.fromRGB(255, 255, 255)
-FrameStroke.Thickness       = 1
-FrameStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-
-drag.Parent = Frame
-
--- Top Bar
-TopBar.Parent           = Frame
-TopBar.Size             = UDim2.new(1, 0, 0, 20)
-TopBar.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-TopBar.BorderSizePixel  = 0
-TopBar.ZIndex           = 3
-
-TopSep.Parent           = TopBar
-TopSep.Size             = UDim2.new(1, 0, 0, 1)
-TopSep.Position         = UDim2.new(0, 0, 1, -1)
-TopSep.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-TopSep.BorderSizePixel  = 0
-
-Title.Parent                 = TopBar
-Title.Size                   = UDim2.new(1, -50, 1, 0)
-Title.Position               = UDim2.new(0, 10, 0, 0)
-Title.BackgroundTransparency = 1
-Title.TextColor3             = Color3.fromRGB(255, 255, 255)
-Title.TextSize               = 10
-Title.TextXAlignment         = Enum.TextXAlignment.Left
-Title.Text                   = "Jheiny Radio"
-Title.Font                   = Enum.Font.SourceSansBold
-Title.ZIndex                 = 4
-
-local StatusLbl = Instance.new("TextLabel", TopBar)
-StatusLbl.Size                   = UDim2.new(0, 80, 1, 0)
-StatusLbl.Position               = UDim2.new(0, 85, 0, 0)
-StatusLbl.BackgroundTransparency = 1
-StatusLbl.TextColor3             = Color3.fromRGB(80, 80, 80)
-StatusLbl.TextSize               = 9
-StatusLbl.TextXAlignment         = Enum.TextXAlignment.Left
-StatusLbl.Text                   = ""
-StatusLbl.Font                   = Enum.Font.SourceSansBold
-StatusLbl.ZIndex                 = 4
-
-MinBtn.Parent           = TopBar
-MinBtn.Size             = UDim2.new(0, 18, 0, 14)
-MinBtn.Position         = UDim2.new(1, -42, 0.5, -7)
-MinBtn.Text             = "-"
-MinBtn.TextSize         = 12
-MinBtn.Font             = Enum.Font.SourceSansBold
-MinBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-MinBtn.TextColor3       = Color3.fromRGB(255, 255, 255)
-MinBtn.BorderSizePixel  = 0
-MinBtn.AutoButtonColor  = false
-MinBtn.ZIndex           = 4
-
-ExitBtn.Parent           = TopBar
-ExitBtn.Size             = UDim2.new(0, 18, 0, 14)
-ExitBtn.Position         = UDim2.new(1, -20, 0.5, -7)
-ExitBtn.Text             = "x"
-ExitBtn.TextSize         = 10
-ExitBtn.Font             = Enum.Font.SourceSansBold
-ExitBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-ExitBtn.TextColor3       = Color3.fromRGB(255, 80, 80)
-ExitBtn.BorderSizePixel  = 0
-ExitBtn.AutoButtonColor  = false
-ExitBtn.ZIndex           = 4
-
--- Input helper
-local function makeInput(label, defaultText, xPos, w, yPos)
-    local lbl = Instance.new("TextLabel", Frame)
-    lbl.Size                   = UDim2.new(0, w, 0, 11)
-    lbl.Position               = UDim2.new(0, xPos, 0, yPos)
-    lbl.BackgroundTransparency = 1
-    lbl.TextColor3             = Color3.fromRGB(110, 110, 110)
-    lbl.TextSize               = 9
-    lbl.TextXAlignment         = Enum.TextXAlignment.Left
-    lbl.Text                   = label
-    lbl.Font                   = Enum.Font.SourceSansBold
-    lbl.ZIndex                 = 2
-
-    local box = Instance.new("TextBox", Frame)
-    box.Size               = UDim2.new(0, w, 0, 24)
-    box.Position           = UDim2.new(0, xPos, 0, yPos + 12)
-    box.BackgroundColor3   = Color3.fromRGB(15, 15, 15)
-    box.BorderSizePixel    = 0
-    box.Text               = defaultText
-    box.PlaceholderText    = label
-    box.TextColor3         = Color3.fromRGB(255, 255, 255)
-    box.PlaceholderColor3  = Color3.fromRGB(70, 70, 70)
-    box.TextSize           = 11
-    box.Font               = Enum.Font.SourceSansBold
-    box.TextXAlignment     = Enum.TextXAlignment.Right
-    box.ClearTextOnFocus   = false
-    box.ZIndex             = 2
-
-    local c = Instance.new("UICorner", box) c.CornerRadius = UDim.new(0, 5)
-    local p = Instance.new("UIPadding", box)
-    p.PaddingRight = UDim.new(0, 8) p.PaddingLeft = UDim.new(0, 8)
+local function o(cls, props, par)
+    local x = Instance.new(cls)
+    for k, v in pairs(props) do x[k] = v end
+    if par then x.Parent = par end
+    return x
+end
+local function stroke(par, t, c)
+    o("UIStroke", {
+        Color = c or W, Thickness = t or 1,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+    }, par)
+end
+local function mkBtn(txt, parent, sz, pos)
+    local b = o("TextButton", {
+        Size = sz, Position = pos,
+        BackgroundColor3 = B, BorderSizePixel = 0,
+        Text = txt, TextColor3 = W, TextSize = 10, Font = FONT,
+        AutoButtonColor = false,
+    }, parent)
+    stroke(b, 1)
+    b.MouseEnter:Connect(function() b.BackgroundColor3 = D end)
+    b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
+    return b
+end
+local function mkInput(label, default, parent, sz, pos)
+    o("TextLabel", {
+        Size = UDim2.new(sz.X.Scale, sz.X.Offset, 0, 10),
+        Position = UDim2.new(pos.X.Scale, pos.X.Offset, pos.Y.Scale, pos.Y.Offset - 12),
+        BackgroundTransparency = 1,
+        Text = label, TextColor3 = G, TextSize = 9, Font = FONT,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    }, parent)
+    local box = o("TextBox", {
+        Size = sz, Position = pos,
+        BackgroundColor3 = D, BorderSizePixel = 0,
+        Text = default, PlaceholderText = label,
+        TextColor3 = W, PlaceholderColor3 = G,
+        TextSize = 10, Font = FONT,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        ClearTextOnFocus = false,
+    }, parent)
+    stroke(box, 1)
+    o("UIPadding", {PaddingRight = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6)}, box)
     return box
 end
 
-local IdBox = makeInput("Sound ID", "", 6, W - 12, 22)
+local RadioGui = o("ScreenGui", {
+    Name = "RadioGui",
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+    ResetOnSpawn = false,
+    IgnoreGuiInset = true,
+}, Player:WaitForChild("PlayerGui"))
 
-local halfW  = (W - 18) / 2
-local inputW = (halfW - 6) / 2
+local W_WIN = 240
+local H_WIN = 180
+local topH  = 24
 
-local SpeedBox = makeInput("Playback Speed", "1",   6,              inputW, 60)
-local VolBox   = makeInput("Volume",         "0.5", 6 + inputW + 6, inputW, 60)
+local win = o("Frame", {
+    Size = UDim2.new(0, W_WIN, 0, H_WIN),
+    Position = UDim2.new(0, 400, 0, 300),
+    BackgroundColor3 = B, BorderSizePixel = 0,
+    Active = true, ClipsDescendants = true,
+}, RadioGui)
+stroke(win, 1)
 
-local rightX = 6 + halfW + 6
-local btnW   = (halfW - 6) / 2
+local top = o("Frame", {
+    Size = UDim2.new(1, 0, 0, topH),
+    BackgroundColor3 = B, BorderSizePixel = 0,
+    Active = true, ZIndex = 10,
+}, win)
 
--- Loop button
-local loopLbl = Instance.new("TextLabel", Frame)
-loopLbl.Size                   = UDim2.new(0, btnW, 0, 11)
-loopLbl.Position               = UDim2.new(0, rightX, 0, 60)
-loopLbl.BackgroundTransparency = 1
-loopLbl.TextColor3             = Color3.fromRGB(110, 110, 110)
-loopLbl.TextSize               = 9
-loopLbl.TextXAlignment         = Enum.TextXAlignment.Left
-loopLbl.Text                   = "Loop"
-loopLbl.Font                   = Enum.Font.SourceSansBold
-loopLbl.ZIndex                 = 2
+o("TextLabel", {
+    Size = UDim2.new(1, -70, 1, 0), Position = UDim2.new(0, 8, 0, 0),
+    BackgroundTransparency = 1, Text = "> RADIO <",
+    TextColor3 = W, TextSize = 10, Font = FONT,
+    TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10,
+}, top)
 
-local loopBtn = Instance.new("TextButton", Frame)
-loopBtn.Size             = UDim2.new(0, btnW, 0, 24)
-loopBtn.Position         = UDim2.new(0, rightX, 0, 72)
-loopBtn.Text             = "OFF"
-loopBtn.Font             = Enum.Font.SourceSansBold
-loopBtn.TextSize         = 10
-loopBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-loopBtn.TextColor3       = Color3.fromRGB(100, 100, 100)
-loopBtn.BorderSizePixel  = 0
-loopBtn.AutoButtonColor  = false
-loopBtn.ZIndex           = 2
-Instance.new("UICorner", loopBtn).CornerRadius = UDim.new(0, 5)
+o("Frame", {Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-66,0,0), BackgroundColor3=W, BorderSizePixel=0, ZIndex=12}, top)
+o("Frame", {Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-33,0,0), BackgroundColor3=W, BorderSizePixel=0, ZIndex=12}, top)
 
-local isLooped = false
+local MinBtn = o("TextButton", {
+    Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-65,0,0),
+    BackgroundColor3=B, BorderSizePixel=0,
+    Text="-", TextColor3=W, TextSize=18, Font=FONT,
+    AutoButtonColor=false, ZIndex=11,
+}, top)
+local XBtn = o("TextButton", {
+    Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-32,0,0),
+    BackgroundColor3=B, BorderSizePixel=0,
+    Text="x", TextColor3=W, TextSize=14, Font=FONT,
+    AutoButtonColor=false, ZIndex=11,
+}, top)
+for _, b in ipairs({MinBtn, XBtn}) do
+    b.MouseEnter:Connect(function() b.BackgroundColor3 = D end)
+    b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
+end
+
+o("Frame", {
+    Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,0,topH),
+    BackgroundColor3=W, BorderSizePixel=0, ZIndex=20,
+}, win)
+
+do
+    local dragging, dragStart, startPos = false, nil, nil
+    top.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1
+        or inp.UserInputType == Enum.UserInputType.Touch then
+            dragging  = true
+            dragStart = inp.Position
+            startPos  = win.Position
+        end
+    end)
+    top.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1
+        or inp.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    UIS.InputChanged:Connect(function(inp)
+        if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement
+            or inp.UserInputType == Enum.UserInputType.Touch) then
+            local d = inp.Position - dragStart
+            win.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + d.X,
+                startPos.Y.Scale, startPos.Y.Offset + d.Y
+            )
+        end
+    end)
+end
+
+local body = o("Frame", {
+    Size = UDim2.new(1, 0, 1, -topH - 1),
+    Position = UDim2.new(0, 0, 0, topH + 1),
+    BackgroundColor3 = B, BorderSizePixel = 0,
+    ClipsDescendants = true,
+}, win)
+
+local StatusLbl = o("TextLabel", {
+    Size = UDim2.new(1, -16, 0, 12),
+    Position = UDim2.new(0, 8, 0, 5),
+    BackgroundTransparency = 1,
+    Text = "", TextColor3 = G, TextSize = 9, Font = FONT,
+    TextXAlignment = Enum.TextXAlignment.Right,
+}, body)
+
+local IdBox = mkInput(
+    "SOUND ID", "",
+    body,
+    UDim2.new(1, -16, 0, 22),
+    UDim2.new(0, 8, 0, 22)
+)
+
+local colW = (W_WIN - 24) / 2
+
+local SpeedBox = mkInput(
+    "SPEED", "1",
+    body,
+    UDim2.new(0, colW, 0, 22),
+    UDim2.new(0, 8, 0, 60)
+)
+local VolBox = mkInput(
+    "VOLUME", "0.5",
+    body,
+    UDim2.new(0, colW, 0, 22),
+    UDim2.new(0, 8 + colW + 8, 0, 60)
+)
+
+o("Frame", {
+    Size=UDim2.new(1,-16,0,1), Position=UDim2.new(0,8,0,97),
+    BackgroundColor3=W, BorderSizePixel=0,
+}, body)
+
+local half     = UDim2.new(0, colW, 0, 20)
+local LoopBtn  = mkBtn("Loop",  body, half, UDim2.new(0, 8, 0, 103))
+local PauseBtn = mkBtn("Pause", body, half, UDim2.new(0, 8 + colW + 8, 0, 103))
+
+local PlayBtn = mkBtn("Play", body,
+    UDim2.new(0, colW, 0, 22),
+    UDim2.new(0, 8, 0, 129)
+)
+local StopBtn = mkBtn("Stop", body,
+    UDim2.new(0, colW, 0, 22),
+    UDim2.new(0, 8 + colW + 8, 0, 129)
+)
+
+local PillGui = o("ScreenGui", {
+    Name = "RadioPill",
+    ResetOnSpawn = false,
+    IgnoreGuiInset = true,
+    DisplayOrder = 9999,
+})
+local okPill = pcall(function() PillGui.Parent = CoreGui end)
+if not okPill then PillGui.Parent = Player:WaitForChild("PlayerGui") end
+
+local pill = o("Frame", {
+    Size = UDim2.new(0, 60, 0, 18),
+    Position = UDim2.new(1, -66, 1, -168),
+    BackgroundColor3 = B, BorderSizePixel = 0,
+    Visible = false, ZIndex = 200,
+}, PillGui)
+stroke(pill, 1)
+
+local pillBtn = o("TextButton", {
+    Size = UDim2.new(1, 0, 1, 0),
+    BackgroundTransparency = 1,
+    Text = "> radio", TextSize = 9, Font = FONT,
+    TextColor3 = W, BorderSizePixel = 0,
+    ZIndex = 201,
+}, pill)
+
+local soundTemplate = Instance.new("Sound")
+soundTemplate.Name   = "c00lsound23sas"
+soundTemplate.Parent = body
+
+local function getSound()
+    return workspace:FindFirstChild("c00lsound23sas")
+end
+
+local isLooped  = false
+local isPaused  = false
+local minimized = false
+
+local function setToggleActive(btn, label, active)
+    if active then
+        btn.BackgroundColor3 = G
+        btn.Text = "> " .. label
+    else
+        btn.BackgroundColor3 = B
+        btn.Text = label
+    end
+end
+
 local function setLoop(val)
     isLooped = val
-    if val then
-        loopBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        loopBtn.TextColor3       = Color3.fromRGB(0, 0, 0)
-        loopBtn.Text             = "ON"
-    else
-        loopBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-        loopBtn.TextColor3       = Color3.fromRGB(100, 100, 100)
-        loopBtn.Text             = "OFF"
-    end
+    setToggleActive(LoopBtn, "Loop", val)
+    local s = getSound()
+    if s then s.Looped = val end
 end
-loopBtn.MouseButton1Click:Connect(function() setLoop(not isLooped) end)
 
--- Pause/Continue button
-local ppX = rightX + btnW + 6
+local function resetPause()
+    isPaused = false
+    PauseBtn.Text = "Pause"
+    PauseBtn.BackgroundColor3 = B
+    StatusLbl.Text = ""
+end
 
-local ppLbl = Instance.new("TextLabel", Frame)
-ppLbl.Size                   = UDim2.new(0, btnW, 0, 11)
-ppLbl.Position               = UDim2.new(0, ppX, 0, 60)
-ppLbl.BackgroundTransparency = 1
-ppLbl.TextColor3             = Color3.fromRGB(110, 110, 110)
-ppLbl.TextSize               = 9
-ppLbl.TextXAlignment         = Enum.TextXAlignment.Left
-ppLbl.Text                   = "Pause"
-ppLbl.Font                   = Enum.Font.SourceSansBold
-ppLbl.ZIndex                 = 2
-
-local ppBtn = Instance.new("TextButton", Frame)
-ppBtn.Size             = UDim2.new(0, btnW, 0, 24)
-ppBtn.Position         = UDim2.new(0, ppX, 0, 72)
-ppBtn.Text             = "="
-ppBtn.Font             = Enum.Font.SourceSansBold
-ppBtn.TextSize         = 14
-ppBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-ppBtn.TextColor3       = Color3.fromRGB(100, 100, 100)
-ppBtn.BorderSizePixel  = 0
-ppBtn.AutoButtonColor  = false
-ppBtn.ZIndex           = 2
-Instance.new("UICorner", ppBtn).CornerRadius = UDim.new(0, 5)
-
-local isPaused = false
-
-local function applyPauseState(paused)
+local function applyPause(paused)
     isPaused = paused
     if paused then
-        ppBtn.Text             = ">"
-        ppBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-        ppBtn.TextColor3       = Color3.fromRGB(180, 180, 180)
-        ppLbl.Text             = "Continue"
-        StatusLbl.Text         = "= paused"
+        PauseBtn.Text = "> Resume"
+        PauseBtn.BackgroundColor3 = G
+        StatusLbl.Text = "= paused"
     else
-        ppBtn.Text             = "="
-        ppBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-        ppBtn.TextColor3       = Color3.fromRGB(100, 100, 100)
-        ppLbl.Text             = "Pause"
-        StatusLbl.Text         = "> playing"
+        PauseBtn.Text = "Pause"
+        PauseBtn.BackgroundColor3 = B
+        StatusLbl.Text = "> playing"
     end
 end
 
-ppBtn.MouseButton1Click:Connect(function()
-    local s = workspace:FindFirstChild("c00lsound23sas")
+LoopBtn.MouseButton1Click:Connect(function()
+    setLoop(not isLooped)
+end)
+
+PauseBtn.MouseButton1Click:Connect(function()
+    local s = getSound()
     if not s then return end
     if isPaused then
         s:Resume()
-        applyPauseState(false)
+        applyPause(false)
     else
         if s.IsPlaying then
             s:Pause()
-            applyPauseState(true)
+            applyPause(true)
         end
     end
 end)
 
--- Play / Stop buttons
-local btnY = 100
-
-local PlayBtn = Instance.new("TextButton", Frame)
-PlayBtn.Size             = UDim2.new(0, halfW, 0, 24)
-PlayBtn.Position         = UDim2.new(0, 6, 0, btnY)
-PlayBtn.BorderSizePixel  = 0
-PlayBtn.Text             = "PLAY"
-PlayBtn.Font             = Enum.Font.SourceSansBold
-PlayBtn.TextSize         = 10
-PlayBtn.AutoButtonColor  = false
-PlayBtn.ZIndex           = 2
-PlayBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-PlayBtn.TextColor3       = Color3.fromRGB(0, 0, 0)
-Instance.new("UICorner", PlayBtn).CornerRadius = UDim.new(0, 6)
-
-local StopBtn = Instance.new("TextButton", Frame)
-StopBtn.Size             = UDim2.new(0, halfW, 0, 24)
-StopBtn.Position         = UDim2.new(0, 6 + halfW + 6, 0, btnY)
-StopBtn.BorderSizePixel  = 0
-StopBtn.Text             = "STOP"
-StopBtn.Font             = Enum.Font.SourceSansBold
-StopBtn.TextSize         = 10
-StopBtn.AutoButtonColor  = false
-StopBtn.ZIndex           = 2
-StopBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-StopBtn.TextColor3       = Color3.fromRGB(255, 80, 80)
-Instance.new("UICorner", StopBtn).CornerRadius = UDim.new(0, 6)
-
-local StopStroke = Instance.new("UIStroke", StopBtn)
-StopStroke.Color           = Color3.fromRGB(255, 80, 80)
-StopStroke.Thickness       = 1
-StopStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-
--- ── Pill (CoreGui) ────────────────────────────────────────────────────
-local PillSg = Instance.new("ScreenGui")
-PillSg.Name           = "SoundGuiPill"
-PillSg.DisplayOrder   = 9999
-PillSg.ResetOnSpawn   = false
-local ok = pcall(function() PillSg.Parent = CoreGui end)
-if not ok then PillSg.Parent = Player:WaitForChild("PlayerGui") end
-
-local Frame2 = Instance.new("Frame", PillSg)
-Frame2.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-Frame2.BorderSizePixel  = 0
-Frame2.Position         = UDim2.new(1, -56, 1, -36)
-Frame2.Size             = UDim2.new(0, 50, 0, 18)
-Frame2.Visible          = false
-
-local F2S = Instance.new("UIStroke", Frame2)
-F2S.Color           = Color3.fromRGB(255, 255, 255)
-F2S.Thickness       = 1
-F2S.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-
-local Open = Instance.new("TextButton", Frame2)
-Open.Size                   = UDim2.new(1, 0, 1, 0)
-Open.BackgroundTransparency = 1
-Open.Text                   = "> radio"
-Open.Font                   = Enum.Font.SourceSansBold
-Open.TextSize               = 9
-Open.TextColor3             = Color3.fromRGB(255, 255, 255)
-Open.BorderSizePixel        = 0
-Open.AutoButtonColor        = false
-
--- Logic
-local minimized = false
-
-local function resetPPBtn()
-    isPaused = false
-    ppBtn.Text             = "="
-    ppBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    ppBtn.TextColor3       = Color3.fromRGB(100, 100, 100)
-    ppLbl.Text             = "Pause"
-end
-
 PlayBtn.MouseButton1Click:Connect(function()
     local id    = IdBox.Text
     local speed = tonumber(SpeedBox.Text) or 1
-    local vol   = tonumber(VolBox.Text) or 0.5
-    if id == "" then return end
+    local vol   = tonumber(VolBox.Text)   or 0.5
+    if id == "" then StatusLbl.Text = "! no id" return end
 
-    local existing = workspace:FindFirstChild("c00lsound23sas")
-    local s = existing or c00lflag:Clone()
+    local existing = getSound()
+    local s = existing or soundTemplate:Clone()
     if not existing then s.Parent = workspace end
 
     s.SoundId       = "rbxassetid://" .. id
@@ -338,29 +306,34 @@ PlayBtn.MouseButton1Click:Connect(function()
     s.Looped        = isLooped
     s:Play()
 
-    resetPPBtn()
+    resetPause()
     StatusLbl.Text = "> playing"
 end)
 
 StopBtn.MouseButton1Click:Connect(function()
-    local s = workspace:FindFirstChild("c00lsound23sas")
+    local s = getSound()
     if s then s:Stop() end
-    resetPPBtn()
+    resetPause()
     StatusLbl.Text = ""
+end)
+
+XBtn.MouseButton1Click:Connect(function()
+    win.Visible  = false
+    pill.Visible = true
 end)
 
 MinBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
-    Frame.Size  = minimized and UDim2.new(0, W, 0, 20) or UDim2.new(0, W, 0, H)
-    MinBtn.Text = minimized and "+" or "-"
+    if minimized then
+        win.Size    = UDim2.new(0, W_WIN, 0, topH)
+        MinBtn.Text = "+"
+    else
+        win.Size    = UDim2.new(0, W_WIN, 0, H_WIN)
+        MinBtn.Text = "-"
+    end
 end)
 
-ExitBtn.MouseButton1Click:Connect(function()
-    Frame.Visible  = false
-    Frame2.Visible = true
-end)
-
-Open.MouseButton1Click:Connect(function()
-    Frame.Visible  = true
-    Frame2.Visible = false
+pillBtn.MouseButton1Click:Connect(function()
+    win.Visible  = true
+    pill.Visible = false
 end)
