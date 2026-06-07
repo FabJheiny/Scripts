@@ -17,16 +17,15 @@ local Config = {
     UI = {
         Name = "FloatGui",
         DisplayOrder = 2147483647,
-        Size = UDim2.new(0, 160, 0, 77),
+        Size = UDim2.new(0, 160, 0, 101), -- topbar(24) + divider(1) + row1(25) + divider(1) + row2(25) + divider(1) + row3(25) - 1
         DefaultPosition = UDim2.new(0.05, 0, 0.4, 0),
         TextSize = 10,
-        Font = Enum.Font.GothamSemibold,
-        BackgroundColor = Color3.fromRGB(0, 0, 0),
-        TextColor = Color3.fromRGB(255, 255, 255),
-        DividerColor = Color3.fromRGB(50, 50, 50),
-        BorderColor = Color3.fromRGB(255, 255, 255),
-        ButtonActive = Color3.fromRGB(0, 170, 255),
-        FloatActive = Color3.fromRGB(255, 255, 255)
+        Font = Enum.Font.Code,
+        B = Color3.fromRGB(0, 0, 0),
+        W = Color3.fromRGB(255, 255, 255),
+        D = Color3.fromRGB(15, 15, 15),
+        G = Color3.fromRGB(50, 50, 50),
+        Active = Color3.fromRGB(50, 50, 50)
     }
 }
 
@@ -44,6 +43,52 @@ local State = {
 
 local Platform = nil
 
+-- ──────────────────────────────────────────────
+-- Helpers (estilo fling)
+-- ──────────────────────────────────────────────
+local B    = Config.UI.B
+local W    = Config.UI.W
+local D    = Config.UI.D
+local G    = Config.UI.G
+local FONT = Config.UI.Font
+
+local function o(cls, props, par)
+    local x = Instance.new(cls)
+    for k, v in pairs(props) do x[k] = v end
+    if par then x.Parent = par end
+    return x
+end
+
+local function stroke(par, t, c)
+    o("UIStroke", {Color = c or W, Thickness = t or 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border}, par)
+end
+
+local function mkBtn(txt, parent, sz, pos)
+    local b = o("TextButton", {
+        Size = sz, Position = pos,
+        BackgroundColor3 = B, BorderSizePixel = 0,
+        Text = txt, TextColor3 = W,
+        TextSize = Config.UI.TextSize, Font = FONT,
+        AutoButtonColor = false,
+    }, parent)
+    stroke(b, 1)
+    b.MouseEnter:Connect(function() b.BackgroundColor3 = D end)
+    b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
+    return b
+end
+
+local function mkDiv(parent, pos, sz, vertical)
+    -- sem stroke, só frame fina como no fling
+    o("Frame", {
+        Position = pos,
+        Size = sz or (vertical and UDim2.new(0, 1, 1, 0) or UDim2.new(1, 0, 0, 1)),
+        BackgroundColor3 = W, BorderSizePixel = 0, ZIndex = 12,
+    }, parent)
+end
+
+-- ──────────────────────────────────────────────
+-- PlatformController (sem mudanças)
+-- ──────────────────────────────────────────────
 local PlatformController = {}
 PlatformController.__index = PlatformController
 
@@ -131,6 +176,9 @@ function PlatformController:cleanup()
     end
 end
 
+-- ──────────────────────────────────────────────
+-- UIController — tema fling
+-- ──────────────────────────────────────────────
 local UIController = {}
 UIController.__index = UIController
 
@@ -144,177 +192,229 @@ function UIController.new(services, config, state, platformController)
     return self
 end
 
-function UIController:createScreenGui()
-    -- Menu in PlayerGui
-    local sg = Instance.new("ScreenGui")
-    sg.Name = self.Config.UI.Name
-    sg.DisplayOrder = self.Config.UI.DisplayOrder
-    sg.IgnoreGuiInset = true
-    sg.ResetOnSpawn = false
-    sg.Parent = self.Services.Players.LocalPlayer.PlayerGui
-    return sg
-end
+function UIController:build()
+    -- ── ScreenGui principal (PlayerGui) ──
+    local sg = o("ScreenGui", {
+        Name = self.Config.UI.Name,
+        DisplayOrder = self.Config.UI.DisplayOrder,
+        IgnoreGuiInset = true,
+        ResetOnSpawn = false,
+    }, self.Services.Players.LocalPlayer.PlayerGui)
+    self.ScreenGui = sg
 
-function UIController:createPill(parent)
-    -- Pill ScreenGui in CoreGui
-    local pillSg = Instance.new("ScreenGui")
-    pillSg.Name = self.Config.UI.Name .. "Pill"
-    pillSg.DisplayOrder = 9999
-    pillSg.ResetOnSpawn = false
+    -- ── Pill ScreenGui (CoreGui) ──
+    local pillSg = o("ScreenGui", {
+        Name = self.Config.UI.Name .. "Pill",
+        DisplayOrder = 9999,
+        ResetOnSpawn = false,
+    })
     local ok = pcall(function() pillSg.Parent = self.Services.CoreGui end)
     if not ok then pillSg.Parent = self.Services.Players.LocalPlayer.PlayerGui end
 
-    local pill = Instance.new("Frame")
-    pill.Name = "FloatPill"
-    pill.Size = UDim2.new(0, 50, 0, 18)
-    pill.Position = UDim2.new(1, -56, 1, -80)
-    pill.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    pill.BorderSizePixel = 0
-    pill.Visible = false
-    pill.Parent = pillSg
+    -- Pill posicionada 22px acima da pill do fling (-190 + 22 + 18 = -150)
+    local pill = o("Frame", {
+        Name = "FloatPill",
+        Size = UDim2.new(0, 54, 0, 18),
+        Position = UDim2.new(1, -60, 1, -150),
+        BackgroundColor3 = B,
+        BorderSizePixel = 0,
+        Visible = false,
+        ZIndex = 200,
+    }, pillSg)
+    stroke(pill, 1)
 
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(255, 255, 255)
-    stroke.Thickness = 1
-    stroke.Parent = pill
-
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 1, 0)
-    btn.Position = UDim2.new(0, 0, 0, 0)
-    btn.BackgroundTransparency = 1
-    btn.Text = "> float"
-    btn.TextSize = 9
-    btn.Font = Enum.Font.SourceSansBold
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Parent = pill
-
-    return pill, btn
-end
-
-function UIController:createMainFrame(parent)
-    local main = Instance.new("Frame", parent)
-    main.Size = self.Config.UI.Size
-    main.Position = self.Config.UI.DefaultPosition
-    main.BackgroundTransparency = 0
-    main.BackgroundColor3 = self.Config.UI.BackgroundColor
-    main.BorderSizePixel = 1
-    main.BorderColor3 = self.Config.UI.BorderColor
-    main.Active = true
-    return main
-end
-
-function UIController:createDivider(parent, position, size)
-    local divider = Instance.new("Frame", parent)
-    divider.Position = position
-    divider.Size = size
-    divider.BackgroundColor3 = self.Config.UI.DividerColor
-    divider.BorderSizePixel = 0
-    divider.Active = false
-    return divider
-end
-
-function UIController:enableDrag(obj, mainFrame)
-    obj.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or
-           input.UserInputType == Enum.UserInputType.Touch then
-            self.State.Dragging = true
-            self.State.DragStart = input.Position
-            self.State.StartPos = mainFrame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    self.State.Dragging = false
-                end
-            end)
-        end
-    end)
-    obj.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or
-           input.UserInputType == Enum.UserInputType.Touch then
-            self.State.DragInput = input
-        end
-    end)
-end
-
-function UIController:createButton(text, position, size, parent)
-    local button = Instance.new("TextButton", parent)
-    button.Text = text
-    button.Position = position
-    button.Size = size
-    button.BorderSizePixel = 0
-    button.BackgroundColor3 = self.Config.UI.BackgroundColor
-    button.TextColor3 = self.Config.UI.TextColor
-    button.Font = self.Config.UI.Font
-    button.TextSize = self.Config.UI.TextSize
-    button.AutoButtonColor = false
-    table.insert(self.Buttons, button)
-    return button
-end
-
-function UIController:updateButtonStates()
-    for _, button in pairs(self.Buttons) do
-        if button.Name == "FloatBtn" then
-            button.Text = self.State.FloatEnabled and "Float: ON" or "Float: OFF"
-            if self.State.FloatEnabled then
-                button.BackgroundColor3 = self.Config.UI.FloatActive
-                button.TextColor3 = Color3.fromRGB(0, 0, 0)
-            else
-                button.BackgroundColor3 = self.Config.UI.BackgroundColor
-                button.TextColor3 = self.Config.UI.TextColor
-            end
-        elseif button.Name == "UpBtn" then
-            button.BackgroundColor3 = (self.State.Direction == 1) and
-                self.Config.UI.ButtonActive or
-                self.Config.UI.BackgroundColor
-        elseif button.Name == "DownBtn" then
-            button.BackgroundColor3 = (self.State.Direction == -1) and
-                self.Config.UI.ButtonActive or
-                self.Config.UI.BackgroundColor
-        elseif button.Name == "SpeedDisplay" then
-            button.Text = string.format("%.1f", self.State.FloatSpeed)
-        end
-    end
-end
-
-function UIController:build()
-    self.ScreenGui = self:createScreenGui()
-
-    local pill, pillBtn = self:createPill(self.ScreenGui)
+    local pillBtn = o("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = "> float",
+        TextSize = 9,
+        Font = FONT,
+        TextColor3 = W,
+        BorderSizePixel = 0,
+        ZIndex = 201,
+    }, pill)
     self.Pill = pill
 
-    local main = self:createMainFrame(self.ScreenGui)
-    self.MainFrame = main
+    -- ── Janela principal ──
+    local topH = 24
+    -- Altura: topH(24) + div(1) + 3×row(25) + 2×div(1) = 24+1+75+2 = 102
+    local win = o("Frame", {
+        Size = UDim2.new(0, 160, 0, 102),
+        Position = self.Config.UI.DefaultPosition,
+        BackgroundColor3 = B,
+        BorderSizePixel = 0,
+        Active = true,
+        ClipsDescendants = true,
+    }, sg)
+    stroke(win, 1)
+    self.MainFrame = win
 
-    pillBtn.MouseButton1Click:Connect(function()
-        main.Visible = true
-        pill.Visible = false
-    end)
+    -- ── Topbar ──
+    local top = o("Frame", {
+        Size = UDim2.new(1, 0, 0, topH),
+        BackgroundColor3 = B,
+        BorderSizePixel = 0,
+        Active = true,
+        ZIndex = 10,
+    }, win)
 
-    self:enableDrag(main, main)
+    o("TextLabel", {
+        Size = UDim2.new(1, -70, 1, 0),
+        Position = UDim2.new(0, 8, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "> FLOAT <",
+        TextColor3 = W,
+        TextSize = 11,
+        Font = FONT,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 10,
+    }, top)
 
-    self.Services.UserInputService.InputChanged:Connect(function(input)
-        if input == self.State.DragInput and self.State.Dragging then
-            local delta = input.Position - self.State.DragStart
-            main.Position = UDim2.new(
-                self.State.StartPos.X.Scale,
-                self.State.StartPos.X.Offset + delta.X,
-                self.State.StartPos.Y.Scale,
-                self.State.StartPos.Y.Offset + delta.Y
-            )
+    -- Separadores verticais topbar
+    mkDiv(top, UDim2.new(1, -66, 0, 0), UDim2.new(0, 1, 1, 0))
+    mkDiv(top, UDim2.new(1, -33, 0, 0), UDim2.new(0, 1, 1, 0))
+
+    -- MinBtn e XBtn
+    local MinBtn = o("TextButton", {
+        Size = UDim2.new(0, 32, 1, 0),
+        Position = UDim2.new(1, -65, 0, 0),
+        BackgroundColor3 = B, BorderSizePixel = 0,
+        Text = "-", TextColor3 = W,
+        TextSize = 18, Font = FONT,
+        AutoButtonColor = false, ZIndex = 11,
+    }, top)
+    local XBtn = o("TextButton", {
+        Size = UDim2.new(0, 32, 1, 0),
+        Position = UDim2.new(1, -32, 0, 0),
+        BackgroundColor3 = B, BorderSizePixel = 0,
+        Text = "x", TextColor3 = W,
+        TextSize = 14, Font = FONT,
+        AutoButtonColor = false, ZIndex = 11,
+    }, top)
+    for _, b in ipairs({MinBtn, XBtn}) do
+        b.MouseEnter:Connect(function() b.BackgroundColor3 = D end)
+        b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
+    end
+
+    -- Separador horizontal abaixo do topbar
+    mkDiv(win, UDim2.new(0, 0, 0, topH), UDim2.new(1, 0, 0, 1))
+
+    -- ── Body ──
+    local body = o("Frame", {
+        Size = UDim2.new(1, 0, 1, -topH - 1),
+        Position = UDim2.new(0, 0, 0, topH + 1),
+        BackgroundColor3 = B,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+    }, win)
+
+    -- Row 0 — Float toggle  (y=0..25)
+    local floatBtn = mkBtn("FLOAT: OFF", body,
+        UDim2.new(1, 0, 0, 25), UDim2.new(0, 0, 0, 0))
+    floatBtn.Name = "FloatBtn"
+    table.insert(self.Buttons, floatBtn)
+
+    -- Separador
+    mkDiv(body, UDim2.new(0, 0, 0, 25), UDim2.new(1, 0, 0, 1))
+
+    -- Row 1 — ↑ | + | speed  (y=26..50)
+    local upBtn = mkBtn("↑", body, UDim2.new(0, 32, 0, 25), UDim2.new(0, 0, 0, 26))
+    upBtn.Name = "UpBtn"
+    table.insert(self.Buttons, upBtn)
+    mkDiv(body, UDim2.new(0, 32, 0, 26), UDim2.new(0, 1, 0, 25))
+
+    local plusBtn = mkBtn("+", body, UDim2.new(0, 48, 0, 25), UDim2.new(0, 33, 0, 26))
+    mkDiv(body, UDim2.new(0, 81, 0, 26), UDim2.new(0, 1, 0, 25))
+
+    local speedDisplay = mkBtn(
+        string.format("%.1f", self.State.FloatSpeed),
+        body, UDim2.new(0, 78, 0, 25), UDim2.new(0, 82, 0, 26))
+    speedDisplay.Name = "SpeedDisplay"
+    table.insert(self.Buttons, speedDisplay)
+
+    -- Separador
+    mkDiv(body, UDim2.new(0, 0, 0, 51), UDim2.new(1, 0, 0, 1))
+
+    -- Row 2 — ↓ | - | reset  (y=52..76)
+    local downBtn = mkBtn("↓", body, UDim2.new(0, 32, 0, 25), UDim2.new(0, 0, 0, 52))
+    downBtn.Name = "DownBtn"
+    table.insert(self.Buttons, downBtn)
+    mkDiv(body, UDim2.new(0, 32, 0, 52), UDim2.new(0, 1, 0, 25))
+
+    local minusBtn = mkBtn("-", body, UDim2.new(0, 48, 0, 25), UDim2.new(0, 33, 0, 52))
+    mkDiv(body, UDim2.new(0, 81, 0, 52), UDim2.new(0, 1, 0, 25))
+
+    local resetBtn = mkBtn("Reset", body, UDim2.new(0, 78, 0, 25), UDim2.new(0, 82, 0, 52))
+
+    -- ── Drag — topbar only, via UIS (padrão fling) ──
+    local minimized = false
+    local fullH = 102
+    do
+        local dragging, dragStart, startPos = false, nil, nil
+        top.InputBegan:Connect(function(inp)
+            if inp.UserInputType == Enum.UserInputType.MouseButton1
+            or inp.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = inp.Position
+                startPos = win.Position
+            end
+        end)
+        top.InputEnded:Connect(function(inp)
+            if inp.UserInputType == Enum.UserInputType.MouseButton1
+            or inp.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
+            end
+        end)
+        self.Services.UserInputService.InputChanged:Connect(function(inp)
+            if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement
+            or inp.UserInputType == Enum.UserInputType.Touch) then
+                local d = inp.Position - dragStart
+                win.Position = UDim2.new(
+                    startPos.X.Scale, startPos.X.Offset + d.X,
+                    startPos.Y.Scale, startPos.Y.Offset + d.Y
+                )
+            end
+        end)
+    end
+
+    -- ── Lógica dos botões ──
+    local function updateStates()
+        for _, btn in pairs(self.Buttons) do
+            if btn.Name == "FloatBtn" then
+                btn.Text = self.State.FloatEnabled and "> FLOAT: ON" or "FLOAT: OFF"
+                btn.BackgroundColor3 = self.State.FloatEnabled and G or B
+            elseif btn.Name == "UpBtn" then
+                btn.BackgroundColor3 = (self.State.Direction == 1) and G or B
+            elseif btn.Name == "DownBtn" then
+                btn.BackgroundColor3 = (self.State.Direction == -1) and G or B
+            elseif btn.Name == "SpeedDisplay" then
+                btn.Text = string.format("%.1f", self.State.FloatSpeed)
+            end
         end
-    end)
+    end
+    self.UpdateStates = updateStates
 
-    local closeBtn = self:createButton("X", UDim2.new(0, 0, 0, 0), UDim2.new(0, 32, 0, 25), main)
-    self:enableDrag(closeBtn, main)
-    closeBtn.MouseButton1Click:Connect(function()
-        main.Visible = false
+    XBtn.MouseButton1Click:Connect(function()
+        win.Visible = false
         pill.Visible = true
     end)
 
-    self:createDivider(main, UDim2.new(0, 32, 0, 0), UDim2.new(0, 1, 0, 25))
+    MinBtn.MouseButton1Click:Connect(function()
+        minimized = not minimized
+        if minimized then
+            win.Size = UDim2.new(0, 160, 0, topH)
+            MinBtn.Text = "+"
+        else
+            win.Size = UDim2.new(0, 160, 0, fullH)
+            MinBtn.Text = "-"
+        end
+    end)
 
-    local floatBtn = self:createButton("FLOAT: OFF", UDim2.new(0, 33, 0, 0), UDim2.new(0, 127, 0, 25), main)
-    floatBtn.Name = "FloatBtn"
-    self:enableDrag(floatBtn, main)
+    pillBtn.MouseButton1Click:Connect(function()
+        win.Visible = true
+        pill.Visible = false
+    end)
+
     floatBtn.MouseButton1Click:Connect(function()
         self.State.FloatEnabled = not self.State.FloatEnabled
         if self.State.FloatEnabled then
@@ -323,74 +423,41 @@ function UIController:build()
             self.State.Direction = 0
             self.PlatformController:destroyPlatform()
         end
-        self:updateButtonStates()
+        updateStates()
     end)
 
-    self:createDivider(main, UDim2.new(0, 0, 0, 25), UDim2.new(0, 160, 0, 1))
-
-    local upBtn = self:createButton("↑", UDim2.new(0, 0, 0, 26), UDim2.new(0, 32, 0, 25), main)
-    upBtn.Name = "UpBtn"
-    self:enableDrag(upBtn, main)
     upBtn.MouseButton1Click:Connect(function()
         if not self.State.FloatEnabled then return end
         self.State.Direction = (self.State.Direction == 1) and 0 or 1
-        self:updateButtonStates()
+        updateStates()
     end)
 
-    self:createDivider(main, UDim2.new(0, 32, 0, 26), UDim2.new(0, 1, 0, 25))
-
-    local plusBtn = self:createButton("+", UDim2.new(0, 33, 0, 26), UDim2.new(0, 48, 0, 25), main)
-    self:enableDrag(plusBtn, main)
-    plusBtn.MouseButton1Click:Connect(function()
-        self.State.FloatSpeed = math.min(self.State.FloatSpeed + 0.1, self.Config.Float.MaxSpeed)
-        self:updateButtonStates()
-    end)
-
-    self:createDivider(main, UDim2.new(0, 81, 0, 26), UDim2.new(0, 1, 0, 25))
-
-    local speedDisplay = self:createButton(
-        string.format("%.1f", self.State.FloatSpeed),
-        UDim2.new(0, 82, 0, 26),
-        UDim2.new(0, 78, 0, 25),
-        main
-    )
-    speedDisplay.Name = "SpeedDisplay"
-    self:enableDrag(speedDisplay, main)
-
-    self:createDivider(main, UDim2.new(0, 0, 0, 51), UDim2.new(0, 160, 0, 1))
-
-    local downBtn = self:createButton("↓", UDim2.new(0, 0, 0, 52), UDim2.new(0, 32, 0, 25), main)
-    downBtn.Name = "DownBtn"
-    self:enableDrag(downBtn, main)
     downBtn.MouseButton1Click:Connect(function()
         if not self.State.FloatEnabled then return end
         self.State.Direction = (self.State.Direction == -1) and 0 or -1
-        self:updateButtonStates()
+        updateStates()
     end)
 
-    self:createDivider(main, UDim2.new(0, 32, 0, 52), UDim2.new(0, 1, 0, 25))
+    plusBtn.MouseButton1Click:Connect(function()
+        self.State.FloatSpeed = math.min(self.State.FloatSpeed + 0.1, self.Config.Float.MaxSpeed)
+        updateStates()
+    end)
 
-    local minusBtn = self:createButton("-", UDim2.new(0, 33, 0, 52), UDim2.new(0, 48, 0, 25), main)
-    self:enableDrag(minusBtn, main)
     minusBtn.MouseButton1Click:Connect(function()
         self.State.FloatSpeed = math.max(self.State.FloatSpeed - 0.1, self.Config.Float.MinSpeed)
-        self:updateButtonStates()
+        updateStates()
     end)
 
-    self:createDivider(main, UDim2.new(0, 81, 0, 52), UDim2.new(0, 1, 0, 25))
-
-    local resetBtn = self:createButton("Reset", UDim2.new(0, 82, 0, 52), UDim2.new(0, 78, 0, 25), main)
-    self:enableDrag(resetBtn, main)
     resetBtn.MouseButton1Click:Connect(function()
         self.PlatformController:destroyPlatform()
         self.State.FloatEnabled = false
         self.State.Direction = 0
         self.State.FloatSpeed = self.Config.Float.DefaultSpeed
         self.State.PlatformY = 0
-        self:updateButtonStates()
+        updateStates()
     end)
 
-    self:updateButtonStates()
+    updateStates()
     return self
 end
 
@@ -405,6 +472,9 @@ function UIController:cleanup()
     end
 end
 
+-- ──────────────────────────────────────────────
+-- MainController
+-- ──────────────────────────────────────────────
 local MainController = {}
 MainController.__index = MainController
 
