@@ -7,7 +7,6 @@ if playerGui:FindFirstChild("AFKBlackScreen") then
     playerGui:FindFirstChild("AFKBlackScreen"):Destroy()
 end
 
--- ── Overlay (PlayerGui) ───────────────────────────────────────────────
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AFKBlackScreen"
 screenGui.ResetOnSpawn = false
@@ -36,8 +35,8 @@ if not ok then pillGui.Parent = playerGui end
 
 local pill = Instance.new("Frame", pillGui)
 pill.Name = "AFKBlackScreenPill"
-pill.Size = UDim2.new(0, 50, 0, 18)
-pill.Position = UDim2.new(1, -56, 1, -146)
+pill.Size = UDim2.new(0, 60, 0, 18)
+pill.Position = UDim2.new(1, -66, 1, -146)
 pill.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 pill.BorderSizePixel = 0
 
@@ -51,7 +50,7 @@ local pillBtn = Instance.new("TextButton")
 pillBtn.Size = UDim2.new(1, 0, 1, 0)
 pillBtn.Text = "> afk"
 pillBtn.TextSize = 9
-pillBtn.Font = Enum.Font.SourceSansBold
+pillBtn.Font = Enum.Font.Code
 pillBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 pillBtn.BackgroundTransparency = 1
 pillBtn.BorderSizePixel = 0
