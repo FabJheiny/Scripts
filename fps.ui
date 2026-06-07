@@ -1,161 +1,100 @@
 local Services = {
     Players = game:GetService("Players"),
-    UserInputService = game:GetService("UserInputService"),
-    CoreGui = game:GetService("CoreGui"),
     Lighting = game:GetService("Lighting"),
     Workspace = game:GetService("Workspace")
 }
 
-local Config = {
-    UI = {
-        Name = "FpsBooster_V1",
-        DisplayOrder = 2147483647,
-        Size = UDim2.new(0, 160, 0, 25),
-        DefaultPosition = UDim2.new(0.05, 0, 0.4, 0),
-        TextSize = 10,
-        Font = Enum.Font.GothamSemibold,
-        BackgroundColor = Color3.fromRGB(0, 0, 0),
-        TextColor = Color3.fromRGB(255, 255, 255),
-        TextColorActive = Color3.fromRGB(0, 0, 0),
-        ActiveColor = Color3.fromRGB(255, 255, 255),
-        DividerColor = Color3.fromRGB(50, 50, 50),
-        BorderColor = Color3.fromRGB(255, 255, 255)
-    }
-}
+-- Lighting
+Services.Lighting.GlobalShadows = false
+Services.Lighting.ShadowSoftness = 0
+Services.Lighting.Brightness = 2
+Services.Lighting.Ambient = Color3.fromRGB(178, 178, 178)
+Services.Lighting.OutdoorAmbient = Color3.fromRGB(178, 178, 178)
 
-local State = {
-    Boosted = false,
-    Dragging = false,
-    DragInput = nil,
-    DragStart = nil,
-    StartPos = nil
-}
-
--- Criar ScreenGui
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = Config.UI.Name
-screenGui.DisplayOrder = Config.UI.DisplayOrder
-screenGui.IgnoreGuiInset = true
-local ok = pcall(function()
-    screenGui.Parent = Services.CoreGui
-end)
-if not ok then
-    screenGui.Parent = Services.Players.LocalPlayer.PlayerGui
+-- Remover post-effects do Lighting
+for _, obj in ipairs(Services.Lighting:GetChildren()) do
+    if obj:IsA("PostEffect") or obj:IsA("BloomEffect") or obj:IsA("BlurEffect")
+    or obj:IsA("ColorCorrectionEffect") or obj:IsA("SunRaysEffect") or obj:IsA("DepthOfFieldEffect") then
+        obj:Destroy()
+    end
 end
 
--- Frame principal (1 linha)
-local main = Instance.new("Frame", screenGui)
-main.Size = Config.UI.Size
-main.Position = Config.UI.DefaultPosition
-main.BackgroundColor3 = Config.UI.BackgroundColor
-main.BorderSizePixel = 1
-main.BorderColor3 = Config.UI.BorderColor
-main.Active = true
-
--- Drag
-local function enableDrag(obj)
-    obj.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or
-           input.UserInputType == Enum.UserInputType.Touch then
-            State.Dragging = true
-            State.DragStart = input.Position
-            State.StartPos = main.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    State.Dragging = false
-                end
-            end)
-        end
-    end)
-    obj.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or
-           input.UserInputType == Enum.UserInputType.Touch then
-            State.DragInput = input
-        end
-    end)
+-- Processar Workspace
+for _, obj in ipairs(Services.Workspace:GetDescendants()) do
+    if obj:IsA("BasePart") then
+        obj.Material = Enum.Material.SmoothPlastic
+        obj.Reflectance = 0
+        obj.CastShadow = false
+    elseif obj:IsA("Texture") or obj:IsA("Decal") then
+        obj:Destroy()
+    elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke")
+    or obj:IsA("Sparkles") or obj:IsA("Fire") or obj:IsA("Beam") then
+        obj:Destroy()
+    elseif obj:IsA("SelectionBox") or obj:IsA("SelectionSphere") then
+        obj:Destroy()
+    elseif obj:IsA("BillboardGui") then
+        obj.Enabled = false
+    elseif obj:IsA("SurfaceGui") then
+        obj.Enabled = false
+    elseif obj:IsA("SpecialMesh") then
+        obj.TextureId = ""
+    end
 end
 
-enableDrag(main)
-Services.UserInputService.InputChanged:Connect(function(input)
-    if input == State.DragInput and State.Dragging then
-        local delta = input.Position - State.DragStart
-        main.Position = UDim2.new(
-            State.StartPos.X.Scale,
-            State.StartPos.X.Offset + delta.X,
-            State.StartPos.Y.Scale,
-            State.StartPos.Y.Offset + delta.Y
-        )
+-- Monitorar novos objetos no Workspace
+Services.Workspace.DescendantAdded:Connect(function(obj)
+    if obj:IsA("BasePart") then
+        obj.Material = Enum.Material.SmoothPlastic
+        obj.Reflectance = 0
+        obj.CastShadow = false
+    elseif obj:IsA("Texture") or obj:IsA("Decal") then
+        obj:Destroy()
+    elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke")
+    or obj:IsA("Sparkles") or obj:IsA("Fire") or obj:IsA("Beam") then
+        obj:Destroy()
+    elseif obj:IsA("BillboardGui") then
+        obj.Enabled = false
+    elseif obj:IsA("SurfaceGui") then
+        obj.Enabled = false
+    elseif obj:IsA("PostEffect") or obj:IsA("BloomEffect") or obj:IsA("BlurEffect")
+    or obj:IsA("ColorCorrectionEffect") or obj:IsA("SunRaysEffect") or obj:IsA("DepthOfFieldEffect") then
+        obj:Destroy()
     end
 end)
 
--- Botão X (esquerda)
-local closeBtn = Instance.new("TextButton", main)
-closeBtn.Text = "X"
-closeBtn.Position = UDim2.new(0, 0, 0, 0)
-closeBtn.Size = UDim2.new(0, 32, 0, 25)
-closeBtn.BorderSizePixel = 0
-closeBtn.BackgroundColor3 = Config.UI.BackgroundColor
-closeBtn.TextColor3 = Config.UI.TextColor
-closeBtn.Font = Config.UI.Font
-closeBtn.TextSize = Config.UI.TextSize
-closeBtn.AutoButtonColor = false
-enableDrag(closeBtn)
+-- Personagem
+local player = Services.Players.LocalPlayer
 
-closeBtn.MouseButton1Click:Connect(function()
-    screenGui:Destroy()
-end)
+local function limparPersonagem(char)
+    for _, obj in ipairs(char:GetDescendants()) do
+        if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Sparkles")
+        or obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Beam") then
+            obj:Destroy()
+        elseif obj:IsA("BasePart") then
+            obj.CastShadow = false
+        end
+    end
 
--- Divisor
-local divider = Instance.new("Frame", main)
-divider.Position = UDim2.new(0, 32, 0, 0)
-divider.Size = UDim2.new(0, 1, 0, 25)
-divider.BackgroundColor3 = Config.UI.DividerColor
-divider.BorderSizePixel = 0
-
--- Botão Booster (direita)
-local boostBtn = Instance.new("TextButton", main)
-boostBtn.Text = "FPS Boost: OFF"
-boostBtn.Position = UDim2.new(0, 33, 0, 0)
-boostBtn.Size = UDim2.new(0, 127, 0, 25)
-boostBtn.BorderSizePixel = 0
-boostBtn.BackgroundColor3 = Config.UI.BackgroundColor
-boostBtn.TextColor3 = Config.UI.TextColor
-boostBtn.Font = Config.UI.Font
-boostBtn.TextSize = Config.UI.TextSize
-boostBtn.AutoButtonColor = false
-enableDrag(boostBtn)
-
-boostBtn.MouseButton1Click:Connect(function()
-    if State.Boosted then return end
-    State.Boosted = true
-
-    boostBtn.Text = "FPS Boost: ON"
-    boostBtn.BackgroundColor3 = Config.UI.ActiveColor
-    boostBtn.TextColor3 = Config.UI.TextColorActive
-
-    pcall(function()
-        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+    char.DescendantAdded:Connect(function(obj)
+        if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Sparkles")
+        or obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Beam") then
+            obj:Destroy()
+        elseif obj:IsA("BasePart") then
+            obj.CastShadow = false
+        end
     end)
+end
 
-    Services.Lighting.GlobalShadows = false
-    Services.Lighting.FogEnd = 9e9
+if player.Character then
+    limparPersonagem(player.Character)
+end
+
+player.CharacterAdded:Connect(function(char)
+    task.wait(0.05)
+    limparPersonagem(char)
 
     for _, obj in ipairs(Services.Lighting:GetChildren()) do
-        if obj:IsA("PostEffect") or obj:IsA("BloomEffect") or
-           obj:IsA("BlurEffect") or obj:IsA("ColorCorrectionEffect") or
-           obj:IsA("SunRaysEffect") then
-            obj:Destroy()
-        end
-    end
-
-    for _, obj in ipairs(Services.Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") then
-            obj.Material = Enum.Material.SmoothPlastic
-            obj.Reflectance = 0
-        elseif obj:IsA("Texture") or obj:IsA("Decal") then
-            obj:Destroy()
-        elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or
-               obj:IsA("Smoke") or obj:IsA("Sparkles") or obj:IsA("Fire") then
+        if obj:IsA("BlurEffect") or obj:IsA("DepthOfFieldEffect") then
             obj:Destroy()
         end
     end
