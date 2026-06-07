@@ -14,7 +14,7 @@ Hub:Tab("Universal")
     :Button("Infinite Zoom","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/iz")
     :Button("ShiftLock","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/shiftlock")
     :Button("Emotes Simple","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/emoter6")
-    :Button("Shaders","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/shader")
+    :Button("Shaders","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/shaders")
     
 Hub:Tab("Others")
     :Button("Dex Explorer","https://raw.githubusercontent.com/infyiff/backup/main/dex.lua")
