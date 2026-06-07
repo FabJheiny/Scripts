@@ -1,9 +1,6 @@
 local RobloxUI = {}
 RobloxUI.__index = RobloxUI
 
--- ═══════════════════════════════════════════
---  TEMA: Hub (preto/branco, Code font, sharp)
--- ═══════════════════════════════════════════
 local B    = Color3.fromRGB(0,0,0)
 local W    = Color3.fromRGB(255,255,255)
 local D    = Color3.fromRGB(15,15,15)
@@ -21,8 +18,6 @@ local function stroke(par,t,c)
         ApplyStrokeMode=Enum.ApplyStrokeMode.Border},par)
 end
 
--- ═══════════════════════════════════════════
-
 function RobloxUI.new(title, version)
     local self = setmetatable({}, RobloxUI)
 
@@ -39,14 +34,12 @@ function RobloxUI.new(title, version)
     self._connections = {}
     self._UIS = UIS
 
-    -- ScreenGui principal
     self.gui = o("ScreenGui",{
         Name="RobloxUI_Lib",ResetOnSpawn=false,
         IgnoreGuiInset=true,ZIndexBehavior=Enum.ZIndexBehavior.Global,
         DisplayOrder=10,
     },pg)
 
-    -- Janela (sem UICorner, sem transparência)
     self.menuFrame = o("Frame",{
         Name="MenuFrame",
         Size=UDim2.new(0,480,0,340),
@@ -66,7 +59,6 @@ function RobloxUI.new(title, version)
         BorderSizePixel=0,Active=true,ZIndex=10,
     },self.menuFrame)
 
-    -- título
     o("TextLabel",{
         Size=UDim2.new(1,-70,1,0),Position=UDim2.new(0,10,0,0),
         BackgroundTransparency=1,
@@ -75,13 +67,11 @@ function RobloxUI.new(title, version)
         TextXAlignment=Enum.TextXAlignment.Left,ZIndex=10,
     },topBar)
 
-    -- separador vertical antes do X
     o("Frame",{
         Size=UDim2.new(0,1,1,0),Position=UDim2.new(1,-33,0,0),
         BackgroundColor3=W,BorderSizePixel=0,ZIndex=12,
     },topBar)
 
-    -- botão fechar (hub style)
     local xBtn=o("TextButton",{
         Size=UDim2.new(0,32,1,0),Position=UDim2.new(1,-32,0,0),
         BackgroundColor3=B,BorderSizePixel=0,
@@ -91,7 +81,6 @@ function RobloxUI.new(title, version)
     xBtn.MouseEnter:Connect(function() xBtn.BackgroundColor3=D end)
     xBtn.MouseLeave:Connect(function() xBtn.BackgroundColor3=B end)
 
-    -- separador horizontal abaixo do topbar
     o("Frame",{
         Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,0,topH),
         BackgroundColor3=W,BorderSizePixel=0,ZIndex=20,
@@ -123,14 +112,14 @@ function RobloxUI.new(title, version)
         end))
     end
 
-    -- ── CONTENT (entre topbar e bottombar) ──
+    -- ── CONTENT ─────────────────────────────
+    -- Sem bottom bar: ocupa todo o espaço abaixo do topbar
     self.contentFrame=o("Frame",{
-        Size=UDim2.new(1,0,1,-topH-1-24),
+        Size=UDim2.new(1,0,1,-topH-1),
         Position=UDim2.new(0,0,0,topH+1),
         BackgroundTransparency=1,
     },self.menuFrame)
 
-    -- headers das colunas
     local function makeHeader(xScale)
         return o("TextLabel",{
             Size=UDim2.new(1/3,0,0,18),
@@ -144,24 +133,28 @@ function RobloxUI.new(title, version)
     self.rightTabLabel = makeHeader(1/3)
     self.thirdTabLabel = makeHeader(2/3)
 
-    -- containers (ScrollingFrame por coluna)
+    -- Containers com UIPadding para bordas não serem cortadas
     local function makeContainer(xScale)
         local c=o("ScrollingFrame",{
-            Size=UDim2.new(1/3,-10,1,-22),
-            Position=UDim2.new(xScale,5,0,20),
+            Size=UDim2.new(1/3,-12,1,-22),
+            Position=UDim2.new(xScale,6,0,20),
             BackgroundTransparency=1,BorderSizePixel=0,
             ScrollBarThickness=2,ScrollBarImageColor3=G,
             AutomaticCanvasSize=Enum.AutomaticSize.Y,
             CanvasSize=UDim2.new(),Visible=true,
         },self.contentFrame)
         o("UIListLayout",{Padding=UDim.new(0,4)},c)
+        o("UIPadding",{
+            PaddingLeft=UDim.new(0,2),
+            PaddingRight=UDim.new(0,2),
+            PaddingTop=UDim.new(0,2),
+        },c)
         return c
     end
     self.leftContainer  = makeContainer(0)
     self.rightContainer = makeContainer(1/3)
     self.thirdContainer = makeContainer(2/3)
 
-    -- separadores verticais entre colunas
     o("Frame",{
         Size=UDim2.new(0,1,1,-8),Position=UDim2.new(1/3,0,0,4),
         BackgroundColor3=W,BackgroundTransparency=0,BorderSizePixel=0,
@@ -171,23 +164,7 @@ function RobloxUI.new(title, version)
         BackgroundColor3=W,BackgroundTransparency=0,BorderSizePixel=0,
     },self.contentFrame)
 
-    -- ── BOTTOM INFO LINE ────────────────────
-    o("Frame",{
-        Size=UDim2.new(1,-16,0,1),
-        Position=UDim2.new(0,8,1,-24),
-        BackgroundColor3=W,BackgroundTransparency=0,BorderSizePixel=0,
-    },self.menuFrame)
-    o("TextLabel",{
-        Size=UDim2.new(1,-16,0,18),
-        Position=UDim2.new(0,8,1,-20),
-        BackgroundTransparency=1,
-        Text="optimized for first person gameplay",
-        Font=FONT,TextSize=9,
-        TextColor3=G,
-        TextXAlignment=Enum.TextXAlignment.Left,
-    },self.menuFrame)
-
-    -- ── PILL (hub style) ────────────────────
+    -- ── PILL ────────────────────────────────
     self.btnGui=o("ScreenGui",{
         Name="RobloxUI_FloatBtn",ResetOnSpawn=false,
         IgnoreGuiInset=true,ZIndexBehavior=Enum.ZIndexBehavior.Global,
@@ -210,13 +187,12 @@ function RobloxUI.new(title, version)
         TextColor3=W,BorderSizePixel=0,ZIndex=201,
     },pill)
 
-    -- fechar → mostra pill
     xBtn.MouseButton1Click:Connect(function()
         self.menuFrame.Visible=false
         pill.Visible=true
     end)
 
-    -- ── DRAG (pill, com dragMoved) ───────────
+    -- ── DRAG (pill) ──────────────────────────
     do
         local dragging,dragStart,startPos,dragMoved=false,nil,nil,false
         table.insert(self._connections,pillBtn.InputBegan:Connect(function(inp)
@@ -254,8 +230,6 @@ function RobloxUI.new(title, version)
     return self
 end
 
--- ═══════════════════════════════════════════
-
 function RobloxUI:Destroy()
     for _,conn in ipairs(self._connections) do conn:Disconnect() end
     self._connections={}
@@ -270,7 +244,6 @@ function RobloxUI:_getContainer(side)
     return self.leftContainer
 end
 
--- ── Toggle ──────────────────────────────────
 function RobloxUI:AddToggle(side,text,default,callback)
     local container=self:_getContainer(side)
     local state=default or false
@@ -282,7 +255,6 @@ function RobloxUI:AddToggle(side,text,default,callback)
     },container)
     stroke(btn,1)
 
-    -- dot quadrado (sem UICorner, hub style)
     local dot=o("Frame",{
         Size=UDim2.new(0,7,0,7),
         Position=UDim2.new(0,8,0.5,-3.5),
@@ -325,7 +297,6 @@ function RobloxUI:AddToggle(side,text,default,callback)
     }
 end
 
--- ── Button ──────────────────────────────────
 function RobloxUI:AddButton(side,text,callback)
     local container=self:_getContainer(side)
 
@@ -353,7 +324,6 @@ function RobloxUI:AddButton(side,text,callback)
     return btn
 end
 
--- ── Slider ──────────────────────────────────
 function RobloxUI:AddSlider(side,text,min,max,default,callback)
     local container=self:_getContainer(side)
     local UIS=self._UIS
@@ -373,7 +343,6 @@ function RobloxUI:AddSlider(side,text,min,max,default,callback)
         TextColor3=W,
     },holder)
 
-    -- track (sem UICorner)
     local track=o("Frame",{
         Size=UDim2.new(1,0,0,4),
         Position=UDim2.new(0,0,0,26),
@@ -382,14 +351,12 @@ function RobloxUI:AddSlider(side,text,min,max,default,callback)
     },holder)
     stroke(track,1)
 
-    -- fill (sem UICorner)
     local fill=o("Frame",{
         Size=UDim2.new(0,0,1,0),
         BackgroundColor3=W,BackgroundTransparency=0,
         BorderSizePixel=0,
     },track)
 
-    -- knob quadrado (hub style)
     local knob=o("Frame",{
         Size=UDim2.new(0,8,0,8),
         AnchorPoint=Vector2.new(.5,.5),
@@ -446,7 +413,6 @@ function RobloxUI:AddSlider(side,text,min,max,default,callback)
     }
 end
 
--- ── SetTabNames ─────────────────────────────
 function RobloxUI:SetTabNames(left,right,third)
     if self.leftTabLabel  then self.leftTabLabel.Text  = left  or "" end
     if self.rightTabLabel then self.rightTabLabel.Text = right or "" end
