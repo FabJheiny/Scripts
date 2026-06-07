@@ -306,7 +306,7 @@ function UI:build(movementController, screenGui)
     local pill = o("Frame", {
         Name = "ReopenPill",
         Size = UDim2.new(0, 60, 0, 18),
-        Position = UDim2.new(1, -66, 1, -46),
+        Position = UDim2.new(1, -66, 1, -36),
         BackgroundColor3 = B,
         BorderSizePixel = 0,
         Visible = false,
