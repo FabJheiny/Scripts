@@ -164,7 +164,7 @@ function RobloxUI.new(title, version)
         BackgroundColor3=W,BackgroundTransparency=0,BorderSizePixel=0,
     },self.contentFrame)
 
-    -- ── PILL (igual ao rádio, CoreGui com fallback) ──
+    -- ── PILL ────────────────────────────────
     self.btnGui = o("ScreenGui",{
         Name="RobloxUI_FloatBtn",ResetOnSpawn=false,
         IgnoreGuiInset=true,ZIndexBehavior=Enum.ZIndexBehavior.Global,
@@ -194,40 +194,10 @@ function RobloxUI.new(title, version)
         pill.Visible=true
     end)
 
-    -- ── DRAG (pill) ──────────────────────────
-    do
-        local dragging,dragStart,startPos,dragMoved=false,nil,nil,false
-        table.insert(self._connections,pillBtn.InputBegan:Connect(function(inp)
-            if inp.UserInputType==Enum.UserInputType.MouseButton1
-            or inp.UserInputType==Enum.UserInputType.Touch then
-                dragging=true dragMoved=false
-                dragStart=inp.Position startPos=pill.Position
-            end
-        end))
-        table.insert(self._connections,UIS.InputEnded:Connect(function(inp)
-            if inp.UserInputType==Enum.UserInputType.MouseButton1
-            or inp.UserInputType==Enum.UserInputType.Touch then
-                dragging=false
-            end
-        end))
-        table.insert(self._connections,UIS.InputChanged:Connect(function(inp)
-            if dragging and (inp.UserInputType==Enum.UserInputType.MouseMovement
-                or inp.UserInputType==Enum.UserInputType.Touch) then
-                local d=inp.Position-dragStart
-                if math.abs(d.X)+math.abs(d.Y)>2 then
-                    dragMoved=true
-                    pill.Position=UDim2.new(
-                        startPos.X.Scale,startPos.X.Offset+d.X,
-                        startPos.Y.Scale,startPos.Y.Offset+d.Y)
-                end
-            end
-        end))
-        table.insert(self._connections,pillBtn.MouseButton1Click:Connect(function()
-            if dragMoved then return end
-            self.menuFrame.Visible=true
-            pill.Visible=false
-        end))
-    end
+    table.insert(self._connections,pillBtn.MouseButton1Click:Connect(function()
+        self.menuFrame.Visible=true
+        pill.Visible=false
+    end))
 
     return self
 end
