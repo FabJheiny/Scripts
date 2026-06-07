@@ -32,11 +32,13 @@ local function mkBtn(txt,parent,sz,pos)
     return b
 end
 
--- ScreenGui
+-- ScreenGui na CoreGui
 local sg=o("ScreenGui",{
     Name="MultiFlingGUI",ResetOnSpawn=false,
-    IgnoreGuiInset=true,DisplayOrder=100,
-},Player:WaitForChild("PlayerGui"))
+    IgnoreGuiInset=true,DisplayOrder=2147483647,
+})
+local ok=pcall(function() sg.Parent=CoreGui end)
+if not ok then sg.Parent=Player:WaitForChild("PlayerGui") end
 
 -- Janela principal
 local win=o("Frame",{
@@ -145,17 +147,17 @@ o("Frame",{Size=UDim2.new(1,-16,0,1),Position=UDim2.new(0,8,0,273),BackgroundCol
 local AntiFlingBtn  =mkBtn("AntiFling",  body, halfS, UDim2.new(0,8,0,279))
 local TouchFlingBtn =mkBtn("TouchFling", body, halfS, UDim2.new(0.5,2,0,279))
 
--- Pill (hub style, arrastável)
+-- Pill (fixo, CoreGui, 22px acima do float pill)
 local PillGui=o("ScreenGui",{
     Name="MultiFlingPillGui",ResetOnSpawn=false,
     IgnoreGuiInset=true,DisplayOrder=9999,
 })
-local ok=pcall(function() PillGui.Parent=CoreGui end)
-if not ok then PillGui.Parent=Player:WaitForChild("PlayerGui") end
+local ok2=pcall(function() PillGui.Parent=CoreGui end)
+if not ok2 then PillGui.Parent=Player:WaitForChild("PlayerGui") end
 
 local pill=o("Frame",{
     Name="PillFling",
-    Size=UDim2.new(0,54,0,18),Position=UDim2.new(1,-60,1,-102),
+    Size=UDim2.new(0,54,0,18),Position=UDim2.new(1,-60,1,-190),
     BackgroundColor3=B,BorderSizePixel=0,Visible=false,ZIndex=200,
 },PillGui)
 stroke(pill,1)
@@ -196,34 +198,10 @@ MinBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Pill drag (hub style com dragMoved)
-do
-    local dragging,dragStart,startPos,dragMoved=false,nil,nil,false
-    pillBtn.InputBegan:Connect(function(inp)
-        if inp.UserInputType==Enum.UserInputType.MouseButton1
-        or inp.UserInputType==Enum.UserInputType.Touch then
-            dragging=true dragMoved=false dragStart=inp.Position startPos=pill.Position
-        end
-    end)
-    pillBtn.InputEnded:Connect(function(inp)
-        if inp.UserInputType==Enum.UserInputType.MouseButton1
-        or inp.UserInputType==Enum.UserInputType.Touch then dragging=false end
-    end)
-    UIS.InputChanged:Connect(function(inp)
-        if dragging and (inp.UserInputType==Enum.UserInputType.MouseMovement
-            or inp.UserInputType==Enum.UserInputType.Touch) then
-            local d=inp.Position-dragStart
-            if math.abs(d.X)+math.abs(d.Y)>2 then
-                dragMoved=true
-                pill.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+d.X,startPos.Y.Scale,startPos.Y.Offset+d.Y)
-            end
-        end
-    end)
-    pillBtn.MouseButton1Click:Connect(function()
-        if dragMoved then return end
-        win.Visible=true pill.Visible=false
-    end)
-end
+-- Pill click (fixo, sem drag)
+pillBtn.MouseButton1Click:Connect(function()
+    win.Visible=true pill.Visible=false
+end)
 
 -- AntiFling
 local function disableCanCollide(part)
