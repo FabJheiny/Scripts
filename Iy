@@ -1,0 +1,341 @@
+local Players          = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui          = game:GetService("CoreGui")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
+
+local COMMANDS = {
+    {n="rejoin",      c="servidor",    d="Reloga no servidor atual."},
+    {n="autorejoin",  c="servidor",    d="Reloga ao tomar kick/cair.",         u="—"},
+    {n="shop",        c="servidor",    d="Troca de servidor."},
+    {n="antiafk",     c="servidor",    d="Evita cair por inatividade.",        u="—"},
+    {n="antilag",     c="servidor",    d="Reduz gráficos para ganhar FPS.",    u="—"},
+    {n="noclip",      c="movimento",   d="Atravessa paredes.",                 u="clip"},
+    {n="fly",         a="[speed]",     c="movimento", d="Voa. Ex: fly 10",     u="unfly"},
+    {n="float",       c="movimento",   d="Anda flutuando no ar.",              u="unfloat"},
+    {n="swim",        c="movimento",   d="Nada no ar.",                        u="unswim"},
+    {n="walltp",      c="movimento",   d="Sobe ao topo de paredes.",           u="unwalltp"},
+    {n="wallwalk",    c="movimento",   d="Anda nas paredes."},
+    {n="antivoid",    c="movimento",   d="Não morre no void."},
+    {n="infjump",     c="movimento",   d="Pulo infinito no ar."},
+    {n="jp",          a="[número]",    c="movimento", d="Define altura do pulo."},
+    {n="grav",        a="[número]",    c="movimento", d="Altera a gravidade."},
+    {n="spin",        a="[speed]",     c="movimento", d="Fica girando.",        u="unspin"},
+    {n="tptool",      c="movimento",   d="Item que teleporta com 1 clique."},
+    {n="esp",         c="visual",      d="Vê jogadores através das paredes.",  u="unesp"},
+    {n="espteam",     c="visual",      d="ESP: aliados verde, inimigos vermelho."},
+    {n="xray",        c="visual",      d="Cenário transparente."},
+    {n="nccam",       c="visual",      d="Câmera atravessa objetos."},
+    {n="fb",          c="visual",      d="Visão noturna."},
+    {n="nofog",       c="visual",      d="Remove névoa do mapa."},
+    {n="day",         c="visual",      d="Muda para dia."},
+    {n="night",       c="visual",      d="Muda para noite."},
+    {n="view",        a="[player]",    c="visual",    d="Vê pela perspectiva do jogador."},
+    {n="goto",        a="[player]",    c="players",   d="Teleporta até o jogador."},
+    {n="walkto",      a="[player]",    c="players",   d="Segue o jogador.",     u="unwalktp"},
+    {n="orbit",       a="[player] [spd] [dist]", c="players", d="Orbita em torno do jogador."},
+    {n="bang",        a="[player]",    c="players",   d="Bang no jogador.",     u="unbang"},
+    {n="carpet",      a="[player]",    c="players",   d="Vira tapete do jogador.", u="uncarpet"},
+    {n="headsit",     a="[player]",    c="players",   d="Senta na cabeça do jogador.", u="unheadsit"},
+    {n="fling",       c="players",     d="Quem tocar voa longe.",              u="unfling"},
+    {n="flyfling",    c="players",     d="Fly + fling.",                       u="unflyfling"},
+    {n="walkfling",   c="players",     d="Fling discreto sem girar.",          u="unwalkfling"},
+    {n="antifling",   c="players",     d="Imune ao fling de outros."},
+    {n="god",         c="personagem",  d="Muito difícil de matar."},
+    {n="invis",       c="personagem",  d="Fica invisível.",                    u="vis"},
+    {n="reset",       c="personagem",  d="Reseta o personagem."},
+    {n="respawn",     c="personagem",  d="Dá respawn."},
+    {n="sit",         c="personagem",  d="Senta."},
+    {n="drophats",    c="personagem",  d="Joga chapéu no chão."},
+    {n="nohats",      c="personagem",  d="Remove chapéu."},
+    {n="hatspin",     c="personagem",  d="Gira o chapéu."},
+    {n="promptr6",    c="personagem",  d="Muda para R6."},
+    {n="promptr15",   c="personagem",  d="Muda para R15."},
+    {n="swp",         a="[nome]",      c="personagem", d="Cria waypoint."},
+    {n="vfly",        a="[speed]",     c="veiculos",   d="Voa com veículo.",   u="unvfly"},
+    {n="vnoclip",     c="veiculos",    d="Atravessa paredes com veículo.",     u="unvnoclip"},
+    {n="vgoto",       a="[player]",    c="veiculos",   d="Teleporta até jogador no veículo."},
+}
+
+local B    = Color3.fromRGB(0,   0,   0)
+local W    = Color3.fromRGB(255, 255, 255)
+local D    = Color3.fromRGB(15,  15,  15)
+local G    = Color3.fromRGB(50,  50,  50)
+local DIM  = Color3.fromRGB(100, 100, 100)
+local FONT = Enum.Font.Code
+
+local function o(cls, props, par)
+    local x = Instance.new(cls)
+    for k, v in pairs(props) do x[k] = v end
+    if par then x.Parent = par end
+    return x
+end
+local function stroke(par, t, c)
+    o("UIStroke", {
+        Color = c or W, Thickness = t or 1,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+    }, par)
+end
+
+local WIN_W  = 360
+local WIN_H  = 340
+local topH   = 24
+local CONT_Y = topH + 1 + 22
+
+local ScreenGui = o("ScreenGui", {
+    Name           = "InfiniteYieldGUI",
+    ResetOnSpawn   = false,
+    IgnoreGuiInset = true,
+}, PlayerGui)
+
+local vp = workspace.CurrentCamera.ViewportSize
+local win = o("Frame", {
+    Size             = UDim2.new(0, WIN_W, 0, WIN_H),
+    Position         = UDim2.new(0, (vp.X-WIN_W)/2, 0, (vp.Y-WIN_H)/2),
+    BackgroundColor3 = B, BorderSizePixel = 0,
+    ClipsDescendants = true,
+}, ScreenGui)
+stroke(win, 1)
+
+local top = o("Frame", {
+    Size = UDim2.new(1, 0, 0, topH),
+    BackgroundColor3 = B, BorderSizePixel = 0,
+    Active = true, ZIndex = 10,
+}, win)
+
+o("TextLabel", {
+    Size = UDim2.new(1, -70, 1, 0), Position = UDim2.new(0, 8, 0, 0),
+    BackgroundTransparency = 1, Text = "> INFINITE YIELD <",
+    TextColor3 = W, TextSize = 10, Font = FONT,
+    TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10,
+}, top)
+
+o("Frame", {Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-66,0,0), BackgroundColor3=W, BorderSizePixel=0, ZIndex=12}, top)
+o("Frame", {Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-33,0,0), BackgroundColor3=W, BorderSizePixel=0, ZIndex=12}, top)
+
+local MinBtn = o("TextButton", {
+    Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-65,0,0),
+    BackgroundColor3=B, BorderSizePixel=0,
+    Text="-", TextColor3=W, TextSize=18, Font=FONT,
+    AutoButtonColor=false, ZIndex=11,
+}, top)
+local XBtn = o("TextButton", {
+    Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-32,0,0),
+    BackgroundColor3=B, BorderSizePixel=0,
+    Text="x", TextColor3=W, TextSize=14, Font=FONT,
+    AutoButtonColor=false, ZIndex=11,
+}, top)
+for _, b in ipairs({MinBtn, XBtn}) do
+    b.MouseEnter:Connect(function() b.BackgroundColor3 = D end)
+    b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
+end
+
+o("Frame", {
+    Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,0,topH),
+    BackgroundColor3=W, BorderSizePixel=0, ZIndex=20,
+}, win)
+
+do
+    local dragging, dragStart, startPos = false, nil, nil
+    top.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1
+        or inp.UserInputType == Enum.UserInputType.Touch then
+            dragging=true; dragStart=inp.Position; startPos=win.Position
+        end
+    end)
+    top.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1
+        or inp.UserInputType == Enum.UserInputType.Touch then
+            dragging=false
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(inp)
+        if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement
+            or inp.UserInputType == Enum.UserInputType.Touch) then
+            local d = inp.Position - dragStart
+            win.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset+d.X, startPos.Y.Scale, startPos.Y.Offset+d.Y)
+        end
+    end)
+end
+
+local searchBox = o("TextBox", {
+    Size = UDim2.new(1, -16, 0, 18),
+    Position = UDim2.new(0, 8, 0, topH + 3),
+    BackgroundColor3 = D, BorderSizePixel = 0,
+    PlaceholderText = "buscar comando...", Text = "",
+    TextColor3 = W, PlaceholderColor3 = G,
+    TextSize = 10, Font = FONT,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ClearTextOnFocus = false,
+}, win)
+stroke(searchBox, 1)
+o("UIPadding", {PaddingLeft = UDim.new(0,6), PaddingRight = UDim.new(0,6)}, searchBox)
+
+o("Frame", {
+    Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,0,CONT_Y-1),
+    BackgroundColor3=W, BorderSizePixel=0, ZIndex=5,
+}, win)
+
+local scrollFrame = o("ScrollingFrame", {
+    Size = UDim2.new(1, 0, 1, -CONT_Y),
+    Position = UDim2.new(0, 0, 0, CONT_Y),
+    BackgroundTransparency = 1, BorderSizePixel = 0,
+    ScrollBarThickness = 2, ScrollBarImageColor3 = G,
+    CanvasSize = UDim2.new(0,0,0,0),
+    AutomaticCanvasSize = Enum.AutomaticSize.Y,
+    ClipsDescendants = true,
+}, win)
+o("UIPadding", {PaddingTop=UDim.new(0,4), PaddingBottom=UDim.new(0,8), PaddingLeft=UDim.new(0,8), PaddingRight=UDim.new(0,8)}, scrollFrame)
+
+o("UIListLayout", {
+    Padding = UDim.new(0,0),
+    FillDirection = Enum.FillDirection.Vertical,
+    HorizontalAlignment = Enum.HorizontalAlignment.Left,
+    SortOrder = Enum.SortOrder.LayoutOrder,
+}, scrollFrame)
+
+local function makeRow(cmd)
+    local row = o("Frame", {
+        Size = UDim2.new(1, 0, 0, 18),
+        BackgroundTransparency = 1, BorderSizePixel = 0,
+    })
+
+    local nameW = #cmd.n * 6.5
+    o("TextLabel", {
+        Text = cmd.n, Font = FONT, TextSize = 10,
+        TextColor3 = W, BackgroundTransparency = 1,
+        Size = UDim2.new(0, nameW, 1, 0),
+        TextXAlignment = Enum.TextXAlignment.Left,
+    }, row)
+
+    local afterName = nameW
+    if cmd.a then
+        local argW = #(" "..cmd.a) * 5.5
+        o("TextLabel", {
+            Text = " "..cmd.a, Font = FONT, TextSize = 10,
+            TextColor3 = G, BackgroundTransparency = 1,
+            Size = UDim2.new(0, argW, 1, 0),
+            Position = UDim2.new(0, afterName, 0, 0),
+            TextXAlignment = Enum.TextXAlignment.Left,
+        }, row)
+        afterName = afterName + argW
+    end
+
+    o("TextLabel", {
+        Text = " / "..cmd.d, Font = FONT, TextSize = 10,
+        TextColor3 = DIM, BackgroundTransparency = 1,
+        Size = UDim2.new(1, -(afterName + 70), 1, 0),
+        Position = UDim2.new(0, afterName + 2, 0, 0),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+    }, row)
+
+    if cmd.u then
+        o("TextLabel", {
+            Text = cmd.u == "—" and "on/off" or cmd.u,
+            Font = FONT, TextSize = 9,
+            TextColor3 = G, BackgroundTransparency = 1,
+            Size = UDim2.new(0, 60, 1, 0),
+            Position = UDim2.new(1, -60, 0, 0),
+            TextXAlignment = Enum.TextXAlignment.Right,
+        }, row)
+    end
+
+    local hit = o("TextButton", {
+        Text = "", BackgroundColor3 = G,
+        BackgroundTransparency = 1, BorderSizePixel = 0,
+        Size = UDim2.new(1,0,1,0), ZIndex = 10,
+    }, row)
+    hit.MouseEnter:Connect(function()  hit.BackgroundTransparency = 0.7 end)
+    hit.MouseLeave:Connect(function()  hit.BackgroundTransparency = 1   end)
+    hit.MouseButton1Click:Connect(function()
+        hit.BackgroundTransparency = 0.5
+        task.wait(0.05)
+        hit.BackgroundTransparency = 1
+        print("[IY] "..cmd.n)
+    end)
+
+    return row
+end
+
+local function render(query)
+    for _, ch in ipairs(scrollFrame:GetChildren()) do
+        if ch:IsA("GuiObject") then ch:Destroy() end
+    end
+    local q = (query or ""):lower()
+    local filtered = {}
+    for _, cmd in ipairs(COMMANDS) do
+        if q == "" or cmd.n:lower():find(q,1,true) or cmd.d:lower():find(q,1,true) then
+            table.insert(filtered, cmd)
+        end
+    end
+    if #filtered == 0 then
+        o("TextLabel", {
+            Text = "Nenhum comando encontrado.",
+            Font = FONT, TextSize = 10,
+            TextColor3 = G, BackgroundTransparency = 1,
+            Size = UDim2.new(1,0,0,30),
+            TextXAlignment = Enum.TextXAlignment.Center,
+            LayoutOrder = 0,
+        }, scrollFrame)
+    else
+        for i, cmd in ipairs(filtered) do
+            local row = makeRow(cmd)
+            row.LayoutOrder = i
+            row.Parent = scrollFrame
+        end
+    end
+end
+
+searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    render(searchBox.Text)
+end)
+
+local pillGui = o("ScreenGui", {
+    Name = "IYPill",
+    ResetOnSpawn = false,
+    IgnoreGuiInset = true,
+    DisplayOrder = 9999,
+})
+local okPill = pcall(function() pillGui.Parent = CoreGui end)
+if not okPill then pillGui.Parent = PlayerGui end
+
+local pill = o("Frame", {
+    Size = UDim2.new(0, 60, 0, 18),
+    Position = UDim2.new(1, -66, 1, -212),
+    BackgroundColor3 = B, BorderSizePixel = 0,
+    Visible = false, ZIndex = 200,
+}, pillGui)
+stroke(pill, 1)
+
+local pillBtn = o("TextButton", {
+    Size = UDim2.new(1,0,1,0),
+    BackgroundTransparency = 1,
+    Text = "> iy", TextSize = 9, Font = FONT,
+    TextColor3 = W, BorderSizePixel = 0, ZIndex = 201,
+}, pill)
+
+local minimized = false
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    if minimized then
+        win.Size    = UDim2.new(0, WIN_W, 0, topH)
+        MinBtn.Text = "+"
+    else
+        win.Size    = UDim2.new(0, WIN_W, 0, WIN_H)
+        MinBtn.Text = "-"
+    end
+end)
+
+XBtn.MouseButton1Click:Connect(function()
+    win.Visible  = false
+    pill.Visible = true
+end)
+
+pillBtn.MouseButton1Click:Connect(function()
+    win.Visible  = true
+    pill.Visible = false
+end)
+
+render("")
