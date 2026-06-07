@@ -17,7 +17,7 @@ local Config = {
     UI = {
         Name = "FloatGui",
         DisplayOrder = 2147483647,
-        Size = UDim2.new(0, 160, 0, 101), -- topbar(24) + divider(1) + row1(25) + divider(1) + row2(25) + divider(1) + row3(25) - 1
+        Size = UDim2.new(0, 160, 0, 101),
         DefaultPosition = UDim2.new(0.05, 0, 0.4, 0),
         TextSize = 10,
         Font = Enum.Font.Code,
@@ -43,9 +43,6 @@ local State = {
 
 local Platform = nil
 
--- ──────────────────────────────────────────────
--- Helpers (estilo fling)
--- ──────────────────────────────────────────────
 local B    = Config.UI.B
 local W    = Config.UI.W
 local D    = Config.UI.D
@@ -78,7 +75,6 @@ local function mkBtn(txt, parent, sz, pos)
 end
 
 local function mkDiv(parent, pos, sz, vertical)
-    -- sem stroke, só frame fina como no fling
     o("Frame", {
         Position = pos,
         Size = sz or (vertical and UDim2.new(0, 1, 1, 0) or UDim2.new(1, 0, 0, 1)),
@@ -86,9 +82,6 @@ local function mkDiv(parent, pos, sz, vertical)
     }, parent)
 end
 
--- ──────────────────────────────────────────────
--- PlatformController (sem mudanças)
--- ──────────────────────────────────────────────
 local PlatformController = {}
 PlatformController.__index = PlatformController
 
@@ -176,9 +169,6 @@ function PlatformController:cleanup()
     end
 end
 
--- ──────────────────────────────────────────────
--- UIController — tema fling
--- ──────────────────────────────────────────────
 local UIController = {}
 UIController.__index = UIController
 
@@ -193,7 +183,6 @@ function UIController.new(services, config, state, platformController)
 end
 
 function UIController:build()
-    -- ── ScreenGui principal (PlayerGui) ──
     local sg = o("ScreenGui", {
         Name = self.Config.UI.Name,
         DisplayOrder = self.Config.UI.DisplayOrder,
@@ -202,7 +191,6 @@ function UIController:build()
     }, self.Services.Players.LocalPlayer.PlayerGui)
     self.ScreenGui = sg
 
-    -- ── Pill ScreenGui (CoreGui) ──
     local pillSg = o("ScreenGui", {
         Name = self.Config.UI.Name .. "Pill",
         DisplayOrder = 9999,
@@ -211,11 +199,10 @@ function UIController:build()
     local ok = pcall(function() pillSg.Parent = self.Services.CoreGui end)
     if not ok then pillSg.Parent = self.Services.Players.LocalPlayer.PlayerGui end
 
-    -- Pill posicionada 22px acima da pill do fling (-190 + 22 + 18 = -150)
     local pill = o("Frame", {
         Name = "FloatPill",
-        Size = UDim2.new(0, 54, 0, 18),
-        Position = UDim2.new(1, -60, 1, -150),
+        Size = UDim2.new(0, 60, 0, 18),
+        Position = UDim2.new(1, -66, 1, -68),
         BackgroundColor3 = B,
         BorderSizePixel = 0,
         Visible = false,
@@ -235,9 +222,7 @@ function UIController:build()
     }, pill)
     self.Pill = pill
 
-    -- ── Janela principal ──
     local topH = 24
-    -- Altura: topH(24) + div(1) + 3×row(25) + 2×div(1) = 24+1+75+2 = 102
     local win = o("Frame", {
         Size = UDim2.new(0, 160, 0, 102),
         Position = self.Config.UI.DefaultPosition,
@@ -249,7 +234,6 @@ function UIController:build()
     stroke(win, 1)
     self.MainFrame = win
 
-    -- ── Topbar ──
     local top = o("Frame", {
         Size = UDim2.new(1, 0, 0, topH),
         BackgroundColor3 = B,
@@ -270,11 +254,9 @@ function UIController:build()
         ZIndex = 10,
     }, top)
 
-    -- Separadores verticais topbar
     mkDiv(top, UDim2.new(1, -66, 0, 0), UDim2.new(0, 1, 1, 0))
     mkDiv(top, UDim2.new(1, -33, 0, 0), UDim2.new(0, 1, 1, 0))
 
-    -- MinBtn e XBtn
     local MinBtn = o("TextButton", {
         Size = UDim2.new(0, 32, 1, 0),
         Position = UDim2.new(1, -65, 0, 0),
@@ -296,10 +278,8 @@ function UIController:build()
         b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
     end
 
-    -- Separador horizontal abaixo do topbar
     mkDiv(win, UDim2.new(0, 0, 0, topH), UDim2.new(1, 0, 0, 1))
 
-    -- ── Body ──
     local body = o("Frame", {
         Size = UDim2.new(1, 0, 1, -topH - 1),
         Position = UDim2.new(0, 0, 0, topH + 1),
@@ -308,16 +288,13 @@ function UIController:build()
         ClipsDescendants = true,
     }, win)
 
-    -- Row 0 — Float toggle  (y=0..25)
     local floatBtn = mkBtn("FLOAT: OFF", body,
         UDim2.new(1, 0, 0, 25), UDim2.new(0, 0, 0, 0))
     floatBtn.Name = "FloatBtn"
     table.insert(self.Buttons, floatBtn)
 
-    -- Separador
     mkDiv(body, UDim2.new(0, 0, 0, 25), UDim2.new(1, 0, 0, 1))
 
-    -- Row 1 — ↑ | + | speed  (y=26..50)
     local upBtn = mkBtn("↑", body, UDim2.new(0, 32, 0, 25), UDim2.new(0, 0, 0, 26))
     upBtn.Name = "UpBtn"
     table.insert(self.Buttons, upBtn)
@@ -332,10 +309,8 @@ function UIController:build()
     speedDisplay.Name = "SpeedDisplay"
     table.insert(self.Buttons, speedDisplay)
 
-    -- Separador
     mkDiv(body, UDim2.new(0, 0, 0, 51), UDim2.new(1, 0, 0, 1))
 
-    -- Row 2 — ↓ | - | reset  (y=52..76)
     local downBtn = mkBtn("↓", body, UDim2.new(0, 32, 0, 25), UDim2.new(0, 0, 0, 52))
     downBtn.Name = "DownBtn"
     table.insert(self.Buttons, downBtn)
@@ -346,7 +321,6 @@ function UIController:build()
 
     local resetBtn = mkBtn("Reset", body, UDim2.new(0, 78, 0, 25), UDim2.new(0, 82, 0, 52))
 
-    -- ── Drag — topbar only, via UIS (padrão fling) ──
     local minimized = false
     local fullH = 102
     do
@@ -377,7 +351,6 @@ function UIController:build()
         end)
     end
 
-    -- ── Lógica dos botões ──
     local function updateStates()
         for _, btn in pairs(self.Buttons) do
             if btn.Name == "FloatBtn" then
@@ -472,9 +445,6 @@ function UIController:cleanup()
     end
 end
 
--- ──────────────────────────────────────────────
--- MainController
--- ──────────────────────────────────────────────
 local MainController = {}
 MainController.__index = MainController
 
