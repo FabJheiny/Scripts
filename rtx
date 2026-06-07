@@ -1,6 +1,8 @@
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+local UIS = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -46,7 +48,6 @@ local function removeAllEffects()
     Lighting.GeographicLatitude   = 41.7
     Lighting.ExposureCompensation = 0
     Lighting.ShadowSoftness       = 0.5
-    print("[Shader Reset] ✓ Lighting restaurado ao padrão Roblox")
 end
 
 local function applyColdDusk()
@@ -88,7 +89,6 @@ local function applyColdDusk()
         cc.Contrast=CFG.CC.Contrast+math.sin(t*0.7)*0.02
         cc.TintColor=Color3.fromRGB(195+math.floor(math.sin(t*0.5)*6),215+math.floor(math.sin(t*0.4)*4),240)
     end)
-    print("[ColdDusk Shader] ✓ Ativo")
 end
 
 local function applyArcticWhite()
@@ -134,7 +134,6 @@ local function applyArcticWhite()
             255
         )
     end)
-    print("[ArcticWhite Shader] ✓ Ativo")
 end
 
 local function applyGoldenNoon()
@@ -176,7 +175,6 @@ local function applyGoldenNoon()
             210+math.floor(math.sin(t*0.35)*5)
         )
     end)
-    print("[GoldenNoon Shader] ✓ Ativo")
 end
 
 local function applyAshWasteland()
@@ -218,7 +216,6 @@ local function applyAshWasteland()
         cc.Contrast=CFG.CC.Contrast+math.sin(t*0.55)*0.03
         cc.Brightness=CFG.CC.Brightness+math.sin(t*0.35)*0.02
     end)
-    print("[AshWasteland Shader] ✓ Ativo")
 end
 
 local shaders = {
@@ -229,158 +226,183 @@ local shaders = {
     { label = "Ash Wasteland",  fn = applyAshWasteland},
 }
 
-local TOPBAR_H   = 24
-local BTN_H      = 22
-local BTN_GAP    = 4
-local PADDING    = 6
-local MENU_W     = 160
-local contentH   = PADDING + (#shaders * (BTN_H + BTN_GAP)) + PADDING - BTN_GAP
-local fullHeight = TOPBAR_H + contentH
-local miniHeight = TOPBAR_H
+local B    = Color3.fromRGB(0,   0,   0)
+local W    = Color3.fromRGB(255, 255, 255)
+local D    = Color3.fromRGB(15,  15,  15)
+local G    = Color3.fromRGB(50,  50,  50)
+local FONT = Enum.Font.Code
 
-local gui = Instance.new("ScreenGui")
-gui.Name          = "ShadersMenu"
-gui.ResetOnSpawn  = false
-gui.Parent        = playerGui
-
-local frame = Instance.new("Frame", gui)
-frame.Size                 = UDim2.new(0, MENU_W, 0, fullHeight)
-frame.Position             = UDim2.new(0.5, -80, 0.5, -100)
-frame.BackgroundColor3     = Color3.fromRGB(0, 0, 0)
-frame.BackgroundTransparency = 0
-frame.BorderSizePixel      = 0
-frame.Active               = true
-frame.Draggable            = true
-frame.ClipsDescendants     = true
-
-local frameStroke = Instance.new("UIStroke", frame)
-frameStroke.Color           = Color3.fromRGB(255, 255, 255)
-frameStroke.Thickness       = 1
-frameStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-
-local topBar = Instance.new("Frame", frame)
-topBar.Size             = UDim2.new(1, 0, 0, TOPBAR_H)
-topBar.Position         = UDim2.new(0, 0, 0, 0)
-topBar.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-topBar.BackgroundTransparency = 0
-topBar.BorderSizePixel  = 0
-
-local topSep = Instance.new("Frame", topBar)
-topSep.Size             = UDim2.new(1, 0, 0, 1)
-topSep.Position         = UDim2.new(0, 0, 1, -1)
-topSep.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-topSep.BackgroundTransparency = 0
-topSep.BorderSizePixel  = 0
-
-local titulo = Instance.new("TextLabel", topBar)
-titulo.Size             = UDim2.new(1, -50, 1, 0)
-titulo.Position         = UDim2.new(0, 10, 0, 0)
-titulo.BackgroundTransparency = 1
-titulo.TextColor3       = Color3.fromRGB(255, 255, 255)
-titulo.TextSize         = 10
-titulo.TextXAlignment   = Enum.TextXAlignment.Left
-titulo.Text             = "Shaders"
-titulo.Font             = Enum.Font.SourceSansBold
-
-local recolherBtn = Instance.new("TextButton", topBar)
-recolherBtn.Size             = UDim2.new(0, 18, 0, 14)
-recolherBtn.Position         = UDim2.new(1, -42, 0.5, -7)
-recolherBtn.Text             = "-"
-recolherBtn.TextSize         = 12
-recolherBtn.Font             = Enum.Font.SourceSansBold
-recolherBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-recolherBtn.BackgroundTransparency = 0
-recolherBtn.TextColor3       = Color3.fromRGB(255, 255, 255)
-recolherBtn.BorderSizePixel  = 0
-recolherBtn.AutoButtonColor  = false
-
-local closeBtn = Instance.new("TextButton", topBar)
-closeBtn.Size             = UDim2.new(0, 18, 0, 14)
-closeBtn.Position         = UDim2.new(1, -20, 0.5, -7)
-closeBtn.Text             = "x"
-closeBtn.TextSize         = 10
-closeBtn.Font             = Enum.Font.SourceSansBold
-closeBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-closeBtn.BackgroundTransparency = 0
-closeBtn.TextColor3       = Color3.fromRGB(255, 255, 255)
-closeBtn.BorderSizePixel  = 0
-closeBtn.AutoButtonColor  = false
-
-for i, shader in ipairs(shaders) do
-    local yPos = TOPBAR_H + PADDING + (i - 1) * (BTN_H + BTN_GAP)
-    local btn = Instance.new("TextButton", frame)
-    btn.Size             = UDim2.new(0, MENU_W - 16, 0, BTN_H)
-    btn.Position         = UDim2.new(0, 8, 0, yPos)
-    btn.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-    btn.BackgroundTransparency = 0
-    btn.BorderSizePixel  = 0
-    btn.Text             = shader.label
-    btn.TextSize         = 10
-    btn.Font             = Enum.Font.SourceSansBold
-    btn.TextColor3       = Color3.fromRGB(220, 220, 220)
-    btn.AutoButtonColor  = false
-    local btnStroke = Instance.new("UIStroke", btn)
-    btnStroke.Color           = Color3.fromRGB(60, 60, 60)
-    btnStroke.Thickness       = 1
-    btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    local corner = Instance.new("UICorner", btn)
-    corner.CornerRadius = UDim.new(0, 3)
-    btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(35,35,35) end)
-    btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(18,18,18) end)
-    btn.MouseButton1Down:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(50,50,50) end)
-    btn.MouseButton1Up:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(35,35,35) end)
-    btn.MouseButton1Click:Connect(shader.fn)
+local function o(cls, props, par)
+    local x = Instance.new(cls)
+    for k, v in pairs(props) do x[k] = v end
+    if par then x.Parent = par end
+    return x
+end
+local function stroke(par, t, c)
+    o("UIStroke", {
+        Color = c or W, Thickness = t or 1,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+    }, par)
+end
+local function mkBtn(txt, parent, sz, pos)
+    local b = o("TextButton", {
+        Size = sz, Position = pos,
+        BackgroundColor3 = B, BorderSizePixel = 0,
+        Text = txt, TextColor3 = W, TextSize = 10, Font = FONT,
+        AutoButtonColor = false,
+    }, parent)
+    stroke(b, 1)
+    b.MouseEnter:Connect(function()  b.BackgroundColor3 = D end)
+    b.MouseLeave:Connect(function()  b.BackgroundColor3 = B end)
+    return b
 end
 
-local recolhido = false
-recolherBtn.MouseButton1Click:Connect(function()
-    recolhido = not recolhido
-    if recolhido then
-        frame.Size = UDim2.new(0, MENU_W, 0, miniHeight)
-        recolherBtn.Text = "+"
-    else
-        frame.Size = UDim2.new(0, MENU_W, 0, fullHeight)
-        recolherBtn.Text = "-"
-    end
-end)
+local topH   = 24
+local btnH   = 22
+local btnGap = 4
+local pad    = 6
+local menuW  = 160
+local contentH  = pad + (#shaders * (btnH + btnGap)) - btnGap + pad
+local fullHeight = topH + contentH
 
-local CoreGui = game:GetService("CoreGui")
-local pillGui = Instance.new("ScreenGui")
-pillGui.Name         = "ShadersPill"
-pillGui.ResetOnSpawn = false
-pillGui.DisplayOrder = 9999
+local gui = o("ScreenGui", {
+    Name = "ShadersMenu",
+    ResetOnSpawn = false,
+    IgnoreGuiInset = true,
+}, playerGui)
+
+local win = o("Frame", {
+    Size = UDim2.new(0, menuW, 0, fullHeight),
+    Position = UDim2.new(0.5, -80, 0.5, -100),
+    BackgroundColor3 = B, BorderSizePixel = 0,
+    Active = true, ClipsDescendants = true,
+}, gui)
+stroke(win, 1)
+
+local top = o("Frame", {
+    Size = UDim2.new(1, 0, 0, topH),
+    BackgroundColor3 = B, BorderSizePixel = 0,
+    Active = true, ZIndex = 10,
+}, win)
+
+o("TextLabel", {
+    Size = UDim2.new(1, -70, 1, 0), Position = UDim2.new(0, 8, 0, 0),
+    BackgroundTransparency = 1, Text = "> SHADERS <",
+    TextColor3 = W, TextSize = 10, Font = FONT,
+    TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10,
+}, top)
+
+o("Frame", {Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-66,0,0), BackgroundColor3=W, BorderSizePixel=0, ZIndex=12}, top)
+o("Frame", {Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-33,0,0), BackgroundColor3=W, BorderSizePixel=0, ZIndex=12}, top)
+
+local MinBtn = o("TextButton", {
+    Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-65,0,0),
+    BackgroundColor3=B, BorderSizePixel=0,
+    Text="-", TextColor3=W, TextSize=18, Font=FONT,
+    AutoButtonColor=false, ZIndex=11,
+}, top)
+local XBtn = o("TextButton", {
+    Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-32,0,0),
+    BackgroundColor3=B, BorderSizePixel=0,
+    Text="x", TextColor3=W, TextSize=14, Font=FONT,
+    AutoButtonColor=false, ZIndex=11,
+}, top)
+for _, b in ipairs({MinBtn, XBtn}) do
+    b.MouseEnter:Connect(function() b.BackgroundColor3 = D end)
+    b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
+end
+
+o("Frame", {
+    Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,0,topH),
+    BackgroundColor3=W, BorderSizePixel=0, ZIndex=20,
+}, win)
+
+do
+    local dragging, dragStart, startPos = false, nil, nil
+    top.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1
+        or inp.UserInputType == Enum.UserInputType.Touch then
+            dragging  = true
+            dragStart = inp.Position
+            startPos  = win.Position
+        end
+    end)
+    top.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1
+        or inp.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    UIS.InputChanged:Connect(function(inp)
+        if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement
+            or inp.UserInputType == Enum.UserInputType.Touch) then
+            local d = inp.Position - dragStart
+            win.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + d.X,
+                startPos.Y.Scale, startPos.Y.Offset + d.Y
+            )
+        end
+    end)
+end
+
+local body = o("Frame", {
+    Size = UDim2.new(1, 0, 1, -topH - 1),
+    Position = UDim2.new(0, 0, 0, topH + 1),
+    BackgroundColor3 = B, BorderSizePixel = 0,
+    ClipsDescendants = true,
+}, win)
+
+for i, shader in ipairs(shaders) do
+    local yPos = pad + (i - 1) * (btnH + btnGap)
+    mkBtn(shader.label, body,
+        UDim2.new(0, menuW - 16, 0, btnH),
+        UDim2.new(0, 8, 0, yPos)
+    ).MouseButton1Click:Connect(shader.fn)
+end
+
+local pillGui = o("ScreenGui", {
+    Name = "ShadersPill",
+    ResetOnSpawn = false,
+    IgnoreGuiInset = true,
+    DisplayOrder = 9999,
+})
 local ok = pcall(function() pillGui.Parent = CoreGui end)
 if not ok then pillGui.Parent = playerGui end
 
-local pill = Instance.new("Frame", pillGui)
-pill.Name             = "ShadersPill"
-pill.Size             = UDim2.new(0, 50, 0, 18)
-pill.Position         = UDim2.new(1, -56, 1, -146)
-pill.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-pill.BorderSizePixel  = 0
-pill.Visible          = false
+local pill = o("Frame", {
+    Size = UDim2.new(0, 60, 0, 18),
+    Position = UDim2.new(1, -66, 1, -146),
+    BackgroundColor3 = B, BorderSizePixel = 0,
+    Visible = false, ZIndex = 200,
+}, pillGui)
+stroke(pill, 1)
 
-local pillStroke = Instance.new("UIStroke", pill)
-pillStroke.Color           = Color3.fromRGB(255, 255, 255)
-pillStroke.Thickness       = 1
-pillStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+local pillBtn = o("TextButton", {
+    Size = UDim2.new(1, 0, 1, 0),
+    BackgroundTransparency = 1,
+    Text = "> shaders", TextSize = 9, Font = FONT,
+    TextColor3 = W, BorderSizePixel = 0,
+    ZIndex = 201,
+}, pill)
 
-local pillBtn = Instance.new("TextButton", pill)
-pillBtn.Size             = UDim2.new(1, 0, 1, 0)
-pillBtn.Text             = "> shaders"
-pillBtn.TextSize         = 9
-pillBtn.Font             = Enum.Font.SourceSansBold
-pillBtn.TextColor3       = Color3.fromRGB(255, 255, 255)
-pillBtn.BackgroundTransparency = 1
-pillBtn.BorderSizePixel  = 0
-pillBtn.AutoButtonColor  = false
+local minimized = false
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    if minimized then
+        win.Size    = UDim2.new(0, menuW, 0, topH)
+        MinBtn.Text = "+"
+    else
+        win.Size    = UDim2.new(0, menuW, 0, fullHeight)
+        MinBtn.Text = "-"
+    end
+end)
 
-closeBtn.MouseButton1Click:Connect(function()
-    frame.Visible = false
-    pill.Visible  = true
+XBtn.MouseButton1Click:Connect(function()
+    win.Visible  = false
+    pill.Visible = true
 end)
 
 pillBtn.MouseButton1Click:Connect(function()
-    frame.Visible = true
-    pill.Visible  = false
+    win.Visible  = true
+    pill.Visible = false
 end)
