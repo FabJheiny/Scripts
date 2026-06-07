@@ -5,7 +5,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UIS           = game:GetService("UserInputService")
 local Player        = Players.LocalPlayer
 
--- Hub theme
 local B    = Color3.fromRGB(0,0,0)
 local W    = Color3.fromRGB(255,255,255)
 local D    = Color3.fromRGB(15,15,15)
@@ -32,7 +31,6 @@ local function mkBtn(txt,parent,sz,pos)
     return b
 end
 
--- ScreenGui na CoreGui
 local sg=o("ScreenGui",{
     Name="MultiFlingGUI",ResetOnSpawn=false,
     IgnoreGuiInset=true,DisplayOrder=2147483647,
@@ -40,7 +38,6 @@ local sg=o("ScreenGui",{
 local ok=pcall(function() sg.Parent=CoreGui end)
 if not ok then sg.Parent=Player:WaitForChild("PlayerGui") end
 
--- Janela principal
 local win=o("Frame",{
     Size=UDim2.new(0,200,0,360),
     Position=UDim2.new(0.5,-100,0.5,-180),
@@ -49,7 +46,6 @@ local win=o("Frame",{
 },sg)
 stroke(win,1)
 
--- TopBar (estilo hub)
 local topH=24
 local top=o("Frame",{
     Size=UDim2.new(1,0,0,topH),
@@ -62,7 +58,6 @@ o("TextLabel",{
     TextColor3=W,TextSize=11,Font=FONT,
     TextXAlignment=Enum.TextXAlignment.Left,ZIndex=10,
 },top)
--- separadores verticais
 o("Frame",{Size=UDim2.new(0,1,1,0),Position=UDim2.new(1,-66,0,0),BackgroundColor3=W,BorderSizePixel=0,ZIndex=12},top)
 o("Frame",{Size=UDim2.new(0,1,1,0),Position=UDim2.new(1,-33,0,0),BackgroundColor3=W,BorderSizePixel=0,ZIndex=12},top)
 
@@ -81,10 +76,8 @@ for _,b in ipairs({MinBtn,XBtn}) do
     b.MouseLeave:Connect(function() b.BackgroundColor3=B end)
 end
 
--- separador horizontal abaixo do topbar
 o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,0,topH),BackgroundColor3=W,BorderSizePixel=0,ZIndex=20},win)
 
--- Drag (hub style, via UIS)
 do
     local dragging,dragStart,startPos=false,nil,nil
     top.InputBegan:Connect(function(inp)
@@ -106,13 +99,11 @@ do
     end)
 end
 
--- Body
 local body=o("Frame",{
     Size=UDim2.new(1,0,1,-topH-1),Position=UDim2.new(0,0,0,topH+1),
     BackgroundColor3=B,BorderSizePixel=0,ClipsDescendants=true,
 },win)
 
--- Status
 local StatusLabel=o("TextLabel",{
     Position=UDim2.new(0,8,0,5),Size=UDim2.new(1,-16,0,14),
     BackgroundTransparency=1,Text="Select targets to fling",
@@ -120,7 +111,6 @@ local StatusLabel=o("TextLabel",{
     TextXAlignment=Enum.TextXAlignment.Left,
 },body)
 
--- Lista de players
 local PlayerListFrame=o("Frame",{
     Position=UDim2.new(0,8,0,23),Size=UDim2.new(1,-16,0,190),
     BackgroundColor3=B,BorderSizePixel=0,
@@ -134,7 +124,6 @@ local PlayerScrollFrame=o("ScrollingFrame",{
     CanvasSize=UDim2.new(0,0,0,0),ClipsDescendants=true,
 },PlayerListFrame)
 
--- Botões ação
 local half =UDim2.new(0.5,-10,0,22)
 local halfS=UDim2.new(0.5,-10,0,20)
 local StartButton   =mkBtn("Start",   body, half,  UDim2.new(0,8,0,219))
@@ -142,12 +131,11 @@ local StopButton    =mkBtn("Stop",    body, half,  UDim2.new(0.5,2,0,219))
 local SelectAllBtn  =mkBtn("All",     body, halfS, UDim2.new(0,8,0,247))
 local DeselectAllBtn=mkBtn("None",    body, halfS, UDim2.new(0.5,2,0,247))
 
--- Separador + toggles
 o("Frame",{Size=UDim2.new(1,-16,0,1),Position=UDim2.new(0,8,0,273),BackgroundColor3=W,BorderSizePixel=0},body)
 local AntiFlingBtn  =mkBtn("AntiFling",  body, halfS, UDim2.new(0,8,0,279))
 local TouchFlingBtn =mkBtn("TouchFling", body, halfS, UDim2.new(0.5,2,0,279))
 
--- Pill (fixo, CoreGui, 22px acima do float pill)
+-- Pill
 local PillGui=o("ScreenGui",{
     Name="MultiFlingPillGui",ResetOnSpawn=false,
     IgnoreGuiInset=true,DisplayOrder=9999,
@@ -157,7 +145,7 @@ if not ok2 then PillGui.Parent=Player:WaitForChild("PlayerGui") end
 
 local pill=o("Frame",{
     Name="PillFling",
-    Size=UDim2.new(0,54,0,18),Position=UDim2.new(1,-60,1,-190),
+    Size=UDim2.new(0,60,0,18),Position=UDim2.new(1,-66,1,-80),
     BackgroundColor3=B,BorderSizePixel=0,Visible=false,ZIndex=200,
 },PillGui)
 stroke(pill,1)
@@ -167,7 +155,6 @@ local pillBtn=o("TextButton",{
     TextColor3=W,BorderSizePixel=0,ZIndex=201,
 },pill)
 
--- Lógica
 local AntiFlingActive=false
 local TouchFlingActive=false
 local antiFlingTracked={}
@@ -182,7 +169,6 @@ getgenv().FPDH=workspace.FallenPartsDestroyHeight
 local minimized=false
 local fullH=360
 
--- Minimize / Close
 XBtn.MouseButton1Click:Connect(function()
     if FlingActive then FlingActive=false end
     win.Visible=false pill.Visible=true
@@ -198,12 +184,10 @@ MinBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Pill click (fixo, sem drag)
 pillBtn.MouseButton1Click:Connect(function()
     win.Visible=true pill.Visible=false
 end)
 
--- AntiFling
 local function disableCanCollide(part)
     if part:IsA("BasePart") and part.CanCollide then part.CanCollide=false end
 end
@@ -250,7 +234,6 @@ AntiFlingBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- TouchFling
 local function runTouchFling()
     local lp=Players.LocalPlayer
     local movel=0.1
@@ -286,7 +269,6 @@ TouchFlingBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Status / lista
 local function UpdateStatus()
     local count=0
     for _ in pairs(SelectedTargets) do count+=1 end
@@ -335,7 +317,6 @@ local function ToggleAll(select)
     RefreshPlayerList() UpdateStatus()
 end
 
--- SkidFling (lógica 100% preservada)
 local function SkidFling(TargetPlayer)
     local Character=Player.Character
     local Humanoid=Character and Character:FindFirstChildOfClass("Humanoid")
