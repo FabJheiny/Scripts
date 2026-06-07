@@ -1,113 +1,238 @@
+
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
+local UIS = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
--- The ACTUAL, official R6 Animation IDs
 local emotes = {
     {Name = "Dance 1", ID = "rbxassetid://182435998"},
     {Name = "Dance 2", ID = "rbxassetid://182436842"},
     {Name = "Dance 3", ID = "rbxassetid://182436935"},
-    {Name = "Wave", ID = "rbxassetid://128777973"},
-    {Name = "Laugh", ID = "rbxassetid://129423131"},
-    {Name = "Cheer", ID = "rbxassetid://129423030"},
-    {Name = "Point", ID = "rbxassetid://128853357"}
+    {Name = "Wave",    ID = "rbxassetid://128777973"},
+    {Name = "Laugh",   ID = "rbxassetid://129423131"},
+    {Name = "Cheer",   ID = "rbxassetid://129423030"},
+    {Name = "Point",   ID = "rbxassetid://128853357"},
 }
 
--- Create the main GUI
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "RealR6Emotes"
-screenGui.Parent = CoreGui 
+local B    = Color3.fromRGB(0,   0,   0)
+local W    = Color3.fromRGB(255, 255, 255)
+local D    = Color3.fromRGB(15,  15,  15)
+local G    = Color3.fromRGB(50,  50,  50)
+local FONT = Enum.Font.Code
 
-local wheelFrame = Instance.new("Frame")
-wheelFrame.Size = UDim2.new(0, 200, 0, 200)
-wheelFrame.Position = UDim2.new(0.5, -100, 0.5, -100)
-wheelFrame.BackgroundTransparency = 1
-wheelFrame.Visible = false
-wheelFrame.Parent = screenGui
+local function o(cls, props, par)
+    local x = Instance.new(cls)
+    for k, v in pairs(props) do x[k] = v end
+    if par then x.Parent = par end
+    return x
+end
+local function stroke(par, t, c)
+    o("UIStroke", {
+        Color = c or W, Thickness = t or 1,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+    }, par)
+end
+local function mkBtn(txt, parent, sz, pos)
+    local b = o("TextButton", {
+        Size = sz, Position = pos,
+        BackgroundColor3 = B, BorderSizePixel = 0,
+        Text = txt, TextColor3 = W, TextSize = 10, Font = FONT,
+        AutoButtonColor = false,
+    }, parent)
+    stroke(b, 1)
+    b.MouseEnter:Connect(function() b.BackgroundColor3 = D end)
+    b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
+    return b
+end
 
-local currentAnimTrack = nil
-local runConnection = nil -- This will track your movement
-local radius = 80
-local center = Vector2.new(100, 100)
+local topH   = 24
+local menuW  = 200
+local pad    = 8
+local btnH   = 22
+local btnGap = 5
+local menuH  = topH + 1 + pad + (#emotes * (btnH + btnGap)) - btnGap + pad
 
-for i, emote in ipairs(emotes) do
-    local angle = (i / #emotes) * math.pi * 2
-    local x = center.X + math.cos(angle) * radius
-    local y = center.Y + math.sin(angle) * radius
+local screenGui = o("ScreenGui", {
+    Name = "RealR6Emotes",
+    ResetOnSpawn = false,
+    IgnoreGuiInset = true,
+})
+local ok = pcall(function() screenGui.Parent = CoreGui end)
+if not ok then screenGui.Parent = player:WaitForChild("PlayerGui") end
 
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 65, 0, 30)
-    btn.Position = UDim2.new(0, x - 32.5, 0, y - 15)
-    btn.Text = emote.Name
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.BorderSizePixel = 0
-    btn.Parent = wheelFrame
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 6)
-    corner.Parent = btn
+local win = o("Frame", {
+    Size = UDim2.new(0, menuW, 0, menuH),
+    Position = UDim2.new(0.5, -100, 0.5, -140),
+    BackgroundColor3 = B, BorderSizePixel = 0,
+    Active = true, ClipsDescendants = true,
+}, screenGui)
+stroke(win, 1)
 
-    btn.MouseButton1Click:Connect(function()
-        local character = player.Character
-        if not character then return end
-        
-        local humanoid = character:FindFirstChild("Humanoid")
-        if humanoid then
-            local animator = humanoid:FindFirstChildOfClass("Animator") or humanoid:WaitForChild("Animator", 3)
-            
-            if animator then
-                -- Stop current animation and disconnect old movement tracker
-                if currentAnimTrack then
-                    currentAnimTrack:Stop()
-                end
-                if runConnection then
-                    runConnection:Disconnect()
-                end
-                
-                local anim = Instance.new("Animation")
-                anim.AnimationId = emote.ID
-                
-                currentAnimTrack = animator:LoadAnimation(anim)
-                currentAnimTrack.Priority = Enum.AnimationPriority.Action
-                
-                if emote.Name:match("Dance") then
-                    currentAnimTrack.Looped = true
-                end
-                
-                currentAnimTrack:Play()
+local top = o("Frame", {
+    Size = UDim2.new(1, 0, 0, topH),
+    BackgroundColor3 = B, BorderSizePixel = 0,
+    Active = true, ZIndex = 10,
+}, win)
 
-                -- NEW: Detect movement to stop the emote
-                runConnection = humanoid.Running:Connect(function(speed)
-                    if speed > 0.1 and currentAnimTrack then
-                        currentAnimTrack:Stop()
-                        currentAnimTrack = nil
-                        
-                        -- Disconnect this event so it isn't constantly firing in the background
-                        if runConnection then
-                            runConnection:Disconnect()
-                            runConnection = nil
-                        end
-                    end
-                end)
-            end
+o("TextLabel", {
+    Size = UDim2.new(1, -70, 1, 0), Position = UDim2.new(0, 8, 0, 0),
+    BackgroundTransparency = 1, Text = "> EMOTES <",
+    TextColor3 = W, TextSize = 10, Font = FONT,
+    TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10,
+}, top)
+
+o("Frame", {Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-66,0,0), BackgroundColor3=W, BorderSizePixel=0, ZIndex=12}, top)
+o("Frame", {Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-33,0,0), BackgroundColor3=W, BorderSizePixel=0, ZIndex=12}, top)
+
+local MinBtn = o("TextButton", {
+    Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-65,0,0),
+    BackgroundColor3=B, BorderSizePixel=0,
+    Text="-", TextColor3=W, TextSize=18, Font=FONT,
+    AutoButtonColor=false, ZIndex=11,
+}, top)
+local XBtn = o("TextButton", {
+    Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-32,0,0),
+    BackgroundColor3=B, BorderSizePixel=0,
+    Text="x", TextColor3=W, TextSize=14, Font=FONT,
+    AutoButtonColor=false, ZIndex=11,
+}, top)
+for _, b in ipairs({MinBtn, XBtn}) do
+    b.MouseEnter:Connect(function() b.BackgroundColor3 = D end)
+    b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
+end
+
+o("Frame", {
+    Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,0,topH),
+    BackgroundColor3=W, BorderSizePixel=0, ZIndex=20,
+}, win)
+
+do
+    local dragging, dragStart, startPos = false, nil, nil
+    top.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1
+        or inp.UserInputType == Enum.UserInputType.Touch then
+            dragging  = true
+            dragStart = inp.Position
+            startPos  = win.Position
+        end
+    end)
+    top.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1
+        or inp.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    UIS.InputChanged:Connect(function(inp)
+        if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement
+            or inp.UserInputType == Enum.UserInputType.Touch) then
+            local d = inp.Position - dragStart
+            win.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + d.X,
+                startPos.Y.Scale, startPos.Y.Offset + d.Y
+            )
         end
     end)
 end
 
--- Toggle Button
-local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0, 100, 0, 35)
-toggleBtn.Position = UDim2.new(0, 10, 0, 10)
-toggleBtn.Text = "Emotes"
-toggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleBtn.Parent = screenGui
+local body = o("Frame", {
+    Size = UDim2.new(1, 0, 1, -topH - 1),
+    Position = UDim2.new(0, 0, 0, topH + 1),
+    BackgroundColor3 = B, BorderSizePixel = 0,
+    ClipsDescendants = true,
+}, win)
 
-local toggleCorner = Instance.new("UICorner")
-toggleCorner.CornerRadius = UDim.new(0, 6)
-toggleCorner.Parent = toggleBtn
+for i, emote in ipairs(emotes) do
+    local yPos = pad + (i - 1) * (btnH + btnGap)
+    local btn = mkBtn(emote.Name, body,
+        UDim2.new(1, -16, 0, btnH),
+        UDim2.new(0, 8, 0, yPos)
+    )
 
-toggleBtn.MouseButton1Click:Connect(function()
-    wheelFrame.Visible = not wheelFrame.Visible
+    local currentAnimTrack = nil
+    local runConnection    = nil
+
+    btn.MouseButton1Click:Connect(function()
+        local character = player.Character
+        if not character then return end
+        local humanoid = character:FindFirstChild("Humanoid")
+        if not humanoid then return end
+        local animator = humanoid:FindFirstChildOfClass("Animator") or humanoid:WaitForChild("Animator", 3)
+        if not animator then return end
+
+        if currentAnimTrack then currentAnimTrack:Stop() end
+        if runConnection then runConnection:Disconnect() end
+
+        local anim = Instance.new("Animation")
+        anim.AnimationId = emote.ID
+        currentAnimTrack = animator:LoadAnimation(anim)
+        currentAnimTrack.Priority = Enum.AnimationPriority.Action
+        if emote.Name:match("Dance") then
+            currentAnimTrack.Looped = true
+        end
+        currentAnimTrack:Play()
+        btn.BackgroundColor3 = G
+
+        runConnection = humanoid.Running:Connect(function(speed)
+            if speed > 0.1 and currentAnimTrack then
+                currentAnimTrack:Stop()
+                currentAnimTrack = nil
+                btn.BackgroundColor3 = B
+                if runConnection then
+                    runConnection:Disconnect()
+                    runConnection = nil
+                end
+            end
+        end)
+
+        currentAnimTrack.Stopped:Connect(function()
+            btn.BackgroundColor3 = B
+        end)
+    end)
+end
+
+local pillGui = o("ScreenGui", {
+    Name = "EmotesPill",
+    ResetOnSpawn = false,
+    IgnoreGuiInset = true,
+    DisplayOrder = 9999,
+})
+local ok2 = pcall(function() pillGui.Parent = CoreGui end)
+if not ok2 then pillGui.Parent = player:WaitForChild("PlayerGui") end
+
+local pill = o("Frame", {
+    Size = UDim2.new(0, 60, 0, 18),
+    Position = UDim2.new(1, -66, 1, -190),
+    BackgroundColor3 = B, BorderSizePixel = 0,
+    Visible = false, ZIndex = 200,
+}, pillGui)
+stroke(pill, 1)
+
+local pillBtn = o("TextButton", {
+    Size = UDim2.new(1, 0, 1, 0),
+    BackgroundTransparency = 1,
+    Text = "> emotes", TextSize = 9, Font = FONT,
+    TextColor3 = W, BorderSizePixel = 0,
+    ZIndex = 201,
+}, pill)
+
+local minimized = false
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    if minimized then
+        win.Size    = UDim2.new(0, menuW, 0, topH)
+        MinBtn.Text = "+"
+    else
+        win.Size    = UDim2.new(0, menuW, 0, menuH)
+        MinBtn.Text = "-"
+    end
+end)
+
+XBtn.MouseButton1Click:Connect(function()
+    win.Visible  = false
+    pill.Visible = true
+end)
+
+pillBtn.MouseButton1Click:Connect(function()
+    win.Visible  = true
+    pill.Visible = false
 end)
