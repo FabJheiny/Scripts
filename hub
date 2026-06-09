@@ -9,7 +9,7 @@ local D  = Color3.fromRGB(15,15,15)
 local G  = Color3.fromRGB(50,50,50)
 
 local BASE_W, BASE_H = 680, 310
-_G.HubScale     = _G.HubScale     or 20
+_G.HubScale     = _G.HubScale     or 10
 _G.HubPillScale = _G.HubPillScale or 10
 local FONT_MAIN = Enum.Font.Code
 
