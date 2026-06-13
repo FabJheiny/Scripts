@@ -10,7 +10,7 @@ local G  = Color3.fromRGB(50,50,50)
 
 local BASE_W, BASE_H = 680, 310
 _G.HubScale     = _G.HubScale     or 10
-_G.HubPillScale = _G.HubPillScale or 10
+_G.HubPillScale = _G.HubPillScale or 2
 local FONT_MAIN = Enum.Font.Code
 
 local function o(cls,props,par)
@@ -30,7 +30,7 @@ local win = o("Frame",{
     Size=UDim2.new(0,BASE_W,0,BASE_H),
     Position=UDim2.new(0.5,0,0.5,0),
     BackgroundColor3=B,BorderSizePixel=0,
-    Active=false,ClipsDescendants=true,Visible=true,
+    Active=false,ClipsDescendants=true,Visible=false,
 },sg)
 stroke(win,1)
 
@@ -169,14 +169,24 @@ end
 
 -- ══ PILL ══
 local PILL_BASE = 44
+
+local function getPillSize(v)
+    local factor = 0.7+(v-1)*0.06
+    return math.floor(PILL_BASE*factor)
+end
+
+local initPillSize = getPillSize(_G.HubPillScale)
+
 local pill=o("Frame",{
     Name="Pill",
-    Size=UDim2.new(0,PILL_BASE,0,PILL_BASE),
-    Position=UDim2.new(1,-60,1,-400),
-    BackgroundColor3=B,BorderSizePixel=0,Visible=false,ZIndex=200,
+    Size=UDim2.new(0,initPillSize,0,initPillSize),
+    AnchorPoint=Vector2.new(0.5,0),
+    Position=UDim2.new(0.5,0,0,55),
+    BackgroundColor3=B,BorderSizePixel=0,Visible=true,ZIndex=200,
     ClipsDescendants=false,
 },sg)
-o("UICorner",{CornerRadius=UDim.new(0,12)},pill)
+-- UDim.new(0.5, 0) = metade do tamanho = círculo perfeito
+o("UICorner",{CornerRadius=UDim.new(0.5,0)},pill)
 stroke(pill,1)
 _G.UniversalHubPill=pill
 
@@ -195,14 +205,10 @@ local pillBtn=o("TextButton",{
 },pill)
 
 local function applyPillScale(v)
-    local factor = 0.7+(v-1)*0.06
-    local ps = math.floor(PILL_BASE*factor)
+    local ps = getPillSize(v)
     pill.Size = UDim2.new(0,ps,0,ps)
-    local corner = pill:FindFirstChildOfClass("UICorner")
-    if corner then corner.CornerRadius = UDim.new(0, math.floor(ps*0.27)) end
+    -- UICorner com UDim.new(0.5,0) já é sempre círculo, não precisa atualizar
 end
-
-applyPillScale(_G.HubPillScale)
 
 do
     local i=1
@@ -299,7 +305,7 @@ do
     local rowY    = bodyH - 13 - ITEM_H - 4
 
     local totalW  = 5*ITEM_W + 4*GAP_H
-    local startX  = colW + math.floor(((areaW - colW) - totalW) / 2) + 2
+    local startX  = tabColW + math.floor(((areaW - colW) - totalW) / 2) + 2
 
     local positions = {}
     for k=0,4 do
@@ -314,7 +320,6 @@ do
         _G.HubPillScale=v applyPillScale(v)
     end)
 
-    -- Loop Speed
     local _origSpeed = nil
     local function getOrigSpeed()
         if _origSpeed then return _origSpeed end
@@ -359,10 +364,34 @@ do
     },lsBar)
 
     local lsCv = nil
+    local lsConn = nil
+
+    local function lsStopLoop()
+        if lsConn then lsConn:Disconnect() lsConn = nil end
+    end
+
+    local function lsStartLoop(v)
+        lsStopLoop()
+        local function hookHum(char)
+            if not char then return end
+            local hum = char:WaitForChild("Humanoid", 5)
+            if not hum then return end
+            hum.WalkSpeed = v
+            lsConn = hum:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+                if hum.WalkSpeed ~= v then
+                    hum.WalkSpeed = v
+                end
+            end)
+        end
+        hookHum(LP.Character)
+        LP.CharacterAdded:Connect(function(char) if lsCv then hookHum(char) end end)
+    end
+
     local function lsApply(v)
         if v == nil then
             lsCv = nil
             lsBox.Text = ""
+            lsStopLoop()
             if LP.Character then
                 local hum = LP.Character:FindFirstChildOfClass("Humanoid")
                 if hum and _origSpeed then hum.WalkSpeed = _origSpeed end
@@ -374,10 +403,7 @@ do
         if lsCv == nil then getOrigSpeed() end
         lsCv = v
         lsBox.Text = tostring(v)
-        if LP.Character then
-            local hum = LP.Character:FindFirstChildOfClass("Humanoid")
-            if hum then hum.WalkSpeed = v end
-        end
+        lsStartLoop(v)
     end
 
     lsPlus.MouseButton1Click:Connect(function()
@@ -401,7 +427,6 @@ do
         btn.MouseLeave:Connect(function() btn.BackgroundColor3=B end)
     end
 
-    -- Inf Jump
     o("TextLabel",{
         Size=UDim2.new(0,ITEM_W,0,12),
         Position=UDim2.new(0,positions[4],0,rowY),
@@ -447,7 +472,6 @@ do
         if not ijActive then ijBtn.BackgroundColor3=B end
     end)
 
-    -- No Clip
     o("TextLabel",{
         Size=UDim2.new(0,ITEM_W,0,12),
         Position=UDim2.new(0,positions[5],0,rowY),
@@ -586,7 +610,6 @@ function Hub:Tab(name)
     local countLbl=o("TextLabel",{Size=UDim2.new(1,-searchW-8,1,0),Position=UDim2.new(0,searchW+6,0,0),BackgroundTransparency=1,Text="Scripts: 0",TextColor3=W,TextSize=10,Font=FONT_MAIN,TextXAlignment=Enum.TextXAlignment.Right,Active=false},hotbar)
     o("UIPadding",{PaddingRight=UDim.new(0,6)},countLbl)
 
-    -- FIX: cellW absoluto baseado na largura lógica do area
     local GAP=6 local COLS=6 local ROWH=28
     local areaAbsW = BASE_W - tabColW - 1
     local cellW = math.floor((areaAbsW - GAP*(COLS+1)) / COLS)
@@ -632,38 +655,71 @@ function Hub:Tab(name)
     return T
 end
 
+-- ══ PILL DRAG — sem soltar rápido, ignora segundo dedo ══
 do
-    local dragging,dragStart,startPos=false,nil,nil
-    local dragMoved=false
+    local dragging    = false
+    local dragMoved   = false
+    local dragStart   = nil
+    local startPos    = nil
+    local _activeTouchId = nil
+
     pillBtn.InputBegan:Connect(function(inp)
-        if inp.UserInputType==Enum.UserInputType.MouseButton1
-        or inp.UserInputType==Enum.UserInputType.Touch then
-            dragging=true dragMoved=false
-            dragStart=inp.Position startPos=pill.Position
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if dragging then return end
+            dragging   = true
+            dragMoved  = false
+            dragStart  = inp.Position
+            startPos   = pill.Position
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if _activeTouchId ~= nil then return end
+            _activeTouchId = inp
+            dragging   = true
+            dragMoved  = false
+            dragStart  = inp.Position
+            startPos   = pill.Position
         end
     end)
-    pillBtn.InputEnded:Connect(function(inp)
-        if inp.UserInputType==Enum.UserInputType.MouseButton1
-        or inp.UserInputType==Enum.UserInputType.Touch then
-            dragging=false
-        end
-    end)
+
     UIS.InputChanged:Connect(function(inp)
-        if dragging and (inp.UserInputType==Enum.UserInputType.MouseMovement
-            or inp.UserInputType==Enum.UserInputType.Touch) then
-            local d=inp.Position-dragStart
-            if math.abs(d.X)+math.abs(d.Y)>2 then
-                dragMoved=true
-                pill.Position=UDim2.new(
-                    startPos.X.Scale,startPos.X.Offset+d.X,
-                    startPos.Y.Scale,startPos.Y.Offset+d.Y
+        if not dragging then return end
+        local isMouse = inp.UserInputType == Enum.UserInputType.MouseMovement
+        local isTouch = inp.UserInputType == Enum.UserInputType.Touch
+        if isTouch and inp ~= _activeTouchId then return end
+        if isMouse or isTouch then
+            local d = inp.Position - dragStart
+            if math.abs(d.X) + math.abs(d.Y) > 2 then
+                dragMoved = true
+                pill.Position = UDim2.new(
+                    startPos.X.Scale, startPos.X.Offset + d.X,
+                    startPos.Y.Scale, startPos.Y.Offset + d.Y
                 )
             end
         end
     end)
-    pillBtn.MouseButton1Click:Connect(function()
-        if dragMoved then return end
-        win.Visible=true pill.Visible=false
+
+    UIS.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if not dragging then return end
+            dragging = false
+            if not dragMoved then
+                win.Visible = true
+                pill.Visible = false
+            end
+            dragStart = nil
+            startPos  = nil
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if inp ~= _activeTouchId then return end
+            local wasMoved = dragMoved
+            dragging       = false
+            dragMoved      = false
+            _activeTouchId = nil
+            dragStart      = nil
+            startPos       = nil
+            if not wasMoved then
+                win.Visible  = true
+                pill.Visible = false
+            end
+        end
     end)
 end
 
