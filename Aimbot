@@ -1,105 +1,603 @@
--- script 
-local LIB_URL = "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/IibAim"
+local RobloxUI = {}
+RobloxUI.__index = RobloxUI
 
-if not _G.RobloxUI then
-    loadstring(game:HttpGet(LIB_URL, true))()
+local B    = Color3.fromRGB(0,0,0)
+local W    = Color3.fromRGB(255,255,255)
+local D    = Color3.fromRGB(15,15,15)
+local G    = Color3.fromRGB(50,50,50)
+local FONT = Enum.Font.Code
+
+local function o(cls,props,par)
+    local x=Instance.new(cls)
+    for k,v in pairs(props) do x[k]=v end
+    if par then x.Parent=par end
+    return x
+end
+local function stroke(par,t,c)
+    o("UIStroke",{Color=c or W,Thickness=t or 1,
+        ApplyStrokeMode=Enum.ApplyStrokeMode.Border},par)
 end
 
-local RobloxUI = _G.RobloxUI
+function RobloxUI.new(title, version)
+    local self = setmetatable({}, RobloxUI)
 
+    local Players = game:GetService("Players")
+    local UIS     = game:GetService("UserInputService")
+    local CoreGui = game:GetService("CoreGui")
+    local player  = Players.LocalPlayer
+    local pg      = player:WaitForChild("PlayerGui",10) or player.PlayerGui
+
+    local old    = pg:FindFirstChild("RobloxUI_Lib")
+    local oldBtn = CoreGui:FindFirstChild("RobloxUI_FloatBtn")
+        or pg:FindFirstChild("RobloxUI_FloatBtn")
+    if old    then old:Destroy()    end
+    if oldBtn then oldBtn:Destroy() end
+
+    self._connections = {}
+    self._UIS         = UIS
+    self._layoutOrder = 0
+
+    -- GuiScale
+    _G.RobloxUIScale = _G.RobloxUIScale or 10
+    local function getUIScale(s) return 0.45 + (s - 1) * 0.04 end
+
+    self.gui = o("ScreenGui",{
+        Name="RobloxUI_Lib",ResetOnSpawn=false,
+        IgnoreGuiInset=true,ZIndexBehavior=Enum.ZIndexBehavior.Global,
+        DisplayOrder=10,
+    },pg)
+
+    self.menuFrame = o("Frame",{
+        Name="MenuFrame",
+        Size=UDim2.new(0,260,0,340),
+        Position=UDim2.new(.5,-130,.5,-170),
+        BackgroundColor3=B,BackgroundTransparency=0,
+        BorderSizePixel=0,Active=true,
+        ClipsDescendants=true,
+    },self.gui)
+    stroke(self.menuFrame,1)
+
+    local uiScaleObj = Instance.new("UIScale")
+    uiScaleObj.Scale  = getUIScale(_G.RobloxUIScale)
+    uiScaleObj.Parent = self.menuFrame
+
+    local topH  = 28
+    local topBar = o("Frame",{
+        Name="TopBar",
+        Size=UDim2.new(1,0,0,topH),
+        BackgroundColor3=B,BackgroundTransparency=0,
+        BorderSizePixel=0,Active=true,ZIndex=10,
+    },self.menuFrame)
+
+    -- Título
+    o("TextLabel",{
+        Size=UDim2.new(1,-140,1,0),Position=UDim2.new(0,10,0,0),
+        BackgroundTransparency=1,
+        Text=(title or "ESP/AIMBOT").." "..(version or ""),
+        TextColor3=W,TextSize=13,Font=FONT,
+        TextXAlignment=Enum.TextXAlignment.Left,ZIndex=10,
+    },topBar)
+
+    -- ── GuiSize stepper na topBar ──────────────
+    -- [ + | val | - ] largura total = 64px, altura = 18px, centrado verticalmente
+    local STEP_W = 64
+    local STEP_H = 18
+    -- posição: encostado ao separador vertical (que fica em 1,-33)
+    -- separador em x = topBar.AbsoluteSize.X - 33 → usamos offset fixo da direita
+    local stepX = -(33 + 4 + STEP_W)   -- 4px de gap entre stepper e separador
+
+    local stepHolder = o("Frame",{
+        Size=UDim2.new(0,STEP_W,0,STEP_H),
+        Position=UDim2.new(1,stepX,0.5,-STEP_H/2),
+        BackgroundColor3=B,BorderSizePixel=0,
+        ZIndex=10,
+    },topBar)
+    stroke(stepHolder,1)
+
+    local bsz = STEP_H
+    local dv  = 1
+    local nw  = STEP_W - 2*bsz - 2*dv
+
+    local stepPlus = o("TextButton",{
+        Size=UDim2.new(0,bsz,1,0),Position=UDim2.new(0,0,0,0),
+        BackgroundColor3=B,BorderSizePixel=0,
+        Text="+",TextColor3=W,TextSize=14,Font=FONT,
+        AutoButtonColor=false,ZIndex=11,
+    },stepHolder)
+    o("Frame",{Size=UDim2.new(0,dv,1,0),Position=UDim2.new(0,bsz,0,0),
+        BackgroundColor3=W,BorderSizePixel=0,ZIndex=11},stepHolder)
+    local stepBox = o("TextBox",{
+        Size=UDim2.new(0,nw,1,0),Position=UDim2.new(0,bsz+dv,0,0),
+        BackgroundTransparency=1,
+        Text=tostring(_G.RobloxUIScale),
+        TextColor3=W,TextSize=11,Font=FONT,
+        TextXAlignment=Enum.TextXAlignment.Center,
+        ClearTextOnFocus=false,ZIndex=11,
+    },stepHolder)
+    o("Frame",{Size=UDim2.new(0,dv,1,0),Position=UDim2.new(0,bsz+dv+nw,0,0),
+        BackgroundColor3=W,BorderSizePixel=0,ZIndex=11},stepHolder)
+    local stepMinus = o("TextButton",{
+        Size=UDim2.new(0,bsz,1,0),Position=UDim2.new(0,bsz+dv+nw+dv,0,0),
+        BackgroundColor3=B,BorderSizePixel=0,
+        Text="-",TextColor3=W,TextSize=14,Font=FONT,
+        AutoButtonColor=false,ZIndex=11,
+    },stepHolder)
+
+    local stepCv = _G.RobloxUIScale
+    local function stepApply(v)
+        v = math.clamp(math.floor(v), 1, 25)
+        stepCv = v
+        _G.RobloxUIScale = v
+        stepBox.Text = tostring(v)
+        uiScaleObj.Scale = getUIScale(v)
+    end
+
+    stepPlus.MouseButton1Click:Connect(function()  stepApply(stepCv + 1) end)
+    stepMinus.MouseButton1Click:Connect(function() stepApply(stepCv - 1) end)
+    stepBox.FocusLost:Connect(function()
+        local n = tonumber(stepBox.Text)
+        if n then stepApply(n) else stepBox.Text = tostring(stepCv) end
+    end)
+    for _,btn in ipairs({stepPlus, stepMinus}) do
+        btn.MouseEnter:Connect(function() btn.BackgroundColor3=D end)
+        btn.MouseLeave:Connect(function() btn.BackgroundColor3=B end)
+    end
+
+    -- Separador vertical + X button
+    o("Frame",{
+        Size=UDim2.new(0,1,1,0),Position=UDim2.new(1,-33,0,0),
+        BackgroundColor3=W,BorderSizePixel=0,ZIndex=12,
+    },topBar)
+
+    local xBtn=o("TextButton",{
+        Size=UDim2.new(0,32,1,0),Position=UDim2.new(1,-32,0,0),
+        BackgroundColor3=B,BorderSizePixel=0,
+        Text="x",TextColor3=W,TextSize=14,Font=FONT,
+        AutoButtonColor=false,ZIndex=11,
+    },topBar)
+    xBtn.MouseEnter:Connect(function() xBtn.BackgroundColor3=D end)
+    xBtn.MouseLeave:Connect(function() xBtn.BackgroundColor3=B end)
+
+    o("Frame",{
+        Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,0,topH),
+        BackgroundColor3=W,BorderSizePixel=0,ZIndex=20,
+    },self.menuFrame)
+
+    -- ── Drag do menu (igual ao Hub) ──────────────
+    do
+        local dragging       = false
+        local dragMoved      = false
+        local dragStart      = nil
+        local startPos       = nil
+        local _activeTouchId = nil
+
+        table.insert(self._connections, topBar.InputBegan:Connect(function(inp)
+            if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+                if dragging then return end
+                dragging  = true
+                dragMoved = false
+                dragStart = inp.Position
+                startPos  = self.menuFrame.Position
+            elseif inp.UserInputType == Enum.UserInputType.Touch then
+                if _activeTouchId ~= nil then return end
+                _activeTouchId = inp
+                dragging  = true
+                dragMoved = false
+                dragStart = inp.Position
+                startPos  = self.menuFrame.Position
+            end
+        end))
+
+        table.insert(self._connections, UIS.InputChanged:Connect(function(inp)
+            if not dragging then return end
+            local isMouse = inp.UserInputType == Enum.UserInputType.MouseMovement
+            local isTouch = inp.UserInputType == Enum.UserInputType.Touch
+            if isTouch and inp ~= _activeTouchId then return end
+            if isMouse or isTouch then
+                local d = inp.Position - dragStart
+                if math.abs(d.X) + math.abs(d.Y) > 2 then
+                    dragMoved = true
+                    self.menuFrame.Position = UDim2.new(
+                        startPos.X.Scale, startPos.X.Offset + d.X,
+                        startPos.Y.Scale, startPos.Y.Offset + d.Y
+                    )
+                end
+            end
+        end))
+
+        table.insert(self._connections, UIS.InputEnded:Connect(function(inp)
+            if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+                if not dragging then return end
+                dragging  = false
+                dragStart = nil
+                startPos  = nil
+            elseif inp.UserInputType == Enum.UserInputType.Touch then
+                if inp ~= _activeTouchId then return end
+                dragging       = false
+                dragMoved      = false
+                _activeTouchId = nil
+                dragStart      = nil
+                startPos       = nil
+            end
+        end))
+    end
+
+    self.contentFrame=o("Frame",{
+        Size=UDim2.new(1,0,1,-topH-1),
+        Position=UDim2.new(0,0,0,topH+1),
+        BackgroundTransparency=1,
+    },self.menuFrame)
+
+    self.container=o("ScrollingFrame",{
+        Size=UDim2.new(1,-12,1,-4),
+        Position=UDim2.new(0,6,0,4),
+        BackgroundTransparency=1,BorderSizePixel=0,
+        ScrollBarThickness=2,ScrollBarImageColor3=G,
+        AutomaticCanvasSize=Enum.AutomaticSize.Y,
+        CanvasSize=UDim2.new(),Visible=true,
+    },self.contentFrame)
+    o("UIListLayout",{
+        Padding=UDim.new(0,4),
+        SortOrder=Enum.SortOrder.LayoutOrder,
+    },self.container)
+    o("UIPadding",{
+        PaddingLeft=UDim.new(0,2),
+        PaddingRight=UDim.new(0,2),
+        PaddingTop=UDim.new(0,2),
+    },self.container)
+
+    -- ── Pill ──────────────────────────────────────
+    self.btnGui = o("ScreenGui",{
+        Name="RobloxUI_FloatBtn",ResetOnSpawn=false,
+        IgnoreGuiInset=true,ZIndexBehavior=Enum.ZIndexBehavior.Global,
+        DisplayOrder=9999,
+    })
+    local okPill = pcall(function() self.btnGui.Parent = CoreGui end)
+    if not okPill then self.btnGui.Parent = pg end
+
+    local pill=o("Frame",{
+        Name="PillUI",
+        Size=UDim2.new(0,80,0,18),
+        Position=UDim2.new(1,-86,1,-256),
+        BackgroundColor3=B,BorderSizePixel=0,
+        Visible=false,ZIndex=200,
+    },self.btnGui)
+    stroke(pill,1)
+    self._pill=pill
+
+    local pillBtn=o("TextButton",{
+        Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,
+        Text="> esp/aimbot",TextSize=9,Font=FONT,
+        TextColor3=W,BorderSizePixel=0,ZIndex=201,
+    },pill)
+
+    xBtn.MouseButton1Click:Connect(function()
+        self.menuFrame.Visible=false
+        pill.Visible=true
+    end)
+
+    -- ── Drag do pill (igual ao Hub) ───────────────
+    do
+        local dragging       = false
+        local dragMoved      = false
+        local dragStart      = nil
+        local startPos       = nil
+        local _activeTouchId = nil
+
+        table.insert(self._connections, pillBtn.InputBegan:Connect(function(inp)
+            if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+                if dragging then return end
+                dragging  = true
+                dragMoved = false
+                dragStart = inp.Position
+                startPos  = pill.Position
+            elseif inp.UserInputType == Enum.UserInputType.Touch then
+                if _activeTouchId ~= nil then return end
+                _activeTouchId = inp
+                dragging  = true
+                dragMoved = false
+                dragStart = inp.Position
+                startPos  = pill.Position
+            end
+        end))
+
+        table.insert(self._connections, UIS.InputChanged:Connect(function(inp)
+            if not dragging then return end
+            local isMouse = inp.UserInputType == Enum.UserInputType.MouseMovement
+            local isTouch = inp.UserInputType == Enum.UserInputType.Touch
+            if isTouch and inp ~= _activeTouchId then return end
+            if isMouse or isTouch then
+                local d = inp.Position - dragStart
+                if math.abs(d.X) + math.abs(d.Y) > 2 then
+                    dragMoved = true
+                    pill.Position = UDim2.new(
+                        startPos.X.Scale, startPos.X.Offset + d.X,
+                        startPos.Y.Scale, startPos.Y.Offset + d.Y
+                    )
+                end
+            end
+        end))
+
+        table.insert(self._connections, UIS.InputEnded:Connect(function(inp)
+            if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+                if not dragging then return end
+                dragging  = false
+                if not dragMoved then
+                    self.menuFrame.Visible = true
+                    pill.Visible = false
+                end
+                dragStart = nil
+                startPos  = nil
+            elseif inp.UserInputType == Enum.UserInputType.Touch then
+                if inp ~= _activeTouchId then return end
+                local wasMoved  = dragMoved
+                dragging        = false
+                dragMoved       = false
+                _activeTouchId  = nil
+                dragStart       = nil
+                startPos        = nil
+                if not wasMoved then
+                    self.menuFrame.Visible = true
+                    pill.Visible = false
+                end
+            end
+        end))
+    end
+
+    return self
+end
+
+function RobloxUI:Destroy()
+    for _,conn in ipairs(self._connections) do conn:Disconnect() end
+    self._connections={}
+    if self.gui    then self.gui:Destroy()    end
+    if self.btnGui then self.btnGui:Destroy() end
+end
+
+function RobloxUI:_nextOrder()
+    self._layoutOrder = self._layoutOrder + 1
+    return self._layoutOrder
+end
+
+function RobloxUI:AddSectionLabel(text)
+    o("TextLabel",{
+        Size=UDim2.new(1,0,0,18),
+        BackgroundTransparency=1,
+        Text=text or "",
+        Font=FONT,TextSize=11,
+        TextColor3=W,
+        TextXAlignment=Enum.TextXAlignment.Left,
+        LayoutOrder=self:_nextOrder(),
+    },self.container)
+end
+
+function RobloxUI:AddDivider()
+    local holder = o("Frame",{
+        Size=UDim2.new(1,-4,0,58),
+        BackgroundTransparency=1,
+        BorderSizePixel=0,
+        LayoutOrder=self:_nextOrder(),
+    },self.container)
+    o("Frame",{
+        Size=UDim2.new(1,0,0,1),
+        Position=UDim2.new(0,0,0.78,0),
+        AnchorPoint=Vector2.new(0,0.5),
+        BackgroundColor3=W,
+        BackgroundTransparency=0,
+        BorderSizePixel=0,
+    },holder)
+end
+
+function RobloxUI:AddToggle(side,text,default,callback)
+    local state=default or false
+
+    local btn=o("TextButton",{
+        Size=UDim2.new(1,-4,0,26),
+        BackgroundColor3=B,BackgroundTransparency=0,
+        BorderSizePixel=0,AutoButtonColor=false,Text="",
+        LayoutOrder=self:_nextOrder(),
+    },self.container)
+    stroke(btn,1)
+
+    local dot=o("Frame",{
+        Size=UDim2.new(0,7,0,7),
+        Position=UDim2.new(0,8,0.5,-3.5),
+        BackgroundColor3=G,BorderSizePixel=0,
+    },btn)
+
+    local label=o("TextLabel",{
+        BackgroundTransparency=1,
+        Position=UDim2.new(0,22,0,0),
+        Size=UDim2.new(1,-28,1,0),
+        Font=FONT,TextSize=10,
+        TextXAlignment=Enum.TextXAlignment.Left,
+        Text=text,
+    },btn)
+
+    local function refresh()
+        if state then
+            dot.BackgroundColor3=W
+            label.TextColor3=W
+        else
+            dot.BackgroundColor3=G
+            label.TextColor3=G
+        end
+    end
+    refresh()
+
+    btn.MouseEnter:Connect(function() if not state then btn.BackgroundColor3=D end end)
+    btn.MouseLeave:Connect(function() if not state then btn.BackgroundColor3=B end end)
+
+    table.insert(self._connections,btn.MouseButton1Click:Connect(function()
+        state=not state
+        btn.BackgroundColor3=state and D or B
+        refresh()
+        if callback then task.spawn(callback,state) end
+    end))
+
+    return {
+        SetState=function(v) state=v refresh() end,
+        GetState=function() return state end,
+    }
+end
+
+function RobloxUI:AddButton(side,text,callback)
+    local btn=o("TextButton",{
+        Size=UDim2.new(1,-4,0,26),
+        BackgroundColor3=B,BackgroundTransparency=0,
+        BorderSizePixel=0,AutoButtonColor=false,
+        Font=FONT,TextSize=10,
+        Text=text,TextColor3=W,
+        LayoutOrder=self:_nextOrder(),
+    },self.container)
+    stroke(btn,1)
+
+    btn.MouseEnter:Connect(function() btn.BackgroundColor3=D end)
+    btn.MouseLeave:Connect(function() btn.BackgroundColor3=B end)
+    table.insert(self._connections,btn.MouseButton1Down:Connect(function()
+        btn.BackgroundColor3=Color3.fromRGB(25,25,25)
+    end))
+    table.insert(self._connections,btn.MouseButton1Up:Connect(function()
+        btn.BackgroundColor3=D
+    end))
+    table.insert(self._connections,btn.MouseButton1Click:Connect(function()
+        if callback then task.spawn(callback) end
+    end))
+
+    return btn
+end
+
+function RobloxUI:AddSlider(side,text,min,max,default,callback)
+    local UIS=self._UIS
+    local value=math.clamp(default or min,min,max)
+    local dragging=false
+
+    local holder=o("Frame",{
+        Size=UDim2.new(1,-4,0,44),
+        BackgroundTransparency=1,
+        LayoutOrder=self:_nextOrder(),
+    },self.container)
+
+    local label=o("TextLabel",{
+        BackgroundTransparency=1,
+        Size=UDim2.new(1,0,0,16),
+        Font=FONT,TextSize=10,
+        TextXAlignment=Enum.TextXAlignment.Left,
+        TextColor3=W,
+    },holder)
+
+    local track=o("Frame",{
+        Size=UDim2.new(1,0,0,4),
+        Position=UDim2.new(0,0,0,26),
+        BackgroundColor3=G,BackgroundTransparency=0,
+        BorderSizePixel=0,
+    },holder)
+    stroke(track,1)
+
+    local fill=o("Frame",{
+        Size=UDim2.new(0,0,1,0),
+        BackgroundColor3=W,BackgroundTransparency=0,
+        BorderSizePixel=0,
+    },track)
+
+    local knob=o("Frame",{
+        Size=UDim2.new(0,8,0,8),
+        AnchorPoint=Vector2.new(.5,.5),
+        Position=UDim2.new(0,0,.5,0),
+        BackgroundColor3=W,BorderSizePixel=0,
+    },track)
+    stroke(knob,1)
+
+    local function redraw()
+        local rel=(value-min)/(max-min)
+        fill.Size=UDim2.new(rel,0,1,0)
+        knob.Position=UDim2.new(rel,0,.5,0)
+        label.Text=text..": "..tostring(math.floor(value))
+    end
+
+    local function update(x)
+        local rel=math.clamp((x-track.AbsolutePosition.X)/track.AbsoluteSize.X,0,1)
+        value=math.floor(min+(max-min)*rel)
+        redraw()
+        if callback then task.spawn(callback,value) end
+    end
+
+    redraw()
+
+    table.insert(self._connections,track.InputBegan:Connect(function(inp)
+        if inp.UserInputType==Enum.UserInputType.MouseButton1
+        or inp.UserInputType==Enum.UserInputType.Touch then
+            dragging=true update(inp.Position.X)
+        end
+    end))
+    table.insert(self._connections,knob.InputBegan:Connect(function(inp)
+        if inp.UserInputType==Enum.UserInputType.MouseButton1
+        or inp.UserInputType==Enum.UserInputType.Touch then
+            dragging=true
+        end
+    end))
+    table.insert(self._connections,UIS.InputChanged:Connect(function(inp)
+        if not dragging then return end
+        if inp.UserInputType==Enum.UserInputType.MouseMovement
+        or inp.UserInputType==Enum.UserInputType.Touch then
+            update(inp.Position.X)
+        end
+    end))
+    table.insert(self._connections,UIS.InputEnded:Connect(function(inp)
+        if inp.UserInputType==Enum.UserInputType.MouseButton1
+        or inp.UserInputType==Enum.UserInputType.Touch then
+            dragging=false
+        end
+    end))
+
+    return {
+        GetValue=function() return value end,
+        SetValue=function(v) value=math.clamp(v,min,max) redraw() end,
+    }
+end
+
+_G.RobloxUI = RobloxUI
+
+-- ══════════════════════════════════════════════
+--  SCRIPT
+-- ══════════════════════════════════════════════
 local Players     = game:GetService("Players")
 local RunService  = game:GetService("RunService")
-local UIS         = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera      = workspace.CurrentCamera
 
 local Settings = {
-    ESP       = true,
     Highlight = true,
-    Team      = true,
     Name      = false,
     Distance  = true,
 }
 
 local AimbotSettings = {
-    Enabled      = true,
-    KillCheck    = true,
-    FOV          = 90,
-    ShowFOV      = true,
-    IgnoreAllies = true,
-    IgnoreWall   = false,
+    Enabled    = true,
+    FOV        = 90,
+    IgnoreWall = false,
 }
 
-local ui = RobloxUI.new()
-ui:SetTabNames("ESP", "Aimbot", "Player")
+local ui = RobloxUI.new("ESP/AIMBOT")
 
--- ESP
-ui:AddToggle("left", "Esp Player",   Settings.ESP,       function(s) Settings.ESP       = s end)
-ui:AddToggle("left", "Highlight",    Settings.Highlight, function(s) Settings.Highlight = s end)
-ui:AddToggle("left", "Team Color",   Settings.Team,      function(s) Settings.Team      = s end)
+-- ── Seção ESP ────────────────────────────────
+ui:AddSectionLabel("ESP")
+ui:AddToggle("left", "Player Esp",   Settings.Highlight, function(s) Settings.Highlight = s end)
 ui:AddToggle("left", "Name Esp",     Settings.Name,      function(s) Settings.Name      = s end)
-ui:AddToggle("left", "Esp Distance", Settings.Distance,  function(s) Settings.Distance  = s end)
+ui:AddToggle("left", "Distance Esp", Settings.Distance,  function(s) Settings.Distance  = s end)
 
--- Aimbot
-ui:AddSlider ("right", "FOV",         20, 500, AimbotSettings.FOV,      function(v) AimbotSettings.FOV          = v end)
-ui:AddToggle ("right", "Aimbot",      AimbotSettings.Enabled,            function(s) AimbotSettings.Enabled      = s end)
-ui:AddToggle ("right", "Show FOV",    AimbotSettings.ShowFOV,            function(s) AimbotSettings.ShowFOV      = s end)
-ui:AddToggle ("right", "Kill Check",  AimbotSettings.KillCheck,          function(s) AimbotSettings.KillCheck    = s end)
-ui:AddToggle ("right", "Ignore Ally", AimbotSettings.IgnoreAllies,       function(s) AimbotSettings.IgnoreAllies = s end)
-ui:AddToggle ("right", "Ignore Wall", AimbotSettings.IgnoreWall,         function(s) AimbotSettings.IgnoreWall   = s end)
+-- ── Divisória ────────────────────────────────
+ui:AddDivider()
 
--- Player
-local playerSpeed = 16
+-- ── Seção Aimbot ─────────────────────────────
+ui:AddSectionLabel("Aimbot")
+ui:AddSlider("right", "FOV",         20, 500, AimbotSettings.FOV,   function(v) AimbotSettings.FOV        = v end)
+ui:AddToggle("right", "Aimbot",      AimbotSettings.Enabled,        function(s) AimbotSettings.Enabled    = s end)
+ui:AddToggle("right", "Ignore Wall", AimbotSettings.IgnoreWall,     function(s) AimbotSettings.IgnoreWall = s end)
 
-ui:AddButton("third", "Resetar Personagem", function()
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("Humanoid") then
-        char.Humanoid.Health = 0
-    end
-end)
-
-local infiniteJump = false
-ui:AddToggle("third", "Infinite Jump", false, function(s) infiniteJump = s end)
-
-UIS.JumpRequest:Connect(function()
-    if not infiniteJump then return end
-    local char = LocalPlayer.Character
-    local hum  = char and char:FindFirstChild("Humanoid")
-    if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
-end)
-
-local noClip     = false
-local noClipConn = nil
-
-local function startNoClip()
-    if noClipConn then return end
-    noClipConn = RunService.Stepped:Connect(function()
-        if not noClip then
-            noClipConn:Disconnect()
-            noClipConn = nil
-            return
-        end
-        local char = LocalPlayer.Character
-        if not char then return end
-        for _, p in ipairs(char:GetDescendants()) do
-            if p:IsA("BasePart") then p.CanCollide = false end
-        end
-    end)
-end
-
-ui:AddToggle("third", "NoClip", false, function(s)
-    noClip = s
-    if s then startNoClip() end
-end)
-
-ui:AddSlider("third", "WalkSpeed", 16, 200, 16, function(val)
-    playerSpeed = val
-    local char = LocalPlayer.Character
-    local hum  = char and char:FindFirstChild("Humanoid")
-    if hum then hum.WalkSpeed = val end
-end)
-
--- Lógica ESP
+-- ══════════════════════════════════════════════
+--  LÓGICA ESP
+-- ══════════════════════════════════════════════
 local myTeamCache, teamCacheTime = nil, 0
 local function getMyTeam()
     if tick() - teamCacheTime > 2 then
@@ -197,13 +695,6 @@ local function setupPlayer(player)
     player.CharacterAdded:Connect(function(char)
         task.wait(0.4)
         createESP(player, char)
-        if player == LocalPlayer then
-            local hum = char:WaitForChild("Humanoid", 5)
-            if hum then
-                hum.WalkSpeed = playerSpeed
-                if noClip then startNoClip() end
-            end
-        end
     end)
     player.CharacterRemoving:Connect(function() destroyESP(player) end)
     if player.Character then createESP(player, player.Character) end
@@ -232,7 +723,7 @@ RunService.Heartbeat:Connect(function(dt)
         local hum = char:FindFirstChildOfClass("Humanoid")
         local hrp = char:FindFirstChild("HumanoidRootPart")
 
-        if not hum or not hrp or hum.Health <= 0 or not Settings.ESP then
+        if not hum or not hrp or hum.Health <= 0 then
             d.NameLabel.Visible = false
             d.DistLabel.Visible = false
             if d.Highlight then d.Highlight.Enabled = false end
@@ -257,7 +748,7 @@ RunService.Heartbeat:Connect(function(dt)
 
         local vis = isVisible(char, player)
         local cfg = vis and VIS_ON or VIS_OFF
-        local col = (Settings.Team and myTeam and player.Team == myTeam) and TEAM_COL or cfg.Color
+        local col = (myTeam and player.Team == myTeam) and TEAM_COL or cfg.Color
 
         if d.Highlight then
             if Settings.Highlight then
@@ -289,7 +780,9 @@ RunService.Heartbeat:Connect(function(dt)
     end
 end)
 
--- Aimbot
+-- ══════════════════════════════════════════════
+--  AIMBOT
+-- ══════════════════════════════════════════════
 local function getClosestTarget()
     local myChar = LocalPlayer.Character
     local myHRP  = myChar and myChar:FindFirstChild("HumanoidRootPart")
@@ -304,14 +797,12 @@ local function getClosestTarget()
         if player == LocalPlayer then continue end
         local char = player.Character
         if not char then continue end
-        if AimbotSettings.IgnoreAllies and myTeam and player.Team == myTeam then continue end
+        if myTeam and player.Team == myTeam then continue end
         local head = char:FindFirstChild("Head")
         local hrp  = char:FindFirstChild("HumanoidRootPart")
         if not head or not hrp then continue end
-        if AimbotSettings.KillCheck then
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if not hum or hum.Health <= 0 then continue end
-        end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hum or hum.Health <= 0 then continue end
         local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
         if not onScreen then continue end
         local sx = pos.X - halfX
@@ -355,8 +846,15 @@ RunService.RenderStepped:Connect(function()
     lastCamCF = Camera.CFrame
 end)
 
--- FOV Circle (no gui do menu)
-local fovCircle = Instance.new("Frame", ui.gui)
+-- ── FOV Circle ───────────────────────────────
+local fovSGui = Instance.new("ScreenGui")
+fovSGui.Name           = "RobloxUI_FOVCircle"
+fovSGui.ResetOnSpawn   = false
+fovSGui.IgnoreGuiInset = true
+fovSGui.DisplayOrder   = 5
+fovSGui.Parent         = game:GetService("Players").LocalPlayer.PlayerGui
+
+local fovCircle = Instance.new("Frame", fovSGui)
 fovCircle.AnchorPoint            = Vector2.new(0.5, 0.5)
 fovCircle.Position               = UDim2.new(0.5, 0, 0.5, 0)
 fovCircle.BackgroundTransparency = 1
@@ -370,9 +868,8 @@ fovStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 local lastFOV = -1
 RunService.RenderStepped:Connect(function()
-    local show = AimbotSettings.Enabled and AimbotSettings.ShowFOV
-    fovCircle.Visible = show
-    if not show then return end
+    fovCircle.Visible = AimbotSettings.Enabled
+    if not AimbotSettings.Enabled then return end
     local f = AimbotSettings.FOV
     if f ~= lastFOV then
         fovCircle.Size = UDim2.new(0, f*2, 0, f*2)
