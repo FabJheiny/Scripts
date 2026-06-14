@@ -9,8 +9,7 @@ local D  = Color3.fromRGB(15,15,15)
 local G  = Color3.fromRGB(50,50,50)
 
 local BASE_W, BASE_H = 680, 310
-_G.HubScale     = _G.HubScale     or 10
-_G.HubPillScale = _G.HubPillScale or 2
+_G.HubScale = _G.HubScale or 10
 local FONT_MAIN = Enum.Font.Code
 
 local function o(cls,props,par)
@@ -168,24 +167,16 @@ local function makeTabBtn(name,idx)
 end
 
 -- ══ PILL ══
-local PILL_BASE = 44
-
-local function getPillSize(v)
-    local factor = 0.7+(v-1)*0.06
-    return math.floor(PILL_BASE*factor)
-end
-
-local initPillSize = getPillSize(_G.HubPillScale)
+local PILL_SIZE = 33
 
 local pill=o("Frame",{
     Name="Pill",
-    Size=UDim2.new(0,initPillSize,0,initPillSize),
+    Size=UDim2.new(0,PILL_SIZE,0,PILL_SIZE),
     AnchorPoint=Vector2.new(0.5,0),
     Position=UDim2.new(0.5,0,0,55),
     BackgroundColor3=B,BorderSizePixel=0,Visible=true,ZIndex=200,
     ClipsDescendants=false,
 },sg)
--- UDim.new(0.5, 0) = metade do tamanho = círculo perfeito
 o("UICorner",{CornerRadius=UDim.new(0.5,0)},pill)
 stroke(pill,1)
 _G.UniversalHubPill=pill
@@ -203,12 +194,6 @@ local pillBtn=o("TextButton",{
     Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,
     Text="",BorderSizePixel=0,ZIndex=202,
 },pill)
-
-local function applyPillScale(v)
-    local ps = getPillSize(v)
-    pill.Size = UDim2.new(0,ps,0,ps)
-    -- UICorner com UDim.new(0.5,0) já é sempre círculo, não precisa atualizar
-end
 
 do
     local i=1
@@ -304,6 +289,7 @@ do
     local bodyH   = BASE_H - topH - 1
     local rowY    = bodyH - 13 - ITEM_H - 4
 
+    -- 5 itens: Gui Size, Loop Speed, Inf Jump, No Clip, Reset
     local totalW  = 5*ITEM_W + 4*GAP_H
     local startX  = tabColW + math.floor(((areaW - colW) - totalW) / 2) + 2
 
@@ -316,10 +302,7 @@ do
         _G.HubScale=v uiScaleObj.Scale=getUIScale(v)
     end)
 
-    makeStepBar(pg, positions[2], rowY, ITEM_W, ITEM_H, "Pill Size", _G.HubPillScale, 1, 25, function(v)
-        _G.HubPillScale=v applyPillScale(v)
-    end)
-
+    -- Loop Speed
     local _origSpeed = nil
     local function getOrigSpeed()
         if _origSpeed then return _origSpeed end
@@ -332,13 +315,13 @@ do
 
     o("TextLabel",{
         Size=UDim2.new(0,ITEM_W,0,12),
-        Position=UDim2.new(0,positions[3],0,rowY),
+        Position=UDim2.new(0,positions[2],0,rowY),
         BackgroundTransparency=1,Text="Loop Speed",TextColor3=W,
         TextSize=9,Font=FONT_MAIN,TextXAlignment=Enum.TextXAlignment.Center,
     },pg)
     local lsBar=o("Frame",{
         Size=UDim2.new(0,ITEM_W,0,ITEM_H),
-        Position=UDim2.new(0,positions[3],0,rowY+13),
+        Position=UDim2.new(0,positions[2],0,rowY+13),
         BackgroundColor3=B,BorderSizePixel=0,Active=false,
     },pg)
     stroke(lsBar,1)
@@ -427,9 +410,10 @@ do
         btn.MouseLeave:Connect(function() btn.BackgroundColor3=B end)
     end
 
+    -- Inf Jump
     o("TextLabel",{
         Size=UDim2.new(0,ITEM_W,0,12),
-        Position=UDim2.new(0,positions[4],0,rowY),
+        Position=UDim2.new(0,positions[3],0,rowY),
         BackgroundTransparency=1,Text="Inf Jump",TextColor3=W,
         TextSize=9,Font=FONT_MAIN,TextXAlignment=Enum.TextXAlignment.Center,
     },pg)
@@ -437,7 +421,7 @@ do
     local ijConn   = nil
     local ijBtn    = o("TextButton",{
         Size=UDim2.new(0,ITEM_W,0,ITEM_H),
-        Position=UDim2.new(0,positions[4],0,rowY+13),
+        Position=UDim2.new(0,positions[3],0,rowY+13),
         BackgroundColor3=B,BorderSizePixel=0,
         Text="OFF",TextColor3=W,TextSize=10,Font=FONT_MAIN,
         AutoButtonColor=false,
@@ -472,9 +456,10 @@ do
         if not ijActive then ijBtn.BackgroundColor3=B end
     end)
 
+    -- No Clip
     o("TextLabel",{
         Size=UDim2.new(0,ITEM_W,0,12),
-        Position=UDim2.new(0,positions[5],0,rowY),
+        Position=UDim2.new(0,positions[4],0,rowY),
         BackgroundTransparency=1,Text="No Clip",TextColor3=W,
         TextSize=9,Font=FONT_MAIN,TextXAlignment=Enum.TextXAlignment.Center,
     },pg)
@@ -482,7 +467,7 @@ do
     local ncConn   = nil
     local ncBtn    = o("TextButton",{
         Size=UDim2.new(0,ITEM_W,0,ITEM_H),
-        Position=UDim2.new(0,positions[5],0,rowY+13),
+        Position=UDim2.new(0,positions[4],0,rowY+13),
         BackgroundColor3=B,BorderSizePixel=0,
         Text="OFF",TextColor3=W,TextSize=10,Font=FONT_MAIN,
         AutoButtonColor=false,
@@ -525,6 +510,30 @@ do
     ncBtn.MouseButton1Click:Connect(function() setNoClip(not ncActive) end)
     ncBtn.MouseEnter:Connect(function() if not ncActive then ncBtn.BackgroundColor3=D end end)
     ncBtn.MouseLeave:Connect(function() if not ncActive then ncBtn.BackgroundColor3=B end end)
+
+    -- ══ Reset Character ══
+    o("TextLabel",{
+        Size=UDim2.new(0,ITEM_W,0,12),
+        Position=UDim2.new(0,positions[5],0,rowY),
+        BackgroundTransparency=1,Text="Reset",TextColor3=W,
+        TextSize=9,Font=FONT_MAIN,TextXAlignment=Enum.TextXAlignment.Center,
+    },pg)
+    local resetBtn = o("TextButton",{
+        Size=UDim2.new(0,ITEM_W,0,ITEM_H),
+        Position=UDim2.new(0,positions[5],0,rowY+13),
+        BackgroundColor3=B,BorderSizePixel=0,
+        Text="Reset",TextColor3=W,TextSize=10,Font=FONT_MAIN,
+        AutoButtonColor=false,
+    },pg)
+    stroke(resetBtn,1)
+    resetBtn.MouseEnter:Connect(function() resetBtn.BackgroundColor3=D end)
+    resetBtn.MouseLeave:Connect(function() resetBtn.BackgroundColor3=B end)
+    resetBtn.MouseButton1Click:Connect(function()
+        if LP.Character then
+            local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+            if hum then hum.Health = 0 end
+        end
+    end)
 
     local joinStr="N/A"
     pcall(function()
@@ -655,7 +664,7 @@ function Hub:Tab(name)
     return T
 end
 
--- ══ PILL DRAG — sem soltar rápido, ignora segundo dedo ══
+-- ══ PILL DRAG ══
 do
     local dragging    = false
     local dragMoved   = false
