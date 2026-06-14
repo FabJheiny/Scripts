@@ -71,25 +71,61 @@ o("Frame",{
     BackgroundColor3=W,BorderSizePixel=0,ZIndex=20,
 },win)
 
+-- ══ DRAG DA TOP (novo) ══
 do
-    local dragging,dragStart,startPos=false,nil,nil
+    local dragging       = false
+    local dragMoved      = false
+    local dragStart      = nil
+    local startPos       = nil
+    local _activeTouchId = nil
+
     top.InputBegan:Connect(function(inp)
-        if inp.UserInputType==Enum.UserInputType.MouseButton1
-        or inp.UserInputType==Enum.UserInputType.Touch then
-            dragging=true dragStart=inp.Position startPos=win.Position
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if dragging then return end
+            dragging  = true
+            dragMoved = false
+            dragStart = inp.Position
+            startPos  = win.Position
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if _activeTouchId ~= nil then return end
+            _activeTouchId = inp
+            dragging  = true
+            dragMoved = false
+            dragStart = inp.Position
+            startPos  = win.Position
         end
     end)
-    top.InputEnded:Connect(function(inp)
-        if inp.UserInputType==Enum.UserInputType.MouseButton1
-        or inp.UserInputType==Enum.UserInputType.Touch then
-            dragging=false
-        end
-    end)
+
     UIS.InputChanged:Connect(function(inp)
-        if dragging and (inp.UserInputType==Enum.UserInputType.MouseMovement
-            or inp.UserInputType==Enum.UserInputType.Touch) then
-            local d=inp.Position-dragStart
-            win.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+d.X,startPos.Y.Scale,startPos.Y.Offset+d.Y)
+        if not dragging then return end
+        local isMouse = inp.UserInputType == Enum.UserInputType.MouseMovement
+        local isTouch = inp.UserInputType == Enum.UserInputType.Touch
+        if isTouch and inp ~= _activeTouchId then return end
+        if isMouse or isTouch then
+            local d = inp.Position - dragStart
+            if math.abs(d.X) + math.abs(d.Y) > 2 then
+                dragMoved = true
+                win.Position = UDim2.new(
+                    startPos.X.Scale, startPos.X.Offset + d.X,
+                    startPos.Y.Scale, startPos.Y.Offset + d.Y
+                )
+            end
+        end
+    end)
+
+    UIS.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if not dragging then return end
+            dragging  = false
+            dragStart = nil
+            startPos  = nil
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if inp ~= _activeTouchId then return end
+            dragging       = false
+            dragMoved      = false
+            _activeTouchId = nil
+            dragStart      = nil
+            startPos       = nil
         end
     end)
 end
@@ -289,7 +325,6 @@ do
     local bodyH   = BASE_H - topH - 1
     local rowY    = bodyH - 13 - ITEM_H - 4
 
-    -- 5 itens: Gui Size, Loop Speed, Inf Jump, No Clip, Reset
     local totalW  = 5*ITEM_W + 4*GAP_H
     local startX  = tabColW + math.floor(((areaW - colW) - totalW) / 2) + 2
 
@@ -511,7 +546,7 @@ do
     ncBtn.MouseEnter:Connect(function() if not ncActive then ncBtn.BackgroundColor3=D end end)
     ncBtn.MouseLeave:Connect(function() if not ncActive then ncBtn.BackgroundColor3=B end end)
 
-    -- ══ Reset Character ══
+    -- Reset Character
     o("TextLabel",{
         Size=UDim2.new(0,ITEM_W,0,12),
         Position=UDim2.new(0,positions[5],0,rowY),
@@ -666,10 +701,10 @@ end
 
 -- ══ PILL DRAG ══
 do
-    local dragging    = false
-    local dragMoved   = false
-    local dragStart   = nil
-    local startPos    = nil
+    local dragging       = false
+    local dragMoved      = false
+    local dragStart      = nil
+    local startPos       = nil
     local _activeTouchId = nil
 
     pillBtn.InputBegan:Connect(function(inp)
