@@ -22,23 +22,10 @@ local function stroke(par, t, c)
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
     }, par)
 end
-local function mkBtn(txt, parent, sz, pos)
-    local b = o("TextButton", {
-        Size = sz, Position = pos,
-        BackgroundColor3 = B, BorderSizePixel = 0,
-        Text = txt, TextColor3 = W, TextSize = 10, Font = FONT,
-        AutoButtonColor = false,
-    }, parent)
-    stroke(b, 1)
-    b.MouseEnter:Connect(function() b.BackgroundColor3 = D end)
-    b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
-    return b
-end
 
 local topH      = 24
 local menuW     = 160
 local fullH     = 272
-local miniH     = topH
 
 local gui = o("ScreenGui", {
     Name = "PremiumCalc",
@@ -54,6 +41,14 @@ local win = o("Frame", {
 }, gui)
 stroke(win, 1)
 
+-- ── GuiSize stepper ─────────────────────────────────────────────────────────
+_G.CalcScale = _G.CalcScale or 10
+local function getUIScale(s) return 0.45 + (s - 1) * 0.04 end
+
+local uiScaleObj = Instance.new("UIScale")
+uiScaleObj.Scale  = getUIScale(_G.CalcScale)
+uiScaleObj.Parent = win
+
 local top = o("Frame", {
     Size = UDim2.new(1, 0, 0, topH),
     BackgroundColor3 = B, BorderSizePixel = 0,
@@ -61,61 +56,175 @@ local top = o("Frame", {
 }, win)
 
 o("TextLabel", {
-    Size = UDim2.new(1, -70, 1, 0), Position = UDim2.new(0, 8, 0, 0),
+    Size = UDim2.new(1, -40, 1, 0), Position = UDim2.new(0, 8, 0, 0),
     BackgroundTransparency = 1, Text = "> CALC <",
     TextColor3 = W, TextSize = 10, Font = FONT,
     TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10,
 }, top)
 
-o("Frame", {Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-66,0,0), BackgroundColor3=W, BorderSizePixel=0, ZIndex=12}, top)
+-- ── Stepper na topBar ────────────────────────────────────────────────────────
+local STEP_W = 64
+local STEP_H = 18
+local stepX  = -(33 + 4 + STEP_W)
+
+local stepHolder = Instance.new("Frame")
+stepHolder.Size             = UDim2.new(0, STEP_W, 0, STEP_H)
+stepHolder.Position         = UDim2.new(1, stepX, 0.5, -STEP_H / 2)
+stepHolder.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+stepHolder.BorderSizePixel  = 0
+stepHolder.ZIndex           = 10
+stepHolder.Parent           = top
+local _sh = Instance.new("UIStroke", stepHolder)
+_sh.Color = Color3.fromRGB(255, 255, 255)
+_sh.Thickness = 1
+_sh.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+local bsz = STEP_H
+local dv  = 1
+local nw  = STEP_W - 2 * bsz - 2 * dv
+
+local stepPlus = Instance.new("TextButton")
+stepPlus.Size             = UDim2.new(0, bsz, 1, 0)
+stepPlus.Position         = UDim2.new(0, 0, 0, 0)
+stepPlus.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+stepPlus.BorderSizePixel  = 0
+stepPlus.Text             = "+"
+stepPlus.TextColor3       = Color3.fromRGB(255, 255, 255)
+stepPlus.TextSize         = 14
+stepPlus.Font             = Enum.Font.Code
+stepPlus.AutoButtonColor  = false
+stepPlus.ZIndex           = 11
+stepPlus.Parent           = stepHolder
+
+local _divL = Instance.new("Frame", stepHolder)
+_divL.Size              = UDim2.new(0, dv, 1, 0)
+_divL.Position          = UDim2.new(0, bsz, 0, 0)
+_divL.BackgroundColor3  = Color3.fromRGB(255, 255, 255)
+_divL.BorderSizePixel   = 0
+
+local stepBox = Instance.new("TextBox", stepHolder)
+stepBox.Size                = UDim2.new(0, nw, 1, 0)
+stepBox.Position            = UDim2.new(0, bsz + dv, 0, 0)
+stepBox.BackgroundTransparency = 1
+stepBox.Text                = tostring(_G.CalcScale)
+stepBox.TextColor3          = Color3.fromRGB(255, 255, 255)
+stepBox.TextSize            = 11
+stepBox.Font                = Enum.Font.Code
+stepBox.TextXAlignment      = Enum.TextXAlignment.Center
+stepBox.ClearTextOnFocus    = false
+stepBox.ZIndex              = 11
+
+local _divR = Instance.new("Frame", stepHolder)
+_divR.Size              = UDim2.new(0, dv, 1, 0)
+_divR.Position          = UDim2.new(0, bsz + dv + nw, 0, 0)
+_divR.BackgroundColor3  = Color3.fromRGB(255, 255, 255)
+_divR.BorderSizePixel   = 0
+
+local stepMinus = Instance.new("TextButton")
+stepMinus.Size             = UDim2.new(0, bsz, 1, 0)
+stepMinus.Position         = UDim2.new(0, bsz + dv + nw + dv, 0, 0)
+stepMinus.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+stepMinus.BorderSizePixel  = 0
+stepMinus.Text             = "-"
+stepMinus.TextColor3       = Color3.fromRGB(255, 255, 255)
+stepMinus.TextSize         = 14
+stepMinus.Font             = Enum.Font.Code
+stepMinus.AutoButtonColor  = false
+stepMinus.ZIndex           = 11
+stepMinus.Parent           = stepHolder
+
+local stepCv = _G.CalcScale
+local function stepApply(v)
+    v                = math.clamp(math.floor(v), 1, 25)
+    stepCv           = v
+    _G.CalcScale     = v
+    stepBox.Text     = tostring(v)
+    uiScaleObj.Scale = getUIScale(v)
+end
+
+stepPlus.MouseButton1Click:Connect(function()  stepApply(stepCv + 1) end)
+stepMinus.MouseButton1Click:Connect(function() stepApply(stepCv - 1) end)
+stepBox.FocusLost:Connect(function()
+    local n = tonumber(stepBox.Text)
+    if n then stepApply(n) else stepBox.Text = tostring(stepCv) end
+end)
+for _, btn in ipairs({stepPlus, stepMinus}) do
+    btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(15, 15, 15) end)
+    btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0) end)
+end
+
 o("Frame", {Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-33,0,0), BackgroundColor3=W, BorderSizePixel=0, ZIndex=12}, top)
 
-local MinBtn = o("TextButton", {
-    Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-65,0,0),
-    BackgroundColor3=B, BorderSizePixel=0,
-    Text="-", TextColor3=W, TextSize=18, Font=FONT,
-    AutoButtonColor=false, ZIndex=11,
-}, top)
 local XBtn = o("TextButton", {
     Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-32,0,0),
     BackgroundColor3=B, BorderSizePixel=0,
     Text="x", TextColor3=W, TextSize=14, Font=FONT,
     AutoButtonColor=false, ZIndex=11,
 }, top)
-for _, b in ipairs({MinBtn, XBtn}) do
-    b.MouseEnter:Connect(function() b.BackgroundColor3 = D end)
-    b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
-end
+
+XBtn.MouseEnter:Connect(function() XBtn.BackgroundColor3 = D end)
+XBtn.MouseLeave:Connect(function() XBtn.BackgroundColor3 = B end)
 
 o("Frame", {
     Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,0,topH),
     BackgroundColor3=W, BorderSizePixel=0, ZIndex=20,
 }, win)
 
+-- ── Drag da UI (topBar) ─────────────────────────────────────────────────────
 do
-    local dragging, dragStart, startPos = false, nil, nil
+    local dragging       = false
+    local dragMoved      = false
+    local dragStart      = nil
+    local startPos       = nil
+    local _activeTouchId = nil
+
     top.InputBegan:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1
-        or inp.UserInputType == Enum.UserInputType.Touch then
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if dragging then return end
             dragging  = true
+            dragMoved = false
+            dragStart = inp.Position
+            startPos  = win.Position
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if _activeTouchId ~= nil then return end
+            _activeTouchId = inp
+            dragging  = true
+            dragMoved = false
             dragStart = inp.Position
             startPos  = win.Position
         end
     end)
-    top.InputEnded:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1
-        or inp.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
+
+    UIS.InputChanged:Connect(function(inp)
+        if not dragging then return end
+        local isMouse = inp.UserInputType == Enum.UserInputType.MouseMovement
+        local isTouch = inp.UserInputType == Enum.UserInputType.Touch
+        if isTouch and inp ~= _activeTouchId then return end
+        if isMouse or isTouch then
+            local d = inp.Position - dragStart
+            if math.abs(d.X) + math.abs(d.Y) > 2 then
+                dragMoved = true
+                win.Position = UDim2.new(
+                    startPos.X.Scale, startPos.X.Offset + d.X,
+                    startPos.Y.Scale, startPos.Y.Offset + d.Y
+                )
+            end
         end
     end)
-    UIS.InputChanged:Connect(function(inp)
-        if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement
-            or inp.UserInputType == Enum.UserInputType.Touch) then
-            local d = inp.Position - dragStart
-            win.Position = UDim2.new(
-                startPos.X.Scale, startPos.X.Offset + d.X,
-                startPos.Y.Scale, startPos.Y.Offset + d.Y
-            )
+
+    UIS.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if not dragging then return end
+            dragging  = false
+            dragStart = nil
+            startPos  = nil
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if inp ~= _activeTouchId then return end
+            dragging       = false
+            dragMoved      = false
+            _activeTouchId = nil
+            dragStart      = nil
+            startPos       = nil
         end
     end)
 end
@@ -294,6 +403,7 @@ createButton(".", 1, 4, false, false, false)
 createButton(",", 2, 4, false, false, false)
 createButton("=", 3, 4, false, true,  false)
 
+-- ── Pill ─────────────────────────────────────────────────────────────────────
 local pillGui = o("ScreenGui", {
     Name = "PremiumCalcPill",
     ResetOnSpawn = false,
@@ -319,24 +429,75 @@ local pillBtn = o("TextButton", {
     ZIndex = 201,
 }, pill)
 
-local minimized = false
-MinBtn.MouseButton1Click:Connect(function()
-    minimized = not minimized
-    if minimized then
-        win.Size    = UDim2.new(0, menuW, 0, topH)
-        MinBtn.Text = "+"
-    else
-        win.Size    = UDim2.new(0, menuW, 0, fullH)
-        MinBtn.Text = "-"
-    end
-end)
-
 XBtn.MouseButton1Click:Connect(function()
     win.Visible  = false
     pill.Visible = true
 end)
 
-pillBtn.MouseButton1Click:Connect(function()
-    win.Visible  = true
-    pill.Visible = false
-end)
+-- ── Drag do pill ────────────────────────────────────────────────────────────
+do
+    local dragging       = false
+    local dragMoved      = false
+    local dragStart      = nil
+    local startPos       = nil
+    local _activeTouchId = nil
+
+    pillBtn.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if dragging then return end
+            dragging  = true
+            dragMoved = false
+            dragStart = inp.Position
+            startPos  = pill.Position
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if _activeTouchId ~= nil then return end
+            _activeTouchId = inp
+            dragging  = true
+            dragMoved = false
+            dragStart = inp.Position
+            startPos  = pill.Position
+        end
+    end)
+
+    UIS.InputChanged:Connect(function(inp)
+        if not dragging then return end
+        local isMouse = inp.UserInputType == Enum.UserInputType.MouseMovement
+        local isTouch = inp.UserInputType == Enum.UserInputType.Touch
+        if isTouch and inp ~= _activeTouchId then return end
+        if isMouse or isTouch then
+            local d = inp.Position - dragStart
+            if math.abs(d.X) + math.abs(d.Y) > 2 then
+                dragMoved = true
+                pill.Position = UDim2.new(
+                    startPos.X.Scale, startPos.X.Offset + d.X,
+                    startPos.Y.Scale, startPos.Y.Offset + d.Y
+                )
+            end
+        end
+    end)
+
+    UIS.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if not dragging then return end
+            dragging  = false
+            if not dragMoved then
+                win.Visible  = true
+                pill.Visible = false
+            end
+            dragStart = nil
+            startPos  = nil
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if inp ~= _activeTouchId then return end
+            local wasMoved  = dragMoved
+            dragging        = false
+            dragMoved       = false
+            _activeTouchId  = nil
+            dragStart       = nil
+            startPos        = nil
+            if not wasMoved then
+                win.Visible  = true
+                pill.Visible = false
+            end
+        end
+    end)
+end
