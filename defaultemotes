@@ -95,7 +95,7 @@ local win = o("Frame", {
     ClipsDescendants = true,
 }, screenGui)
 stroke(win, 1, LINE)
-o("UICorner", { CornerRadius = UDim.new(0, 6) }, win)
+o("UICorner", { CornerRadius = UDim.new(0, 0) }, win)
 
 local uiScale = o("UIScale", {
     Scale = 0.45 + (_G.EmotesUIScale - 1) * 0.04,
@@ -130,7 +130,7 @@ local stepFrame = o("Frame", {
     BorderSizePixel  = 0,
     ZIndex           = 11,
 }, top)
-o("UICorner", { CornerRadius = UDim.new(0, 4) }, stepFrame)
+o("UICorner", { CornerRadius = UDim.new(0, 0) }, stepFrame)
 stroke(stepFrame, 1, LINE)
 
 local stepPlus = o("TextButton", {
