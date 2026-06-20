@@ -5,360 +5,553 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UIS           = game:GetService("UserInputService")
 local Player        = Players.LocalPlayer
 
-local B    = Color3.fromRGB(0,0,0)
-local W    = Color3.fromRGB(255,255,255)
-local D    = Color3.fromRGB(15,15,15)
-local G    = Color3.fromRGB(50,50,50)
-local FONT = Enum.Font.Code
+local BG    = Color3.fromRGB(28, 28, 32)
+local PANEL = Color3.fromRGB(34, 34, 40)
+local CARD  = Color3.fromRGB(40, 40, 48)
+local HOVER = Color3.fromRGB(48, 48, 58)
+local LINE  = Color3.fromRGB(58, 58, 70)
+local DIM   = Color3.fromRGB(140, 140, 160)
+local MID   = Color3.fromRGB(185, 185, 205)
+local W     = Color3.fromRGB(235, 235, 245)
+local FONT  = Enum.Font.GothamMedium
 
-local function o(cls,props,par)
-    local x=Instance.new(cls)
-    for k,v in pairs(props) do x[k]=v end
-    if par then x.Parent=par end
+local function o(cls, props, par)
+    local x = Instance.new(cls)
+    for k, v in pairs(props) do x[k] = v end
+    if par then x.Parent = par end
     return x
 end
-local function stroke(par,t,c)
-    o("UIStroke",{Color=c or W,Thickness=t or 1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},par)
+local function stroke(par, t, c)
+    o("UIStroke", {
+        Color = c or LINE, Thickness = t or 1,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+    }, par)
 end
-local function mkBtn(txt,parent,sz,pos)
-    local b=o("TextButton",{
-        Size=sz,Position=pos,BackgroundColor3=B,BorderSizePixel=0,
-        Text=txt,TextColor3=W,TextSize=10,Font=FONT,AutoButtonColor=false,
-    },parent)
-    stroke(b,1)
-    b.MouseEnter:Connect(function() b.BackgroundColor3=D end)
-    b.MouseLeave:Connect(function() b.BackgroundColor3=B end)
+local function mkBtn(txt, parent, sz, pos)
+    local b = o("TextButton", {
+        Size = sz, Position = pos,
+        BackgroundColor3 = CARD, BorderSizePixel = 0,
+        Text = txt, TextColor3 = MID, TextSize = 10,
+        Font = FONT, AutoButtonColor = false,
+    }, parent)
+    stroke(b, 1, LINE)
+    o("UICorner", { CornerRadius = UDim.new(0, 5) }, b)
+    b.MouseEnter:Connect(function() b.BackgroundColor3 = HOVER; b.TextColor3 = W end)
+    b.MouseLeave:Connect(function() b.BackgroundColor3 = CARD;  b.TextColor3 = MID end)
+    b.MouseButton1Down:Connect(function() b.BackgroundColor3 = Color3.fromRGB(52,52,62) end)
+    b.MouseButton1Up:Connect(function()   b.BackgroundColor3 = HOVER end)
     return b
 end
 
-local sg=o("ScreenGui",{
-    Name="MultiFlingGUI",ResetOnSpawn=false,
-    IgnoreGuiInset=true,DisplayOrder=2147483647,
+-- ── ScreenGui ────────────────────────────────
+local sg = o("ScreenGui", {
+    Name = "MultiFlingGUI", ResetOnSpawn = false,
+    IgnoreGuiInset = true, DisplayOrder = 2147483647,
+    ZIndexBehavior = Enum.ZIndexBehavior.Global,
 })
-local ok=pcall(function() sg.Parent=CoreGui end)
-if not ok then sg.Parent=Player:WaitForChild("PlayerGui") end
+local ok = pcall(function() sg.Parent = CoreGui end)
+if not ok then sg.Parent = Player:WaitForChild("PlayerGui") end
 
-local win=o("Frame",{
-    Size=UDim2.new(0,200,0,360),
-    Position=UDim2.new(0.5,-100,0.5,-180),
-    BackgroundColor3=B,BorderSizePixel=0,
-    Active=true,ClipsDescendants=true,
-},sg)
-stroke(win,1)
+-- ── Janela ───────────────────────────────────
+_G.FlingUIScale = _G.FlingUIScale or 10
+local function getUIScale(s) return 0.45 + (s - 1) * 0.04 end
 
-local topH=24
-local top=o("Frame",{
-    Size=UDim2.new(1,0,0,topH),
-    BackgroundColor3=B,BorderSizePixel=0,
-    Active=true,ZIndex=10,
-},win)
-o("TextLabel",{
-    Size=UDim2.new(1,-70,1,0),Position=UDim2.new(0,8,0,0),
-    BackgroundTransparency=1,Text="> MULTI FLING <",
-    TextColor3=W,TextSize=11,Font=FONT,
-    TextXAlignment=Enum.TextXAlignment.Left,ZIndex=10,
-},top)
-o("Frame",{Size=UDim2.new(0,1,1,0),Position=UDim2.new(1,-66,0,0),BackgroundColor3=W,BorderSizePixel=0,ZIndex=12},top)
-o("Frame",{Size=UDim2.new(0,1,1,0),Position=UDim2.new(1,-33,0,0),BackgroundColor3=W,BorderSizePixel=0,ZIndex=12},top)
+local win = o("Frame", {
+    Size = UDim2.new(0, 210, 0, 370),
+    Position = UDim2.new(0.5, -105, 0.5, -185),
+    BackgroundColor3 = BG, BorderSizePixel = 0,
+    Active = true, ClipsDescendants = true,
+}, sg)
+stroke(win, 1, LINE)
+o("UICorner", { CornerRadius = UDim.new(0, 6) }, win)
 
-local MinBtn=o("TextButton",{
-    Size=UDim2.new(0,32,1,0),Position=UDim2.new(1,-65,0,0),
-    BackgroundColor3=B,BorderSizePixel=0,Text="-",
-    TextColor3=W,TextSize=18,Font=FONT,AutoButtonColor=false,ZIndex=11,
-},top)
-local XBtn=o("TextButton",{
-    Size=UDim2.new(0,32,1,0),Position=UDim2.new(1,-32,0,0),
-    BackgroundColor3=B,BorderSizePixel=0,Text="x",
-    TextColor3=W,TextSize=14,Font=FONT,AutoButtonColor=false,ZIndex=11,
-},top)
-for _,b in ipairs({MinBtn,XBtn}) do
-    b.MouseEnter:Connect(function() b.BackgroundColor3=D end)
-    b.MouseLeave:Connect(function() b.BackgroundColor3=B end)
+local uiScaleObj = Instance.new("UIScale")
+uiScaleObj.Scale  = getUIScale(_G.FlingUIScale)
+uiScaleObj.Parent = win
+
+-- ── TopBar ───────────────────────────────────
+local topH = 30
+local top  = o("Frame", {
+    Size = UDim2.new(1, 0, 0, topH),
+    BackgroundColor3 = BG, BorderSizePixel = 0,
+    Active = true, ZIndex = 10,
+}, win)
+
+o("TextLabel", {
+    Size = UDim2.new(1, -150, 1, 0), Position = UDim2.new(0, 12, 0, 0),
+    BackgroundTransparency = 1, Text = "Multi Fling",
+    TextColor3 = W, TextSize = 12, Font = FONT,
+    TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10,
+}, top)
+
+-- ── GuiSize stepper ──────────────────────────
+local STEP_W = 62
+local STEP_H = 18
+local stepX  = -(33 + 6 + STEP_W)
+
+local stepHolder = o("Frame", {
+    Size = UDim2.new(0, STEP_W, 0, STEP_H),
+    Position = UDim2.new(1, stepX, 0.5, -STEP_H / 2),
+    BackgroundColor3 = CARD, BorderSizePixel = 0, ZIndex = 10,
+}, top)
+stroke(stepHolder, 1, LINE)
+o("UICorner", { CornerRadius = UDim.new(0, 4) }, stepHolder)
+
+local bsz = STEP_H
+local dv  = 1
+local nw  = STEP_W - 2 * bsz - 2 * dv
+
+local stepPlus = o("TextButton", {
+    Size = UDim2.new(0, bsz, 1, 0),
+    BackgroundColor3 = CARD, BorderSizePixel = 0,
+    Text = "+", TextColor3 = MID, TextSize = 14, Font = FONT,
+    AutoButtonColor = false, ZIndex = 11,
+}, stepHolder)
+o("Frame", {
+    Size = UDim2.new(0, dv, 1, 0), Position = UDim2.new(0, bsz, 0, 0),
+    BackgroundColor3 = LINE, BorderSizePixel = 0, ZIndex = 11,
+}, stepHolder)
+local stepBox = o("TextBox", {
+    Size = UDim2.new(0, nw, 1, 0), Position = UDim2.new(0, bsz + dv, 0, 0),
+    BackgroundTransparency = 1,
+    Text = tostring(_G.FlingUIScale),
+    TextColor3 = W, TextSize = 10, Font = FONT,
+    TextXAlignment = Enum.TextXAlignment.Center,
+    ClearTextOnFocus = false, ZIndex = 11,
+}, stepHolder)
+o("Frame", {
+    Size = UDim2.new(0, dv, 1, 0), Position = UDim2.new(0, bsz + dv + nw, 0, 0),
+    BackgroundColor3 = LINE, BorderSizePixel = 0, ZIndex = 11,
+}, stepHolder)
+local stepMinus = o("TextButton", {
+    Size = UDim2.new(0, bsz, 1, 0), Position = UDim2.new(0, bsz + dv + nw + dv, 0, 0),
+    BackgroundColor3 = CARD, BorderSizePixel = 0,
+    Text = "−", TextColor3 = MID, TextSize = 14, Font = FONT,
+    AutoButtonColor = false, ZIndex = 11,
+}, stepHolder)
+
+local stepCv = _G.FlingUIScale
+local function stepApply(v)
+    v = math.clamp(math.floor(v), 1, 35)
+    stepCv = v; _G.FlingUIScale = v
+    stepBox.Text = tostring(v)
+    uiScaleObj.Scale = getUIScale(v)
+end
+stepPlus.MouseButton1Click:Connect(function()  stepApply(stepCv + 1) end)
+stepMinus.MouseButton1Click:Connect(function() stepApply(stepCv - 1) end)
+stepBox.FocusLost:Connect(function()
+    local n = tonumber(stepBox.Text)
+    if n then stepApply(n) else stepBox.Text = tostring(stepCv) end
+end)
+for _, btn in ipairs({ stepPlus, stepMinus }) do
+    btn.MouseEnter:Connect(function() btn.TextColor3 = W end)
+    btn.MouseLeave:Connect(function() btn.TextColor3 = MID end)
 end
 
-o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,0,topH),BackgroundColor3=W,BorderSizePixel=0,ZIndex=20},win)
+-- separador + X
+o("Frame", {
+    Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-33,0,0),
+    BackgroundColor3=LINE, BorderSizePixel=0, ZIndex=12,
+}, top)
 
+local XBtn = o("TextButton", {
+    Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-32,0,0),
+    BackgroundColor3=BG, BorderSizePixel=0, Text="×",
+    TextColor3=DIM, TextSize=16, Font=FONT, AutoButtonColor=false, ZIndex=11,
+}, top)
+XBtn.MouseEnter:Connect(function() XBtn.TextColor3 = W end)
+XBtn.MouseLeave:Connect(function() XBtn.TextColor3 = DIM end)
+
+-- linha TopBar → body
+o("Frame", {
+    Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,1,-1),
+    BackgroundColor3=LINE, BorderSizePixel=0, ZIndex=12,
+}, top)
+
+-- ── Drag da janela ────────────────────────────
 do
-    local dragging,dragStart,startPos=false,nil,nil
+    local dragging, dragMoved, dragStart, startPos, _activeTouchId =
+        false, false, nil, nil, nil
     top.InputBegan:Connect(function(inp)
-        if inp.UserInputType==Enum.UserInputType.MouseButton1
-        or inp.UserInputType==Enum.UserInputType.Touch then
-            dragging=true dragStart=inp.Position startPos=win.Position
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if dragging then return end
+            dragging=true; dragMoved=false
+            dragStart=inp.Position; startPos=win.Position
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if _activeTouchId ~= nil then return end
+            _activeTouchId=inp; dragging=true; dragMoved=false
+            dragStart=inp.Position; startPos=win.Position
         end
-    end)
-    top.InputEnded:Connect(function(inp)
-        if inp.UserInputType==Enum.UserInputType.MouseButton1
-        or inp.UserInputType==Enum.UserInputType.Touch then dragging=false end
     end)
     UIS.InputChanged:Connect(function(inp)
-        if dragging and (inp.UserInputType==Enum.UserInputType.MouseMovement
-            or inp.UserInputType==Enum.UserInputType.Touch) then
-            local d=inp.Position-dragStart
-            win.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+d.X,startPos.Y.Scale,startPos.Y.Offset+d.Y)
+        if not dragging then return end
+        local isM = inp.UserInputType == Enum.UserInputType.MouseMovement
+        local isT = inp.UserInputType == Enum.UserInputType.Touch
+        if isT and inp ~= _activeTouchId then return end
+        if isM or isT then
+            local d = inp.Position - dragStart
+            if math.abs(d.X)+math.abs(d.Y) > 2 then
+                dragMoved = true
+                win.Position = UDim2.new(
+                    startPos.X.Scale, startPos.X.Offset + d.X,
+                    startPos.Y.Scale, startPos.Y.Offset + d.Y)
+            end
+        end
+    end)
+    UIS.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if not dragging then return end
+            dragging=false; dragStart=nil; startPos=nil
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if inp ~= _activeTouchId then return end
+            dragging=false; dragMoved=false
+            _activeTouchId=nil; dragStart=nil; startPos=nil
         end
     end)
 end
 
-local body=o("Frame",{
-    Size=UDim2.new(1,0,1,-topH-1),Position=UDim2.new(0,0,0,topH+1),
-    BackgroundColor3=B,BorderSizePixel=0,ClipsDescendants=true,
-},win)
+-- ── Body ─────────────────────────────────────
+local body = o("Frame", {
+    Size = UDim2.new(1, 0, 1, -topH),
+    Position = UDim2.new(0, 0, 0, topH),
+    BackgroundColor3 = PANEL, BorderSizePixel = 0,
+}, win)
 
-local StatusLabel=o("TextLabel",{
-    Position=UDim2.new(0,8,0,5),Size=UDim2.new(1,-16,0,14),
-    BackgroundTransparency=1,Text="Select targets to fling",
-    TextColor3=W,Font=FONT,TextSize=10,
-    TextXAlignment=Enum.TextXAlignment.Left,
-},body)
+local StatusLabel = o("TextLabel", {
+    Position = UDim2.new(0, 10, 0, 8),
+    Size = UDim2.new(1, -20, 0, 14),
+    BackgroundTransparency = 1,
+    Text = "Select targets to fling",
+    TextColor3 = DIM, Font = FONT, TextSize = 10,
+    TextXAlignment = Enum.TextXAlignment.Left,
+}, body)
 
-local PlayerListFrame=o("Frame",{
-    Position=UDim2.new(0,8,0,23),Size=UDim2.new(1,-16,0,190),
-    BackgroundColor3=B,BorderSizePixel=0,
-},body)
-stroke(PlayerListFrame,1)
+local PlayerListFrame = o("Frame", {
+    Position = UDim2.new(0, 8, 0, 28),
+    Size = UDim2.new(1, -16, 0, 188),
+    BackgroundColor3 = CARD, BorderSizePixel = 0,
+}, body)
+stroke(PlayerListFrame, 1, LINE)
+o("UICorner", { CornerRadius = UDim.new(0, 5) }, PlayerListFrame)
 
-local PlayerScrollFrame=o("ScrollingFrame",{
-    Position=UDim2.new(0,3,0,3),Size=UDim2.new(1,-6,1,-6),
-    BackgroundTransparency=1,BorderSizePixel=0,
-    ScrollBarThickness=2,ScrollBarImageColor3=G,
-    CanvasSize=UDim2.new(0,0,0,0),ClipsDescendants=true,
-},PlayerListFrame)
+local PlayerScrollFrame = o("ScrollingFrame", {
+    Position = UDim2.new(0, 4, 0, 4),
+    Size = UDim2.new(1, -8, 1, -8),
+    BackgroundTransparency = 1, BorderSizePixel = 0,
+    ScrollBarThickness = 2, ScrollBarImageColor3 = LINE,
+    CanvasSize = UDim2.new(0,0,0,0), ClipsDescendants = true,
+}, PlayerListFrame)
 
-local half =UDim2.new(0.5,-10,0,22)
-local halfS=UDim2.new(0.5,-10,0,20)
-local StartButton   =mkBtn("Start",   body, half,  UDim2.new(0,8,0,219))
-local StopButton    =mkBtn("Stop",    body, half,  UDim2.new(0.5,2,0,219))
-local SelectAllBtn  =mkBtn("All",     body, halfS, UDim2.new(0,8,0,247))
-local DeselectAllBtn=mkBtn("None",    body, halfS, UDim2.new(0.5,2,0,247))
+local half  = UDim2.new(0.5, -10, 0, 24)
+local halfS = UDim2.new(0.5, -10, 0, 22)
 
-o("Frame",{Size=UDim2.new(1,-16,0,1),Position=UDim2.new(0,8,0,273),BackgroundColor3=W,BorderSizePixel=0},body)
-local AntiFlingBtn  =mkBtn("AntiFling",  body, halfS, UDim2.new(0,8,0,279))
-local TouchFlingBtn =mkBtn("TouchFling", body, halfS, UDim2.new(0.5,2,0,279))
+local StartButton    = mkBtn("Start",    body, half,  UDim2.new(0, 8,   0, 224))
+local StopButton     = mkBtn("Stop",     body, half,  UDim2.new(0.5, 2, 0, 224))
+local SelectAllBtn   = mkBtn("All",      body, halfS, UDim2.new(0, 8,   0, 254))
+local DeselectAllBtn = mkBtn("None",     body, halfS, UDim2.new(0.5, 2, 0, 254))
 
--- Pill
-local PillGui=o("ScreenGui",{
-    Name="MultiFlingPillGui",ResetOnSpawn=false,
-    IgnoreGuiInset=true,DisplayOrder=9999,
+o("Frame", {
+    Size=UDim2.new(1,-16,0,1), Position=UDim2.new(0,8,0,282),
+    BackgroundColor3=LINE, BorderSizePixel=0,
+}, body)
+
+local AntiFlingBtn  = mkBtn("AntiFling",  body, halfS, UDim2.new(0, 8,   0, 289))
+local TouchFlingBtn = mkBtn("TouchFling", body, halfS, UDim2.new(0.5, 2, 0, 289))
+
+-- ── Pill ──────────────────────────────────────
+local PillGui = o("ScreenGui", {
+    Name="MultiFlingPillGui", ResetOnSpawn=false,
+    IgnoreGuiInset=true, DisplayOrder=9999,
+    ZIndexBehavior=Enum.ZIndexBehavior.Global,
 })
-local ok2=pcall(function() PillGui.Parent=CoreGui end)
-if not ok2 then PillGui.Parent=Player:WaitForChild("PlayerGui") end
+local ok2 = pcall(function() PillGui.Parent = CoreGui end)
+if not ok2 then PillGui.Parent = Player:WaitForChild("PlayerGui") end
 
-local pill=o("Frame",{
+local pill = o("Frame", {
     Name="PillFling",
-    Size=UDim2.new(0,60,0,18),Position=UDim2.new(1,-66,1,-80),
-    BackgroundColor3=B,BorderSizePixel=0,Visible=false,ZIndex=200,
-},PillGui)
-stroke(pill,1)
-local pillBtn=o("TextButton",{
-    Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,
-    Text="> fling",TextSize=9,Font=FONT,
-    TextColor3=W,BorderSizePixel=0,ZIndex=201,
-},pill)
+    Size=UDim2.new(0,80,0,20), Position=UDim2.new(1,-86,1,-80),
+    BackgroundColor3=BG, BorderSizePixel=0, Visible=false, ZIndex=200,
+}, PillGui)
+stroke(pill, 1, LINE)
+o("UICorner", { CornerRadius=UDim.new(0,5) }, pill)
 
-local AntiFlingActive=false
-local TouchFlingActive=false
-local antiFlingTracked={}
-local antiFlingConnections={}
-local antiFlingRenderConn=nil
-local SelectedTargets={}
-local PlayerEntries={}
-local FlingActive=false
-getgenv().OldPos=nil
-getgenv().FPDH=workspace.FallenPartsDestroyHeight
+local pillBtn = o("TextButton", {
+    Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
+    Text="multi fling", TextSize=9, Font=FONT,
+    TextColor3=DIM, BorderSizePixel=0, ZIndex=201,
+}, pill)
+pillBtn.MouseEnter:Connect(function() pillBtn.TextColor3 = W end)
+pillBtn.MouseLeave:Connect(function() pillBtn.TextColor3 = DIM end)
 
-local minimized=false
-local fullH=360
+-- ── Drag da pill ──────────────────────────────
+do
+    local dragging, dragMoved, dragStart, startPos, _activeTouchId =
+        false, false, nil, nil, nil
+    pillBtn.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if dragging then return end
+            dragging=true; dragMoved=false
+            dragStart=inp.Position; startPos=pill.Position
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if _activeTouchId ~= nil then return end
+            _activeTouchId=inp; dragging=true; dragMoved=false
+            dragStart=inp.Position; startPos=pill.Position
+        end
+    end)
+    UIS.InputChanged:Connect(function(inp)
+        if not dragging then return end
+        local isM = inp.UserInputType == Enum.UserInputType.MouseMovement
+        local isT = inp.UserInputType == Enum.UserInputType.Touch
+        if isT and inp ~= _activeTouchId then return end
+        if isM or isT then
+            local d = inp.Position - dragStart
+            if math.abs(d.X)+math.abs(d.Y) > 2 then
+                dragMoved = true
+                pill.Position = UDim2.new(
+                    startPos.X.Scale, startPos.X.Offset + d.X,
+                    startPos.Y.Scale, startPos.Y.Offset + d.Y)
+            end
+        end
+    end)
+    UIS.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if not dragging then return end
+            dragging = false
+            if not dragMoved then win.Visible=true; pill.Visible=false end
+            dragStart=nil; startPos=nil
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if inp ~= _activeTouchId then return end
+            local wasMoved = dragMoved
+            dragging=false; dragMoved=false
+            _activeTouchId=nil; dragStart=nil; startPos=nil
+            if not wasMoved then win.Visible=true; pill.Visible=false end
+        end
+    end)
+end
 
 XBtn.MouseButton1Click:Connect(function()
-    if FlingActive then FlingActive=false end
-    win.Visible=false pill.Visible=true
-end)
-MinBtn.MouseButton1Click:Connect(function()
-    minimized=not minimized
-    if minimized then
-        win.Size=UDim2.new(0,200,0,topH)
-        MinBtn.Text="+"
-    else
-        win.Size=UDim2.new(0,200,0,fullH)
-        MinBtn.Text="-"
-    end
+    if FlingActive then FlingActive = false end
+    win.Visible = false; pill.Visible = true
 end)
 
-pillBtn.MouseButton1Click:Connect(function()
-    win.Visible=true pill.Visible=false
-end)
+-- ══════════════════════════════════════════════
+--  LÓGICA
+-- ══════════════════════════════════════════════
+local AntiFlingActive  = false
+local TouchFlingActive = false
+local antiFlingTracked = {}
+local antiFlingConnections = {}
+local antiFlingRenderConn  = nil
+local SelectedTargets = {}
+local PlayerEntries   = {}
+local FlingActive     = false
+getgenv().OldPos = nil
+getgenv().FPDH   = workspace.FallenPartsDestroyHeight
 
 local function disableCanCollide(part)
-    if part:IsA("BasePart") and part.CanCollide then part.CanCollide=false end
+    if part:IsA("BasePart") and part.CanCollide then part.CanCollide = false end
 end
 local function trackAFCharacter(character)
-    for _,part in pairs(character:GetChildren()) do disableCanCollide(part) end
-    local conn=character.ChildAdded:Connect(function(child) disableCanCollide(child) end)
-    table.insert(antiFlingConnections,conn)
+    for _, part in pairs(character:GetChildren()) do disableCanCollide(part) end
+    local conn = character.ChildAdded:Connect(function(child) disableCanCollide(child) end)
+    table.insert(antiFlingConnections, conn)
 end
 local function trackAFPlayer(player)
-    if player==Player then return end
+    if player == Player then return end
     if player.Character then trackAFCharacter(player.Character) end
-    local conn=player.CharacterAdded:Connect(trackAFCharacter)
-    table.insert(antiFlingConnections,conn)
-    antiFlingTracked[player]=true
+    local conn = player.CharacterAdded:Connect(trackAFCharacter)
+    table.insert(antiFlingConnections, conn)
+    antiFlingTracked[player] = true
 end
 local function startAntiFling()
-    antiFlingTracked={} antiFlingConnections={}
-    for _,player in pairs(Players:GetPlayers()) do trackAFPlayer(player) end
-    table.insert(antiFlingConnections,Players.PlayerAdded:Connect(trackAFPlayer))
-    antiFlingRenderConn=RunService.RenderStepped:Connect(function()
+    antiFlingTracked = {}; antiFlingConnections = {}
+    for _, player in pairs(Players:GetPlayers()) do trackAFPlayer(player) end
+    table.insert(antiFlingConnections, Players.PlayerAdded:Connect(trackAFPlayer))
+    antiFlingRenderConn = RunService.RenderStepped:Connect(function()
         for player in pairs(antiFlingTracked) do
             if player.Character then
-                for _,part in pairs(player.Character:GetChildren()) do disableCanCollide(part) end
+                for _, part in pairs(player.Character:GetChildren()) do disableCanCollide(part) end
             end
         end
     end)
 end
 local function stopAntiFling()
-    for _,conn in ipairs(antiFlingConnections) do conn:Disconnect() end
-    antiFlingConnections={} antiFlingTracked={}
-    if antiFlingRenderConn then antiFlingRenderConn:Disconnect() antiFlingRenderConn=nil end
+    for _, conn in ipairs(antiFlingConnections) do conn:Disconnect() end
+    antiFlingConnections = {}; antiFlingTracked = {}
+    if antiFlingRenderConn then antiFlingRenderConn:Disconnect(); antiFlingRenderConn = nil end
 end
 
+-- ── Toggle visual: acende igual ao scroll de jogadores ───────────────────────
+AntiFlingBtn.MouseLeave:Connect(function()
+    task.defer(function()
+        if AntiFlingActive then
+            AntiFlingBtn.BackgroundColor3 = HOVER
+            AntiFlingBtn.TextColor3 = W
+        end
+    end)
+end)
+
 AntiFlingBtn.MouseButton1Click:Connect(function()
-    AntiFlingActive=not AntiFlingActive
+    AntiFlingActive = not AntiFlingActive
     if AntiFlingActive then
         startAntiFling()
-        AntiFlingBtn.Text="> AntiFling"
-        AntiFlingBtn.BackgroundColor3=G
+        AntiFlingBtn.BackgroundColor3 = HOVER
+        AntiFlingBtn.TextColor3 = W
     else
         stopAntiFling()
-        AntiFlingBtn.Text="AntiFling"
-        AntiFlingBtn.BackgroundColor3=B
+        AntiFlingBtn.BackgroundColor3 = CARD
+        AntiFlingBtn.TextColor3 = MID
     end
 end)
 
 local function runTouchFling()
-    local lp=Players.LocalPlayer
-    local movel=0.1
+    local lp = Players.LocalPlayer
+    local movel = 0.1
     while TouchFlingActive do
         RunService.Heartbeat:Wait()
-        local c=lp.Character
-        local hrp=c and c:FindFirstChild("HumanoidRootPart")
+        local c   = lp.Character
+        local hrp = c and c:FindFirstChild("HumanoidRootPart")
         if hrp then
-            local vel=hrp.Velocity
-            hrp.Velocity=vel*10000+Vector3.new(0,10000,0)
+            local vel = hrp.Velocity
+            hrp.Velocity = vel * 10000 + Vector3.new(0, 10000, 0)
             RunService.RenderStepped:Wait()
-            hrp.Velocity=vel
+            hrp.Velocity = vel
             RunService.Stepped:Wait()
-            hrp.Velocity=vel+Vector3.new(0,movel,0)
-            movel=-movel
+            hrp.Velocity = vel + Vector3.new(0, movel, 0)
+            movel = -movel
         end
     end
 end
 
+TouchFlingBtn.MouseLeave:Connect(function()
+    task.defer(function()
+        if TouchFlingActive then
+            TouchFlingBtn.BackgroundColor3 = HOVER
+            TouchFlingBtn.TextColor3 = W
+        end
+    end)
+end)
+
 TouchFlingBtn.MouseButton1Click:Connect(function()
-    TouchFlingActive=not TouchFlingActive
+    TouchFlingActive = not TouchFlingActive
     if TouchFlingActive then
         if not ReplicatedStorage:FindFirstChild("juisdfj0i32i0eidsuf0iok") then
-            local d=Instance.new("Decal")
-            d.Name="juisdfj0i32i0eidsuf0iok" d.Parent=ReplicatedStorage
+            local d = Instance.new("Decal")
+            d.Name = "juisdfj0i32i0eidsuf0iok"; d.Parent = ReplicatedStorage
         end
-        TouchFlingBtn.Text="> TouchFling"
-        TouchFlingBtn.BackgroundColor3=G
+        TouchFlingBtn.BackgroundColor3 = HOVER
+        TouchFlingBtn.TextColor3 = W
         coroutine.resume(coroutine.create(runTouchFling))
     else
-        TouchFlingBtn.Text="TouchFling"
-        TouchFlingBtn.BackgroundColor3=B
+        TouchFlingBtn.BackgroundColor3 = CARD
+        TouchFlingBtn.TextColor3 = MID
     end
 end)
 
+-- ─────────────────────────────────────────────
 local function UpdateStatus()
-    local count=0
-    for _ in pairs(SelectedTargets) do count+=1 end
-    StatusLabel.Text=FlingActive and ("Flinging "..count.." target(s)") or (count.." target(s) selected")
+    local count = 0
+    for _ in pairs(SelectedTargets) do count += 1 end
+    StatusLabel.Text = FlingActive
+        and ("Flinging " .. count .. " target(s)")
+        or  (count .. " target(s) selected")
 end
 
 local function RefreshPlayerList()
-    for _,child in pairs(PlayerScrollFrame:GetChildren()) do
+    for _, child in pairs(PlayerScrollFrame:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
-    PlayerEntries={}
-    local list=Players:GetPlayers()
-    table.sort(list,function(a,b) return a.Name:lower()<b.Name:lower() end)
-    local yPos=2
-    for _,op in ipairs(list) do
-        if op~=Player then
-            local sel=SelectedTargets[op.Name]~=nil
-            local row=o("TextButton",{
-                Size=UDim2.new(1,-4,0,22),Position=UDim2.new(0,2,0,yPos),
-                BackgroundTransparency=1,
-                Text=(sel and "> " or "  ")..op.Name,
-                TextColor3=W,TextSize=10,Font=FONT,
-                TextXAlignment=Enum.TextXAlignment.Left,
-                BorderSizePixel=0,AutoButtonColor=false,
-            },PlayerScrollFrame)
-            row.MouseEnter:Connect(function() if not SelectedTargets[op.Name] then row.TextColor3=G end end)
-            row.MouseLeave:Connect(function() row.TextColor3=W end)
-            row.MouseButton1Click:Connect(function()
-                if SelectedTargets[op.Name] then SelectedTargets[op.Name]=nil
-                else SelectedTargets[op.Name]=op end
-                RefreshPlayerList() UpdateStatus()
+    PlayerEntries = {}
+    local list = Players:GetPlayers()
+    table.sort(list, function(a, b) return a.Name:lower() < b.Name:lower() end)
+    local yPos = 2
+    for _, op in ipairs(list) do
+        if op ~= Player then
+            local sel = SelectedTargets[op.Name] ~= nil
+            local row = o("TextButton", {
+                Size = UDim2.new(1, -8, 0, 22), Position = UDim2.new(0, 4, 0, yPos),
+                BackgroundColor3 = sel and HOVER or CARD,
+                BorderSizePixel = 0, AutoButtonColor = false,
+                Text = op.Name, TextColor3 = sel and W or DIM,
+                TextSize = 10, Font = FONT,
+                TextXAlignment = Enum.TextXAlignment.Left,
+            }, PlayerScrollFrame)
+            o("UICorner", { CornerRadius = UDim.new(0, 4) }, row)
+            o("UIPadding", { PaddingLeft = UDim.new(0, 8) }, row)
+            row.MouseEnter:Connect(function()
+                if not SelectedTargets[op.Name] then
+                    row.BackgroundColor3 = HOVER; row.TextColor3 = W
+                end
             end)
-            PlayerEntries[op.Name]=row
-            yPos+=24
+            row.MouseLeave:Connect(function()
+                if not SelectedTargets[op.Name] then
+                    row.BackgroundColor3 = CARD; row.TextColor3 = DIM
+                end
+            end)
+            row.MouseButton1Click:Connect(function()
+                if SelectedTargets[op.Name] then SelectedTargets[op.Name] = nil
+                else SelectedTargets[op.Name] = op end
+                RefreshPlayerList(); UpdateStatus()
+            end)
+            PlayerEntries[op.Name] = row
+            yPos += 26
         end
     end
-    PlayerScrollFrame.CanvasSize=UDim2.new(0,0,0,yPos+4)
+    PlayerScrollFrame.CanvasSize = UDim2.new(0, 0, 0, yPos + 4)
 end
 
 local function ToggleAll(select)
-    for _,p in ipairs(Players:GetPlayers()) do
-        if p~=Player then
-            if select then SelectedTargets[p.Name]=p else SelectedTargets[p.Name]=nil end
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= Player then
+            if select then SelectedTargets[p.Name] = p
+            else SelectedTargets[p.Name] = nil end
         end
     end
-    RefreshPlayerList() UpdateStatus()
+    RefreshPlayerList(); UpdateStatus()
 end
 
 local function SkidFling(TargetPlayer)
-    local Character=Player.Character
-    local Humanoid=Character and Character:FindFirstChildOfClass("Humanoid")
-    local RootPart=Humanoid and Humanoid.RootPart
-    local TCharacter=TargetPlayer.Character
+    local Character = Player.Character
+    local Humanoid  = Character and Character:FindFirstChildOfClass("Humanoid")
+    local RootPart  = Humanoid  and Humanoid.RootPart
+    local TCharacter = TargetPlayer.Character
     if not TCharacter then return end
-    local THumanoid,TRootPart,THead,Accessory,Handle
-    if TCharacter:FindFirstChildOfClass("Humanoid") then THumanoid=TCharacter:FindFirstChildOfClass("Humanoid") end
-    if THumanoid and THumanoid.RootPart then TRootPart=THumanoid.RootPart end
-    if TCharacter:FindFirstChild("Head") then THead=TCharacter.Head end
-    if TCharacter:FindFirstChildOfClass("Accessory") then Accessory=TCharacter:FindFirstChildOfClass("Accessory") end
-    if Accessory and Accessory:FindFirstChild("Handle") then Handle=Accessory.Handle end
+    local THumanoid, TRootPart, THead, Accessory, Handle
+    if TCharacter:FindFirstChildOfClass("Humanoid") then THumanoid = TCharacter:FindFirstChildOfClass("Humanoid") end
+    if THumanoid and THumanoid.RootPart then TRootPart = THumanoid.RootPart end
+    if TCharacter:FindFirstChild("Head")             then THead     = TCharacter.Head end
+    if TCharacter:FindFirstChildOfClass("Accessory") then Accessory = TCharacter:FindFirstChildOfClass("Accessory") end
+    if Accessory and Accessory:FindFirstChild("Handle") then Handle = Accessory.Handle end
     if Character and Humanoid and RootPart then
-        if RootPart.Velocity.Magnitude<50 then getgenv().OldPos=RootPart.CFrame end
+        if RootPart.Velocity.Magnitude < 50 then getgenv().OldPos = RootPart.CFrame end
         if THumanoid and THumanoid.Sit then return end
-        if THead then workspace.CurrentCamera.CameraSubject=THead
-        elseif Handle then workspace.CurrentCamera.CameraSubject=Handle
-        elseif THumanoid and TRootPart then workspace.CurrentCamera.CameraSubject=THumanoid end
+        if THead        then workspace.CurrentCamera.CameraSubject = THead
+        elseif Handle   then workspace.CurrentCamera.CameraSubject = Handle
+        elseif THumanoid and TRootPart then workspace.CurrentCamera.CameraSubject = THumanoid end
         if not TCharacter:FindFirstChildWhichIsA("BasePart") then return end
-        local FPos=function(BasePart,Pos,Ang)
-            RootPart.CFrame=CFrame.new(BasePart.Position)*Pos*Ang
-            Character:SetPrimaryPartCFrame(CFrame.new(BasePart.Position)*Pos*Ang)
-            RootPart.Velocity=Vector3.new(9e7,9e7*10,9e7)
-            RootPart.RotVelocity=Vector3.new(9e8,9e8,9e8)
+        local FPos = function(BasePart, Pos, Ang)
+            RootPart.CFrame = CFrame.new(BasePart.Position) * Pos * Ang
+            Character:SetPrimaryPartCFrame(CFrame.new(BasePart.Position) * Pos * Ang)
+            RootPart.Velocity    = Vector3.new(9e7, 9e7*10, 9e7)
+            RootPart.RotVelocity = Vector3.new(9e8, 9e8, 9e8)
         end
-        local SFBasePart=function(BasePart)
-            local TimeToWait=2 local Time=tick() local Angle=0
+        local SFBasePart = function(BasePart)
+            local TimeToWait = 2; local Time = tick(); local Angle = 0
             repeat
                 if RootPart and THumanoid then
                     if TouchFlingActive then
-                        local hrp=Character:FindFirstChild("HumanoidRootPart")
+                        local hrp = Character:FindFirstChild("HumanoidRootPart")
                         if hrp then
-                            local vel=hrp.Velocity
-                            hrp.Velocity=vel*10000+Vector3.new(0,10000,0)
+                            local vel = hrp.Velocity
+                            hrp.Velocity = vel*10000+Vector3.new(0,10000,0)
                             RunService.RenderStepped:Wait()
-                            hrp.Velocity=vel RunService.Stepped:Wait()
+                            hrp.Velocity = vel; RunService.Stepped:Wait()
                         end
-                        Angle=Angle+100
+                        Angle += 100
                         FPos(BasePart,CFrame.new(0,1.5,0)+THumanoid.MoveDirection*BasePart.Velocity.Magnitude/1.25,CFrame.Angles(math.rad(Angle),0,0)) task.wait()
                         FPos(BasePart,CFrame.new(0,-1.5,0)+THumanoid.MoveDirection*BasePart.Velocity.Magnitude/1.25,CFrame.Angles(math.rad(Angle),0,0)) task.wait()
-                    elseif BasePart.Velocity.Magnitude<50 then
-                        Angle=Angle+100
+                    elseif BasePart.Velocity.Magnitude < 50 then
+                        Angle += 100
                         FPos(BasePart,CFrame.new(0,1.5,0)+THumanoid.MoveDirection*BasePart.Velocity.Magnitude/1.25,CFrame.Angles(math.rad(Angle),0,0)) task.wait()
                         FPos(BasePart,CFrame.new(0,-1.5,0)+THumanoid.MoveDirection*BasePart.Velocity.Magnitude/1.25,CFrame.Angles(math.rad(Angle),0,0)) task.wait()
                         FPos(BasePart,CFrame.new(0,1.5,0)+THumanoid.MoveDirection*BasePart.Velocity.Magnitude/1.25,CFrame.Angles(math.rad(Angle),0,0)) task.wait()
@@ -375,57 +568,60 @@ local function SkidFling(TargetPlayer)
                         FPos(BasePart,CFrame.new(0,-1.5,0),CFrame.Angles(0,0,0)) task.wait()
                     end
                 end
-            until Time+TimeToWait<tick() or not FlingActive
+            until Time+TimeToWait < tick() or not FlingActive
         end
-        workspace.FallenPartsDestroyHeight=0/0
-        local BV=Instance.new("BodyVelocity")
-        BV.Parent=RootPart BV.Velocity=Vector3.new(0,0,0) BV.MaxForce=Vector3.new(9e9,9e9,9e9)
-        Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated,false)
-        if TRootPart then SFBasePart(TRootPart)
-        elseif THead then SFBasePart(THead)
-        elseif Handle then SFBasePart(Handle)
+        workspace.FallenPartsDestroyHeight = 0/0
+        local BV = Instance.new("BodyVelocity")
+        BV.Parent = RootPart; BV.Velocity = Vector3.new(0,0,0); BV.MaxForce = Vector3.new(9e9,9e9,9e9)
+        Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+        if TRootPart   then SFBasePart(TRootPart)
+        elseif THead   then SFBasePart(THead)
+        elseif Handle  then SFBasePart(Handle)
         else return end
         BV:Destroy()
-        Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated,true)
-        workspace.CurrentCamera.CameraSubject=Humanoid
+        Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+        workspace.CurrentCamera.CameraSubject = Humanoid
         if getgenv().OldPos then
             repeat
-                RootPart.CFrame=getgenv().OldPos*CFrame.new(0,.5,0)
-                Character:SetPrimaryPartCFrame(getgenv().OldPos*CFrame.new(0,.5,0))
+                RootPart.CFrame = getgenv().OldPos * CFrame.new(0,.5,0)
+                Character:SetPrimaryPartCFrame(getgenv().OldPos * CFrame.new(0,.5,0))
                 Humanoid:ChangeState("GettingUp")
-                for _,part in pairs(Character:GetChildren()) do
-                    if part:IsA("BasePart") then part.Velocity,part.RotVelocity=Vector3.new(),Vector3.new() end
+                for _, part in pairs(Character:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.Velocity = Vector3.new(); part.RotVelocity = Vector3.new()
+                    end
                 end
                 task.wait()
-            until (RootPart.Position-getgenv().OldPos.p).Magnitude<25
-            workspace.FallenPartsDestroyHeight=getgenv().FPDH
+            until (RootPart.Position - getgenv().OldPos.p).Magnitude < 25
+            workspace.FallenPartsDestroyHeight = getgenv().FPDH
         end
     end
 end
 
 local function StartFling()
     if FlingActive then return end
-    local count=0 for _ in pairs(SelectedTargets) do count+=1 end
-    if count==0 then StatusLabel.Text="No targets selected!" task.wait(1) UpdateStatus() return end
-    FlingActive=true UpdateStatus()
+    local count = 0; for _ in pairs(SelectedTargets) do count += 1 end
+    if count == 0 then StatusLabel.Text = "No targets selected!"; task.wait(1); UpdateStatus(); return end
+    FlingActive = true; UpdateStatus()
     task.spawn(function()
         while FlingActive do
-            local valid={}
-            for name,player in pairs(SelectedTargets) do
-                if player and player.Parent then valid[name]=player else SelectedTargets[name]=nil end
+            local valid = {}
+            for name, player in pairs(SelectedTargets) do
+                if player and player.Parent then valid[name] = player
+                else SelectedTargets[name] = nil end
             end
-            for _,player in pairs(valid) do
+            for _, player in pairs(valid) do
                 if not FlingActive then break end
-                SkidFling(player) task.wait(0.1)
+                SkidFling(player); task.wait(0.1)
             end
-            RefreshPlayerList() UpdateStatus() task.wait(0.5)
+            RefreshPlayerList(); UpdateStatus(); task.wait(0.5)
         end
     end)
 end
 
 local function StopFling()
     if not FlingActive then return end
-    FlingActive=false UpdateStatus()
+    FlingActive = false; UpdateStatus()
 end
 
 StartButton.MouseButton1Click:Connect(StartFling)
@@ -435,8 +631,8 @@ DeselectAllBtn.MouseButton1Click:Connect(function() ToggleAll(false) end)
 
 Players.PlayerAdded:Connect(RefreshPlayerList)
 Players.PlayerRemoving:Connect(function(player)
-    if SelectedTargets[player.Name] then SelectedTargets[player.Name]=nil end
-    RefreshPlayerList() UpdateStatus()
+    if SelectedTargets[player.Name] then SelectedTargets[player.Name] = nil end
+    RefreshPlayerList(); UpdateStatus()
 end)
 
 RefreshPlayerList()
