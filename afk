@@ -25,46 +25,78 @@ blackOverlay.ZIndex = 1
 blackOverlay.Visible = false
 blackOverlay.Parent = screenGui
 
--- ── Pill (CoreGui) ────────────────────────────────────────────────────
-local pillGui = Instance.new("ScreenGui")
-pillGui.Name = "AFKBlackScreenPill"
-pillGui.ResetOnSpawn = false
-pillGui.DisplayOrder = 9999
-local ok = pcall(function() pillGui.Parent = CoreGui end)
-if not ok then pillGui.Parent = playerGui end
+-- ── Pill ──────────────────────────────────────
+local PillGui = o("ScreenGui", {
+    Name="MultiFlingPillGui", ResetOnSpawn=false,
+    IgnoreGuiInset=true, DisplayOrder=9999,
+    ZIndexBehavior=Enum.ZIndexBehavior.Global,
+})
+local ok2 = pcall(function() PillGui.Parent = CoreGui end)
+if not ok2 then PillGui.Parent = Player:WaitForChild("PlayerGui") end
 
-local pill = Instance.new("Frame", pillGui)
-pill.Name = "AFKBlackScreenPill"
-pill.Size = UDim2.new(0, 60, 0, 18)
-pill.Position = UDim2.new(1, -66, 1, -102)
-pill.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-pill.BorderSizePixel = 0
+local pill = o("Frame", {
+    Name="PillFling",
+    Size=UDim2.new(0,80,0,20), Position=UDim2.new(1,-86,1,-102),
+    BackgroundColor3=BG, BorderSizePixel=0, Visible=false, ZIndex=200,
+}, PillGui)
+stroke(pill, 1, LINE)
+o("UICorner", { CornerRadius=UDim.new(0,5) }, pill)
 
-local pillStroke = Instance.new("UIStroke")
-pillStroke.Color = Color3.fromRGB(255, 255, 255)
-pillStroke.Thickness = 1
-pillStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-pillStroke.Parent = pill
+local pillBtn = o("TextButton", {
+    Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
+    Text="multi fling", TextSize=9, Font=FONT,
+    TextColor3=DIM, BorderSizePixel=0, ZIndex=201,
+}, pill)
+pillBtn.MouseEnter:Connect(function() pillBtn.TextColor3 = W end)
+pillBtn.MouseLeave:Connect(function() pillBtn.TextColor3 = DIM end)
 
-local pillBtn = Instance.new("TextButton")
-pillBtn.Size = UDim2.new(1, 0, 1, 0)
-pillBtn.Text = "> afk"
-pillBtn.TextSize = 9
-pillBtn.Font = Enum.Font.Code
-pillBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-pillBtn.BackgroundTransparency = 1
-pillBtn.BorderSizePixel = 0
-pillBtn.AutoButtonColor = false
-pillBtn.Parent = pill
-
-local isBlack = false
-
-local function setBlackScreen(active)
-    isBlack = active
-    blackOverlay.Visible = active
-    pillBtn.Text = active and "> on" or "> afk"
+-- ── Drag da pill ──────────────────────────────
+do
+    local dragging, dragMoved, dragStart, startPos, _activeTouchId =
+        false, false, nil, nil, nil
+    pillBtn.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if dragging then return end
+            dragging=true; dragMoved=false
+            dragStart=inp.Position; startPos=pill.Position
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if _activeTouchId ~= nil then return end
+            _activeTouchId=inp; dragging=true; dragMoved=false
+            dragStart=inp.Position; startPos=pill.Position
+        end
+    end)
+    UIS.InputChanged:Connect(function(inp)
+        if not dragging then return end
+        local isM = inp.UserInputType == Enum.UserInputType.MouseMovement
+        local isT = inp.UserInputType == Enum.UserInputType.Touch
+        if isT and inp ~= _activeTouchId then return end
+        if isM or isT then
+            local d = inp.Position - dragStart
+            if math.abs(d.X)+math.abs(d.Y) > 2 then
+                dragMoved = true
+                pill.Position = UDim2.new(
+                    startPos.X.Scale, startPos.X.Offset + d.X,
+                    startPos.Y.Scale, startPos.Y.Offset + d.Y)
+            end
+        end
+    end)
+    UIS.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if not dragging then return end
+            dragging = false
+            if not dragMoved then win.Visible=true; pill.Visible=false end
+            dragStart=nil; startPos=nil
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if inp ~= _activeTouchId then return end
+            local wasMoved = dragMoved
+            dragging=false; dragMoved=false
+            _activeTouchId=nil; dragStart=nil; startPos=nil
+            if not wasMoved then win.Visible=true; pill.Visible=false end
+        end
+    end)
 end
 
-pillBtn.MouseButton1Click:Connect(function()
-    setBlackScreen(not isBlack)
+XBtn.MouseButton1Click:Connect(function()
+    if FlingActive then FlingActive = false end
+    win.Visible = false; pill.Visible = true
 end)
