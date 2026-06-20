@@ -2,11 +2,16 @@ local Hub = {}
 local LP = game:GetService("Players").LocalPlayer
 local UIS = game:GetService("UserInputService")
 local RS  = game:GetService("RunService")
+local TS  = game:GetService("TweenService")
+local DBR = game:GetService("Debris")
 local PG = LP:WaitForChild("PlayerGui")
-local B  = Color3.fromRGB(0,0,0)
-local W  = Color3.fromRGB(255,255,255)
-local D  = Color3.fromRGB(15,15,15)
-local G  = Color3.fromRGB(50,50,50)
+
+-- ══ TEMA: FROST UI (Gelo / Azul) ══
+local B  = Color3.fromRGB(6,10,18)        -- fundo (preto-azulado, noite gelada)
+local W  = Color3.fromRGB(160,225,255)    -- acento (texto, bordas, estados "on")
+local D  = Color3.fromRGB(14,28,46)       -- hover escuro (azul gelo)
+local G  = Color3.fromRGB(85,125,150)     -- scrollbar / detalhes secundários
+local FROST = Color3.fromRGB(225,248,255) -- branco-gelo (partículas / burst)
 
 local BASE_W, BASE_H = 680, 310
 _G.HubScale = _G.HubScale or 10
@@ -19,10 +24,97 @@ local function o(cls,props,par)
     return x
 end
 local function stroke(par,t,c)
-    o("UIStroke",{Color=c or W,Thickness=t or 1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},par)
+    return o("UIStroke",{Color=c or W,Thickness=t or 1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},par)
 end
 
+-- ══ TWEEN / SFX HELPERS ══
+local function tween(obj, props, dur, style, dir)
+    local info = TweenInfo.new(dur or 0.2, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out)
+    local tw = TS:Create(obj, info, props)
+    tw:Play()
+    return tw
+end
+
+-- swap these IDs anytime if one doesn't play for you
+local SFX = {
+    Click  = "rbxassetid://6042053626",
+    Hover  = "rbxassetid://6042057263",
+    Toggle = "rbxassetid://6042056842",
+    Open   = "rbxassetid://6895079853",
+    Close  = "rbxassetid://6895079853",
+}
+local function playSfx(id, vol, pitch)
+    local s = Instance.new("Sound")
+    s.SoundId = id
+    s.Volume = vol or 0.5
+    s.PlaybackSpeed = pitch or 1
+    s.Parent = PG
+    s:Play()
+    DBR:AddItem(s, 3)
+end
+
+local function flashStroke(s)
+    if not s then return end
+    tween(s, {Thickness=2.2}, 0.05)
+    task.delay(0.05, function() tween(s, {Thickness=1}, 0.25) end)
+end
+
+local function addPressFX(btn)
+    local sc = o("UIScale",{Scale=1},btn)
+    btn.MouseButton1Down:Connect(function() tween(sc,{Scale=0.9},0.08) end)
+    btn.MouseButton1Up:Connect(function() tween(sc,{Scale=1},0.12) end)
+    btn.MouseLeave:Connect(function() tween(sc,{Scale=1},0.12) end)
+end
+
+-- ❄ efeito de "estouro de gelo" (anel que expande e desaparece) ❄
+local function frostBurst(parent, posUDim, sizeStart)
+    local ring = o("Frame",{
+        AnchorPoint=Vector2.new(0.5,0.5),
+        Position=posUDim,
+        Size=UDim2.new(0,sizeStart,0,sizeStart),
+        BackgroundTransparency=1,
+        ZIndex=250,
+    },parent)
+    o("UICorner",{CornerRadius=UDim.new(1,0)},ring)
+    local rStroke = stroke(ring,2,FROST)
+    tween(ring,{Size=UDim2.new(0,sizeStart+60,0,sizeStart+60)},0.45,Enum.EasingStyle.Quad,Enum.EasingDirection.Out)
+    tween(rStroke,{Transparency=1},0.45)
+    task.delay(0.45,function() ring:Destroy() end)
+end
+
+local openHub, closeHub -- assigned once pill/win exist
+
 local sg = o("ScreenGui",{Name="UniversalHub",ResetOnSpawn=false,IgnoreGuiInset=true,DisplayOrder=100},PG)
+
+-- ══ TOAST NOTIFICATIONS ══
+local toastHolder = o("Frame",{
+    AnchorPoint=Vector2.new(1,0),
+    Position=UDim2.new(1,-10,0,10),
+    Size=UDim2.new(0,200,1,-20),
+    BackgroundTransparency=1,Active=false,ZIndex=300,
+},sg)
+o("UIListLayout",{
+    SortOrder=Enum.SortOrder.LayoutOrder,
+    HorizontalAlignment=Enum.HorizontalAlignment.Right,
+    Padding=UDim.new(0,6),
+},toastHolder)
+
+local function toast(msg)
+    local t=o("TextLabel",{
+        Size=UDim2.new(0,0,0,24),AutomaticSize=Enum.AutomaticSize.X,
+        BackgroundColor3=B,BackgroundTransparency=1,BorderSizePixel=0,
+        Text="  "..msg.."  ",TextColor3=W,TextTransparency=1,
+        TextSize=11,Font=FONT_MAIN,ZIndex=300,
+    },toastHolder)
+    local tS=stroke(t,1) tS.Transparency=1
+    tween(t,{BackgroundTransparency=0,TextTransparency=0},0.2)
+    tween(tS,{Transparency=0},0.2)
+    task.delay(1.4,function()
+        local tw=tween(t,{BackgroundTransparency=1,TextTransparency=1},0.3)
+        tween(tS,{Transparency=1},0.3)
+        tw.Completed:Connect(function() t:Destroy() end)
+    end)
+end
 
 local win = o("Frame",{
     AnchorPoint=Vector2.new(0.5,0.5),
@@ -31,12 +123,26 @@ local win = o("Frame",{
     BackgroundColor3=B,BorderSizePixel=0,
     Active=false,ClipsDescendants=true,Visible=false,
 },sg)
-stroke(win,1)
+local winStroke = stroke(win,1)
 
 local uiScaleObj = Instance.new("UIScale")
 local function getUIScale(s) return 0.45+(s-1)*0.04 end
 uiScaleObj.Scale = getUIScale(_G.HubScale)
 uiScaleObj.Parent = win
+
+-- breathing glow while open
+task.spawn(function()
+    while true do
+        if win.Visible then
+            tween(winStroke,{Thickness=1.6},1.4)
+            task.wait(1.4)
+            tween(winStroke,{Thickness=1},1.4)
+            task.wait(1.4)
+        else
+            task.wait(0.4)
+        end
+    end
+end)
 
 local topH = 26
 local top = o("Frame",{
@@ -44,6 +150,29 @@ local top = o("Frame",{
     BackgroundColor3=B,BorderSizePixel=0,
     Active=true,ZIndex=10,
 },win)
+
+-- shimmer sweep (gelo)
+local shimmer = o("UIGradient",{
+    Color=ColorSequence.new{
+        ColorSequenceKeypoint.new(0,Color3.fromRGB(18,32,52)),
+        ColorSequenceKeypoint.new(0.5,Color3.fromRGB(225,248,255)),
+        ColorSequenceKeypoint.new(1,Color3.fromRGB(18,32,52)),
+    },
+    Transparency=NumberSequence.new{
+        NumberSequenceKeypoint.new(0,1),
+        NumberSequenceKeypoint.new(0.5,0.88),
+        NumberSequenceKeypoint.new(1,1),
+    },
+    Offset=Vector2.new(-1,0),
+},top)
+task.spawn(function()
+    while true do
+        shimmer.Offset=Vector2.new(-1.5,0)
+        tween(shimmer,{Offset=Vector2.new(1.5,0)},1.6,Enum.EasingStyle.Linear)
+        task.wait(1.6)
+        task.wait(3)
+    end
+end)
 
 o("TextLabel",{
     Size=UDim2.new(1,-36,1,0),
@@ -65,13 +194,15 @@ local xBtn = o("TextButton",{
     BackgroundColor3=B,BorderSizePixel=0,Text="x",TextColor3=W,
     TextSize=20,Font=FONT_MAIN,AutoButtonColor=false,ZIndex=11,
 },top)
+xBtn.MouseEnter:Connect(function() tween(xBtn,{BackgroundColor3=Color3.fromRGB(255,90,110)},0.15) end)
+xBtn.MouseLeave:Connect(function() tween(xBtn,{BackgroundColor3=B},0.15) end)
 
 o("Frame",{
     Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,0,topH),
     BackgroundColor3=W,BorderSizePixel=0,ZIndex=20,
 },win)
 
--- ══ DRAG DA TOP (novo) ══
+-- ══ DRAG DA TOP ══
 do
     local dragging       = false
     local dragMoved      = false
@@ -131,7 +262,8 @@ do
 end
 
 xBtn.MouseButton1Click:Connect(function()
-    win.Visible=false _G.UniversalHubPill.Visible=true
+    playSfx(SFX.Click,0.4)
+    if closeHub then closeHub() end
 end)
 
 local body = o("Frame",{
@@ -154,13 +286,46 @@ local area=o("Frame",{
     BackgroundColor3=B,BorderSizePixel=0,ClipsDescendants=true,Active=false,
 },body)
 
-local modal=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BackgroundTransparency=0.45,BorderSizePixel=0,Visible=false,ZIndex=50},sg)
+-- ❄ camada de partículas de gelo (motes flutuando enquanto o hub está aberto) ❄
+local frostLayer = o("Frame",{
+    Size=UDim2.new(1,0,1,0),
+    BackgroundTransparency=1,
+    Active=false,
+    ZIndex=15,
+},body)
+task.spawn(function()
+    while true do
+        if win.Visible then
+            local mote = o("Frame",{
+                Size=UDim2.new(0,math.random(2,4),0,math.random(2,4)),
+                Position=UDim2.new(math.random(),0,1,math.random(0,10)),
+                BackgroundColor3=FROST,
+                BackgroundTransparency=0.4,
+                BorderSizePixel=0,
+                ZIndex=15,
+            },frostLayer)
+            o("UICorner",{CornerRadius=UDim.new(1,0)},mote)
+            local rise = math.random(40,80)
+            local dur  = math.random(18,30)/10
+            tween(mote,{
+                Position=UDim2.new(mote.Position.X.Scale,mote.Position.X.Offset,0,mote.Position.Y.Offset-rise),
+                BackgroundTransparency=1,
+            },dur,Enum.EasingStyle.Linear)
+            task.delay(dur,function() mote:Destroy() end)
+            task.wait(math.random(35,65)/100)
+        else
+            task.wait(0.5)
+        end
+    end
+end)
+
+local modal=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BackgroundTransparency=1,BorderSizePixel=0,Visible=false,ZIndex=50},sg)
 local modalBg=o("TextButton",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text="",ZIndex=51},modal)
 local mbox=o("Frame",{Size=UDim2.new(0,220,0,90),Position=UDim2.new(.5,-110,.5,-45),BackgroundColor3=B,BorderSizePixel=0,ZIndex=52},modal)
 stroke(mbox,1)
 local mTitle=o("TextLabel",{
     Size=UDim2.new(1,0,0,28),Position=UDim2.new(0,0,0,0),
-    BackgroundColor3=Color3.fromRGB(10,10,10),BorderSizePixel=0,
+    BackgroundColor3=Color3.fromRGB(12,20,36),BorderSizePixel=0,
     Text="",TextColor3=W,TextSize=11,Font=FONT_MAIN,
     TextXAlignment=Enum.TextXAlignment.Center,TextWrapped=true,ZIndex=53,
 },mbox)
@@ -170,25 +335,50 @@ o("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,HorizontalAlignmen
 local function mBtn(txt,lo)
     local b=o("TextButton",{Size=UDim2.new(0,62,0,22),BackgroundColor3=D,BorderSizePixel=0,Text=txt,TextColor3=W,TextSize=10,Font=FONT_MAIN,AutoButtonColor=false,LayoutOrder=lo,ZIndex=54},mBtnBar)
     stroke(b,1)
-    b.MouseEnter:Connect(function() b.BackgroundColor3=Color3.fromRGB(30,30,30) end)
-    b.MouseLeave:Connect(function() b.BackgroundColor3=D end)
+    addPressFX(b)
+    b.MouseEnter:Connect(function() tween(b,{BackgroundColor3=Color3.fromRGB(22,42,68)},0.12) end)
+    b.MouseLeave:Connect(function() tween(b,{BackgroundColor3=D},0.12) end)
     return b
 end
 local mCopy=mBtn("Copiar",1) local mCancel=mBtn("Cancelar",2) local mExec=mBtn("Executar",3)
 local _mCb,_mTxt=nil,nil
-local function closeModal() modal.Visible=false _mCb=nil _mTxt=nil end
-local function openModal(dT,cT,cb) _mCb=cb _mTxt=cT mTitle.Text=dT modal.Visible=true end
+local function closeModal()
+    playSfx(SFX.Close,0.3,1.25)
+    local tw=tween(modal,{BackgroundTransparency=1},0.15)
+    tween(mbox,{Size=UDim2.new(0,0,0,0),Position=UDim2.new(.5,0,.5,0)},0.15,Enum.EasingStyle.Quad,Enum.EasingDirection.In)
+    tw.Completed:Connect(function()
+        modal.Visible=false _mCb=nil _mTxt=nil
+    end)
+end
+local function openModal(dT,cT,cb)
+    _mCb=cb _mTxt=cT mTitle.Text=dT
+    modal.Visible=true modal.BackgroundTransparency=1
+    mbox.Size=UDim2.new(0,0,0,0) mbox.Position=UDim2.new(.5,0,.5,0)
+    playSfx(SFX.Open,0.3,1.25)
+    tween(modal,{BackgroundTransparency=0.45},0.2)
+    tween(mbox,{Size=UDim2.new(0,220,0,90),Position=UDim2.new(.5,-110,.5,-45)},0.25,Enum.EasingStyle.Back,Enum.EasingDirection.Out)
+end
 modalBg.MouseButton1Click:Connect(closeModal)
 mCancel.MouseButton1Click:Connect(closeModal)
-mExec.MouseButton1Click:Connect(function() local cb=_mCb closeModal() if cb then pcall(cb) end end)
-mCopy.MouseButton1Click:Connect(function() if _mTxt and setclipboard then pcall(setclipboard,_mTxt) end closeModal() end)
+mExec.MouseButton1Click:Connect(function() local cb=_mCb closeModal() if cb then pcall(cb) end toast("Executed") end)
+mCopy.MouseButton1Click:Connect(function() if _mTxt and setclipboard then pcall(setclipboard,_mTxt) end closeModal() toast("Copied") end)
 
 local tabBtns,tabPages,cur={},{},nil
 local function sw(idx)
     if cur==idx then return end
-    if cur then tabBtns[cur].BackgroundColor3=B tabBtns[cur].TextColor3=W end
-    cur=idx tabBtns[idx].BackgroundColor3=B tabBtns[idx].TextColor3=W
-    for j,p in ipairs(tabPages) do p.Visible=(j==idx) end
+    if cur then tween(tabBtns[cur],{BackgroundColor3=B,TextColor3=W},0.15) end
+    cur=idx
+    tween(tabBtns[idx],{BackgroundColor3=W,TextColor3=B},0.15)
+    playSfx(SFX.Click,0.3,1.1)
+    for j,p in ipairs(tabPages) do
+        if j==idx then
+            p.Position=UDim2.new(0,14,0,0)
+            p.Visible=true
+            tween(p,{Position=UDim2.new(0,0,0,0)},0.2,Enum.EasingStyle.Quad,Enum.EasingDirection.Out)
+        else
+            p.Visible=false
+        end
+    end
 end
 local function makeTabBtn(name,idx)
     local tb=o("TextButton",{
@@ -197,8 +387,12 @@ local function makeTabBtn(name,idx)
         AutoButtonColor=false,LayoutOrder=idx,TextWrapped=true,
     },tlist)
     stroke(tb,1)
-    tb.MouseEnter:Connect(function() if cur~=idx then tb.BackgroundColor3=Color3.fromRGB(10,10,10) end end)
-    tb.MouseLeave:Connect(function() if cur~=idx then tb.BackgroundColor3=B end end)
+    tb.MouseEnter:Connect(function()
+        if cur~=idx then tween(tb,{BackgroundColor3=Color3.fromRGB(12,24,40)},0.12) playSfx(SFX.Hover,0.15) end
+    end)
+    tb.MouseLeave:Connect(function()
+        if cur~=idx then tween(tb,{BackgroundColor3=B},0.12) end
+    end)
     return tb
 end
 
@@ -207,21 +401,37 @@ local PILL_SIZE = 33
 
 local pill=o("Frame",{
     Name="Pill",
-    Size=UDim2.new(0,PILL_SIZE,0,PILL_SIZE),
+    Size=UDim2.new(0,0,0,0),
     AnchorPoint=Vector2.new(0.5,0),
     Position=UDim2.new(0.5,0,0,55),
     BackgroundColor3=B,BorderSizePixel=0,Visible=true,ZIndex=200,
     ClipsDescendants=false,
 },sg)
 o("UICorner",{CornerRadius=UDim.new(0.5,0)},pill)
-stroke(pill,1)
+local pillStroke = stroke(pill,1)
 _G.UniversalHubPill=pill
+tween(pill,{Size=UDim2.new(0,PILL_SIZE,0,PILL_SIZE)},0.4,Enum.EasingStyle.Back,Enum.EasingDirection.Out)
+
+-- idle breathing glow
+task.spawn(function()
+    while true do
+        if pill.Visible then
+            tween(pillStroke,{Transparency=0.65},1.1)
+            task.wait(1.1)
+            tween(pillStroke,{Transparency=0},1.1)
+            task.wait(1.1)
+        else
+            task.wait(0.4)
+        end
+    end
+end)
 
 local pillImg=o("ImageLabel",{
     Size=UDim2.new(1,-8,1,-8),
     Position=UDim2.new(0,4,0,4),
     BackgroundTransparency=1,
     Image="rbxassetid://81708230935867",
+    ImageColor3=W,
     ScaleType=Enum.ScaleType.Fit,
     ZIndex=201,
 },pill)
@@ -231,10 +441,42 @@ local pillBtn=o("TextButton",{
     Text="",BorderSizePixel=0,ZIndex=202,
 },pill)
 
+pillBtn.MouseEnter:Connect(function()
+    tween(pill,{Size=UDim2.new(0,PILL_SIZE+5,0,PILL_SIZE+5)},0.15)
+    tween(pillStroke,{Thickness=1.6},0.15)
+end)
+pillBtn.MouseLeave:Connect(function()
+    tween(pill,{Size=UDim2.new(0,PILL_SIZE,0,PILL_SIZE)},0.15)
+    tween(pillStroke,{Thickness=1},0.15)
+end)
+
+openHub = function()
+    local burstPos = UDim2.new(pill.Position.X.Scale, pill.Position.X.Offset, pill.Position.Y.Scale, pill.Position.Y.Offset + PILL_SIZE/2)
+    frostBurst(sg, burstPos, PILL_SIZE)
+    pill.Visible=false
+    win.Visible=true
+    win.Size=UDim2.new(0,0,0,0)
+    win.BackgroundTransparency=1
+    playSfx(SFX.Open,0.45)
+    tween(win,{Size=UDim2.new(0,BASE_W,0,BASE_H),BackgroundTransparency=0},0.3,Enum.EasingStyle.Back,Enum.EasingDirection.Out)
+end
+closeHub = function()
+    playSfx(SFX.Close,0.45)
+    local tw=tween(win,{Size=UDim2.new(0,0,0,0),BackgroundTransparency=1},0.22,Enum.EasingStyle.Quad,Enum.EasingDirection.In)
+    tw.Completed:Connect(function()
+        win.Visible=false
+        win.Size=UDim2.new(0,BASE_W,0,BASE_H)
+        win.BackgroundTransparency=0
+        pill.Visible=true
+        pill.Size=UDim2.new(0,PILL_SIZE+6,0,PILL_SIZE+6)
+        tween(pill,{Size=UDim2.new(0,PILL_SIZE,0,PILL_SIZE)},0.18,Enum.EasingStyle.Back,Enum.EasingDirection.Out)
+    end)
+end
+
 do
     local i=1
     local tb=makeTabBtn("Main",i)
-    tb.BackgroundColor3=B tb.TextColor3=W
+    tb.BackgroundColor3=W tb.TextColor3=B
     local pg=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BorderSizePixel=0,Visible=true,Active=false},area)
     tabBtns[i]=tb tabPages[i]=pg cur=i
     tb.MouseButton1Click:Connect(function() sw(i) end)
@@ -255,7 +497,11 @@ do
         local ok,t=pcall(function()
             return game:GetService("Players"):GetUserThumbnailAsync(LP.UserId,Enum.ThumbnailType.HeadShot,Enum.ThumbnailSize.Size420x420)
         end)
-        if ok then avImg.Image=t end
+        if ok then
+            avImg.ImageTransparency=1
+            avImg.Image=t
+            tween(avImg,{ImageTransparency=0},0.3)
+        end
     end)
 
     local wY = 6 + avSize + 8
@@ -282,7 +528,7 @@ do
             Position=UDim2.new(0,posX,0,posY+13),
             BackgroundColor3=B,BorderSizePixel=0,Active=false,
         },parent)
-        stroke(bar,1)
+        local barStroke=stroke(bar,1)
         local bsz=barH local dv=1 local nw=barW-2*bsz-2*dv
         local plusBtn=o("TextButton",{
             Size=UDim2.new(0,bsz,1,0),Position=UDim2.new(0,0,0,0),
@@ -303,19 +549,21 @@ do
             BackgroundColor3=B,BorderSizePixel=0,Text="-",TextColor3=W,
             TextSize=14,Font=FONT_MAIN,AutoButtonColor=false,
         },bar)
+        addPressFX(plusBtn) addPressFX(minusBtn)
         local function apply(v)
             v=math.clamp(math.floor(v),minV or 1,maxV or 25)
             cv=v box.Text=tostring(v) onChanged(v)
+            flashStroke(barStroke)
         end
-        plusBtn.MouseButton1Click:Connect(function() apply(cv+1) end)
-        minusBtn.MouseButton1Click:Connect(function() apply(cv-1) end)
+        plusBtn.MouseButton1Click:Connect(function() playSfx(SFX.Click,0.25,1.3) apply(cv+1) end)
+        minusBtn.MouseButton1Click:Connect(function() playSfx(SFX.Click,0.25,0.8) apply(cv-1) end)
         box.FocusLost:Connect(function()
             local n=tonumber(box.Text)
             if n then apply(n) else box.Text=tostring(cv) end
         end)
         for _,btn in ipairs({plusBtn,minusBtn}) do
-            btn.MouseEnter:Connect(function() btn.BackgroundColor3=D end)
-            btn.MouseLeave:Connect(function() btn.BackgroundColor3=B end)
+            btn.MouseEnter:Connect(function() tween(btn,{BackgroundColor3=D},0.12) end)
+            btn.MouseLeave:Connect(function() tween(btn,{BackgroundColor3=B},0.12) end)
         end
     end
 
@@ -359,7 +607,7 @@ do
         Position=UDim2.new(0,positions[2],0,rowY+13),
         BackgroundColor3=B,BorderSizePixel=0,Active=false,
     },pg)
-    stroke(lsBar,1)
+    local lsBarStroke=stroke(lsBar,1)
     local bsz=ITEM_H local dv=1 local nw=ITEM_W-2*bsz-2*dv
     local lsPlus=o("TextButton",{
         Size=UDim2.new(0,bsz,1,0),Position=UDim2.new(0,0,0,0),
@@ -370,7 +618,7 @@ do
     local lsBox=o("TextBox",{
         Size=UDim2.new(0,nw,1,0),Position=UDim2.new(0,bsz+dv,0,0),
         BackgroundTransparency=1,Text="",PlaceholderText="speed",
-        PlaceholderColor3=Color3.fromRGB(80,80,80),
+        PlaceholderColor3=Color3.fromRGB(100,140,160),
         TextColor3=W,TextSize=10,Font=FONT_MAIN,
         TextXAlignment=Enum.TextXAlignment.Center,ClearTextOnFocus=false,
     },lsBar)
@@ -380,6 +628,7 @@ do
         BackgroundColor3=B,BorderSizePixel=0,Text="-",TextColor3=W,
         TextSize=14,Font=FONT_MAIN,AutoButtonColor=false,
     },lsBar)
+    addPressFX(lsPlus) addPressFX(lsMinus)
 
     local lsCv = nil
     local lsConn = nil
@@ -415,6 +664,8 @@ do
                 if hum and _origSpeed then hum.WalkSpeed = _origSpeed end
             end
             _origSpeed = nil
+            flashStroke(lsBarStroke)
+            toast("Loop Speed: OFF")
             return
         end
         v = math.clamp(math.floor(v), 1, 5000)
@@ -422,12 +673,16 @@ do
         lsCv = v
         lsBox.Text = tostring(v)
         lsStartLoop(v)
+        flashStroke(lsBarStroke)
+        toast("Loop Speed: "..v)
     end
 
     lsPlus.MouseButton1Click:Connect(function()
+        playSfx(SFX.Click,0.25,1.3)
         lsApply((lsCv or getOrigSpeed()) + 1)
     end)
     lsMinus.MouseButton1Click:Connect(function()
+        playSfx(SFX.Click,0.25,0.8)
         local cur = lsCv or getOrigSpeed()
         if cur - 1 < 1 then lsApply(nil) else lsApply(cur - 1) end
     end)
@@ -441,8 +696,8 @@ do
         end
     end)
     for _,btn in ipairs({lsPlus,lsMinus}) do
-        btn.MouseEnter:Connect(function() btn.BackgroundColor3=D end)
-        btn.MouseLeave:Connect(function() btn.BackgroundColor3=B end)
+        btn.MouseEnter:Connect(function() tween(btn,{BackgroundColor3=D},0.12) end)
+        btn.MouseLeave:Connect(function() tween(btn,{BackgroundColor3=B},0.12) end)
     end
 
     -- Inf Jump
@@ -461,13 +716,16 @@ do
         Text="OFF",TextColor3=W,TextSize=10,Font=FONT_MAIN,
         AutoButtonColor=false,
     },pg)
-    stroke(ijBtn,1)
+    local ijStroke=stroke(ijBtn,1)
+    addPressFX(ijBtn)
 
     local function setInfJump(state)
         ijActive = state
+        playSfx(SFX.Toggle,0.4,state and 1.2 or 0.8)
+        flashStroke(ijStroke)
         if state then
             ijBtn.Text = "ON"
-            ijBtn.BackgroundColor3 = W
+            tween(ijBtn,{BackgroundColor3=W},0.15)
             ijBtn.TextColor3 = B
             ijConn = UIS.JumpRequest:Connect(function()
                 if LP.Character then
@@ -477,18 +735,19 @@ do
             end)
         else
             ijBtn.Text = "OFF"
-            ijBtn.BackgroundColor3 = B
+            tween(ijBtn,{BackgroundColor3=B},0.15)
             ijBtn.TextColor3 = W
             if ijConn then ijConn:Disconnect() ijConn=nil end
         end
+        toast("Inf Jump: "..(state and "ON" or "OFF"))
     end
 
     ijBtn.MouseButton1Click:Connect(function() setInfJump(not ijActive) end)
     ijBtn.MouseEnter:Connect(function()
-        if not ijActive then ijBtn.BackgroundColor3=D end
+        if not ijActive then tween(ijBtn,{BackgroundColor3=D},0.12) end
     end)
     ijBtn.MouseLeave:Connect(function()
-        if not ijActive then ijBtn.BackgroundColor3=B end
+        if not ijActive then tween(ijBtn,{BackgroundColor3=B},0.12) end
     end)
 
     -- No Clip
@@ -507,7 +766,8 @@ do
         Text="OFF",TextColor3=W,TextSize=10,Font=FONT_MAIN,
         AutoButtonColor=false,
     },pg)
-    stroke(ncBtn,1)
+    local ncStroke=stroke(ncBtn,1)
+    addPressFX(ncBtn)
 
     local function restoreCollision(char)
         if not char then return end
@@ -526,8 +786,10 @@ do
 
     local function setNoClip(state)
         ncActive=state
+        playSfx(SFX.Toggle,0.4,state and 1.2 or 0.8)
+        flashStroke(ncStroke)
         if state then
-            ncBtn.Text="ON" ncBtn.BackgroundColor3=W ncBtn.TextColor3=B
+            ncBtn.Text="ON" tween(ncBtn,{BackgroundColor3=W},0.15) ncBtn.TextColor3=B
             ncConn=RS.Stepped:Connect(function()
                 if LP.Character then
                     for _,v in pairs(LP.Character:GetDescendants()) do
@@ -536,15 +798,16 @@ do
                 end
             end)
         else
-            ncBtn.Text="OFF" ncBtn.BackgroundColor3=B ncBtn.TextColor3=W
+            ncBtn.Text="OFF" tween(ncBtn,{BackgroundColor3=B},0.15) ncBtn.TextColor3=W
             if ncConn then ncConn:Disconnect() ncConn=nil end
             restoreCollision(LP.Character)
         end
+        toast("No Clip: "..(state and "ON" or "OFF"))
     end
 
     ncBtn.MouseButton1Click:Connect(function() setNoClip(not ncActive) end)
-    ncBtn.MouseEnter:Connect(function() if not ncActive then ncBtn.BackgroundColor3=D end end)
-    ncBtn.MouseLeave:Connect(function() if not ncActive then ncBtn.BackgroundColor3=B end end)
+    ncBtn.MouseEnter:Connect(function() if not ncActive then tween(ncBtn,{BackgroundColor3=D},0.12) end end)
+    ncBtn.MouseLeave:Connect(function() if not ncActive then tween(ncBtn,{BackgroundColor3=B},0.12) end end)
 
     -- Reset Character
     o("TextLabel",{
@@ -560,14 +823,18 @@ do
         Text="Reset",TextColor3=W,TextSize=10,Font=FONT_MAIN,
         AutoButtonColor=false,
     },pg)
-    stroke(resetBtn,1)
-    resetBtn.MouseEnter:Connect(function() resetBtn.BackgroundColor3=D end)
-    resetBtn.MouseLeave:Connect(function() resetBtn.BackgroundColor3=B end)
+    local resetStroke=stroke(resetBtn,1)
+    addPressFX(resetBtn)
+    resetBtn.MouseEnter:Connect(function() tween(resetBtn,{BackgroundColor3=D},0.12) end)
+    resetBtn.MouseLeave:Connect(function() tween(resetBtn,{BackgroundColor3=B},0.12) end)
     resetBtn.MouseButton1Click:Connect(function()
+        playSfx(SFX.Click,0.4,0.9)
+        flashStroke(resetStroke)
         if LP.Character then
             local hum = LP.Character:FindFirstChildOfClass("Humanoid")
             if hum then hum.Health = 0 end
         end
+        toast("Character Reset")
     end)
 
     local joinStr="N/A"
@@ -616,7 +883,7 @@ do
     tabBtns[i]=tb tabPages[i]=pg
     tb.MouseButton1Click:Connect(function() sw(i) end)
     local ef=o("Frame",{Size=UDim2.new(1,-16,1,-48),Position=UDim2.new(0,8,0,8),BackgroundColor3=B,BorderSizePixel=0,Active=false},pg)
-    stroke(ef,1)
+    local efStroke=stroke(ef,1)
     local editor=o("TextBox",{
         Size=UDim2.new(1,-8,1,-8),Position=UDim2.new(0,4,0,4),
         BackgroundTransparency=1,
@@ -625,21 +892,41 @@ do
         TextXAlignment=Enum.TextXAlignment.Left,TextYAlignment=Enum.TextYAlignment.Top,
         ClearTextOnFocus=false,MultiLine=true,TextWrapped=true,
     },ef)
+    editor.Focused:Connect(function() tween(efStroke,{Thickness=1.6},0.15) end)
+    editor.FocusLost:Connect(function() tween(efStroke,{Thickness=1},0.15) end)
     local bb=o("Frame",{Size=UDim2.new(1,-16,0,30),Position=UDim2.new(0,8,1,-38),BackgroundTransparency=1,BorderSizePixel=0,Active=false},pg)
     o("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,HorizontalAlignment=Enum.HorizontalAlignment.Right,VerticalAlignment=Enum.VerticalAlignment.Center,Padding=UDim.new(0,6),SortOrder=Enum.SortOrder.LayoutOrder},bb)
     local function mkBtn(txt,lo)
         local b=o("TextButton",{Size=UDim2.new(0,70,0,22),BackgroundColor3=B,BorderSizePixel=0,Text=txt,TextColor3=W,TextSize=10,Font=FONT_MAIN,AutoButtonColor=false,LayoutOrder=lo},bb)
         stroke(b,1)
-        b.MouseEnter:Connect(function() b.BackgroundColor3=D end)
-        b.MouseLeave:Connect(function() b.BackgroundColor3=B end)
+        addPressFX(b)
+        b.MouseEnter:Connect(function() tween(b,{BackgroundColor3=D},0.12) end)
+        b.MouseLeave:Connect(function() tween(b,{BackgroundColor3=B},0.12) end)
         return b
     end
     local cBtn=mkBtn("Copy",1) local clBtn=mkBtn("Clear",2) local eBtn=mkBtn("Execute",3)
-    cBtn.MouseButton1Click:Connect(function() if setclipboard then pcall(setclipboard,editor.Text) end end)
-    clBtn.MouseButton1Click:Connect(function() editor.Text="" end)
+    cBtn.MouseButton1Click:Connect(function()
+        playSfx(SFX.Click,0.35)
+        if setclipboard then pcall(setclipboard,editor.Text) end
+        toast("Copied to clipboard")
+    end)
+    clBtn.MouseButton1Click:Connect(function()
+        playSfx(SFX.Click,0.35,0.85)
+        editor.Text=""
+    end)
     eBtn.MouseButton1Click:Connect(function()
+        playSfx(SFX.Click,0.4,1.15)
         local code=editor.Text
-        if code~="" then local fn,err=loadstring(code) if fn then pcall(fn) else warn("[Executor] "..tostring(err)) end end
+        if code~="" then
+            local fn,err=loadstring(code)
+            if fn then
+                local ok=pcall(fn)
+                toast(ok and "Executed successfully" or "Runtime error")
+            else
+                warn("[Executor] "..tostring(err))
+                toast("Syntax error")
+            end
+        end
     end)
 end
 
@@ -649,7 +936,11 @@ function Hub:Tab(name)
     local pg=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BorderSizePixel=0,Visible=false,Active=false},area)
     local hotbar=o("Frame",{Size=UDim2.new(1,0,0,20),BackgroundColor3=B,BorderSizePixel=0,Active=false},pg)
     local searchW=120
-    local search=o("TextBox",{Size=UDim2.new(0,searchW,1,0),BackgroundColor3=B,BorderSizePixel=0,PlaceholderText="Search...",PlaceholderColor3=Color3.fromRGB(90,90,90),Text="",TextColor3=W,TextSize=11,Font=FONT_MAIN,ClearTextOnFocus=false,TextXAlignment=Enum.TextXAlignment.Left},hotbar)
+    local search=o("TextBox",{Size=UDim2.new(0,searchW,1,0),BackgroundColor3=B,BorderSizePixel=0,PlaceholderText="Search...",PlaceholderColor3=Color3.fromRGB(100,140,160),Text="",TextColor3=W,TextSize=11,Font=FONT_MAIN,ClearTextOnFocus=false,TextXAlignment=Enum.TextXAlignment.Left},hotbar)
+    local searchStroke=stroke(search,1)
+    searchStroke.Transparency=1
+    search.Focused:Connect(function() tween(searchStroke,{Transparency=0,Thickness=1.4},0.15) end)
+    search.FocusLost:Connect(function() tween(searchStroke,{Transparency=1,Thickness=1},0.2) end)
     o("UIPadding",{PaddingLeft=UDim.new(0,6)},search)
     local countLbl=o("TextLabel",{Size=UDim2.new(1,-searchW-8,1,0),Position=UDim2.new(0,searchW+6,0,0),BackgroundTransparency=1,Text="Scripts: 0",TextColor3=W,TextSize=10,Font=FONT_MAIN,TextXAlignment=Enum.TextXAlignment.Right,Active=false},hotbar)
     o("UIPadding",{PaddingRight=UDim.new(0,6)},countLbl)
@@ -689,10 +980,16 @@ function Hub:Tab(name)
     function T:Button(txt,url)
         local b=o("TextButton",{Name=txt,BackgroundColor3=B,BorderSizePixel=0,Text=txt,TextColor3=W,TextSize=10,Font=FONT_MAIN,AutoButtonColor=false,TextWrapped=true,LineHeight=1.1},scroll)
         stroke(b,1)
-        b.MouseEnter:Connect(function() b.BackgroundColor3=Color3.fromRGB(18,18,18) end)
-        b.MouseLeave:Connect(function() b.BackgroundColor3=B end)
+        local bScale=o("UIScale",{Scale=1},b)
+        b.MouseEnter:Connect(function() tween(b,{BackgroundColor3=Color3.fromRGB(16,32,50)},0.15) playSfx(SFX.Hover,0.15) end)
+        b.MouseLeave:Connect(function() tween(b,{BackgroundColor3=B},0.15) end)
+        b.MouseButton1Down:Connect(function() tween(bScale,{Scale=0.92},0.08) end)
+        b.MouseButton1Up:Connect(function() tween(bScale,{Scale=1},0.12) end)
         local copyTxt='loadstring(game:HttpGet("'..url..'"))()'
-        b.MouseButton1Click:Connect(function() openModal(txt,copyTxt,function() loadstring(game:HttpGet(url))() end) end)
+        b.MouseButton1Click:Connect(function()
+            playSfx(SFX.Click,0.35)
+            openModal(txt,copyTxt,function() loadstring(game:HttpGet(url))() end)
+        end)
         table.insert(allBtns,b) countLbl.Text="Scripts: "..#allBtns
         return self
     end
@@ -746,8 +1043,7 @@ do
             if not dragging then return end
             dragging = false
             if not dragMoved then
-                win.Visible = true
-                pill.Visible = false
+                openHub()
             end
             dragStart = nil
             startPos  = nil
@@ -760,8 +1056,7 @@ do
             dragStart      = nil
             startPos       = nil
             if not wasMoved then
-                win.Visible  = true
-                pill.Visible = false
+                openHub()
             end
         end
     end)
@@ -769,8 +1064,7 @@ end
 
 UIS.InputBegan:Connect(function(inp,gp)
     if not gp and inp.KeyCode==Enum.KeyCode.RightShift then
-        local v=not win.Visible win.Visible=v
-        if v then pill.Visible=false end
+        if win.Visible then closeHub() else openHub() end
     end
 end)
 
