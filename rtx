@@ -1,10 +1,66 @@
-local Players = game:GetService("Players")
+-- ══════════════════════════════════════════════
+--              SHADERS MENU — HUB THEME
+-- ══════════════════════════════════════════════
+
+local Players  = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
-local UIS = game:GetService("UserInputService")
-local player = Players.LocalPlayer
+local CoreGui  = game:GetService("CoreGui")
+local UIS      = game:GetService("UserInputService")
+local player   = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+
+-- ── PALETA ─────────────────────────────────────
+local BG    = Color3.fromRGB(28,  28,  32)
+local PANEL = Color3.fromRGB(34,  34,  40)
+local CARD  = Color3.fromRGB(40,  40,  48)
+local HOVER = Color3.fromRGB(48,  48,  58)
+local LINE  = Color3.fromRGB(58,  58,  70)
+local DIM   = Color3.fromRGB(140, 140, 160)
+local MID   = Color3.fromRGB(185, 185, 205)
+local W     = Color3.fromRGB(235, 235, 245)
+local FONT  = Enum.Font.GothamMedium
+
+-- ── HELPERS ────────────────────────────────────
+local function o(cls, props, par)
+    local x = Instance.new(cls)
+    for k, v in pairs(props) do x[k] = v end
+    if par then x.Parent = par end
+    return x
+end
+local function stroke(par, t, c)
+    o("UIStroke", {
+        Color = c or LINE, Thickness = t or 1,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+    }, par)
+end
+local function mkBtn(txt, parent, sz, pos)
+    local b = o("TextButton", {
+        Size = sz, Position = pos,
+        BackgroundColor3 = CARD, BorderSizePixel = 0,
+        Text = txt, TextColor3 = MID, TextSize = 10,
+        Font = FONT, AutoButtonColor = false,
+    }, parent)
+    stroke(b, 1, LINE)
+    o("UICorner", { CornerRadius = UDim.new(0, 5) }, b)
+    b.MouseEnter:Connect(function()
+        b.BackgroundColor3 = HOVER; b.TextColor3 = W
+    end)
+    b.MouseLeave:Connect(function()
+        b.BackgroundColor3 = CARD; b.TextColor3 = MID
+    end)
+    b.MouseButton1Down:Connect(function()
+        b.BackgroundColor3 = Color3.fromRGB(52, 52, 62)
+    end)
+    b.MouseButton1Up:Connect(function()
+        b.BackgroundColor3 = HOVER
+    end)
+    return b
+end
+
+-- ══════════════════════════════════════════════
+--                LÓGICA ORIGINAL
+-- ══════════════════════════════════════════════
 
 local activeHeartbeat = nil
 
@@ -28,21 +84,21 @@ end
 local function removeAllEffects()
     clearHeartbeat()
     local EFFECTS = {
-        "ColorCorrectionEffect", "BloomEffect",
-        "BlurEffect", "DepthOfFieldEffect", "SunRaysEffect",
+        "ColorCorrectionEffect","BloomEffect",
+        "BlurEffect","DepthOfFieldEffect","SunRaysEffect",
     }
     for _, className in ipairs(EFFECTS) do
         for _, obj in ipairs(Lighting:GetChildren()) do
             if obj:IsA(className) then obj:Destroy() end
         end
     end
-    Lighting.Ambient              = Color3.fromRGB(127, 127, 127)
-    Lighting.OutdoorAmbient       = Color3.fromRGB(127, 127, 127)
+    Lighting.Ambient              = Color3.fromRGB(127,127,127)
+    Lighting.OutdoorAmbient       = Color3.fromRGB(127,127,127)
     Lighting.Brightness           = 1.0
-    Lighting.ColorShift_Bottom    = Color3.fromRGB(0, 0, 0)
-    Lighting.ColorShift_Top       = Color3.fromRGB(0, 0, 0)
+    Lighting.ColorShift_Bottom    = Color3.fromRGB(0,0,0)
+    Lighting.ColorShift_Top       = Color3.fromRGB(0,0,0)
     Lighting.ClockTime            = 14
-    Lighting.FogColor             = Color3.fromRGB(192, 192, 192)
+    Lighting.FogColor             = Color3.fromRGB(192,192,192)
     Lighting.FogEnd               = 100000
     Lighting.FogStart             = 0
     Lighting.GeographicLatitude   = 41.7
@@ -226,132 +282,213 @@ local shaders = {
     { label = "Ash Wasteland",  fn = applyAshWasteland},
 }
 
-local B    = Color3.fromRGB(0,   0,   0)
-local W    = Color3.fromRGB(255, 255, 255)
-local D    = Color3.fromRGB(15,  15,  15)
-local G    = Color3.fromRGB(50,  50,  50)
-local FONT = Enum.Font.Code
+-- ══════════════════════════════════════════════
+--                    UI
+-- ══════════════════════════════════════════════
 
-local function o(cls, props, par)
-    local x = Instance.new(cls)
-    for k, v in pairs(props) do x[k] = v end
-    if par then x.Parent = par end
-    return x
-end
-local function stroke(par, t, c)
-    o("UIStroke", {
-        Color = c or W, Thickness = t or 1,
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-    }, par)
-end
-local function mkBtn(txt, parent, sz, pos)
-    local b = o("TextButton", {
-        Size = sz, Position = pos,
-        BackgroundColor3 = B, BorderSizePixel = 0,
-        Text = txt, TextColor3 = W, TextSize = 10, Font = FONT,
-        AutoButtonColor = false,
-    }, parent)
-    stroke(b, 1)
-    b.MouseEnter:Connect(function()  b.BackgroundColor3 = D end)
-    b.MouseLeave:Connect(function()  b.BackgroundColor3 = B end)
-    return b
-end
+-- UIScale global
+_G.ShadersUIScale = _G.ShadersUIScale or 10
+local function scaleValue(v) return 0.45 + (v - 1) * 0.04 end
 
-local topH   = 24
+local topH   = 30
 local btnH   = 22
 local btnGap = 4
-local pad    = 6
-local menuW  = 160
-local contentH  = pad + (#shaders * (btnH + btnGap)) - btnGap + pad
+local pad    = 8
+local menuW  = 170
+local contentH   = pad + (#shaders * (btnH + btnGap)) - btnGap + pad
 local fullHeight = topH + contentH
 
+-- ── ScreenGui principal ─────────────────────
 local gui = o("ScreenGui", {
     Name = "ShadersMenu",
+    ZIndexBehavior = Enum.ZIndexBehavior.Global,
     ResetOnSpawn = false,
     IgnoreGuiInset = true,
-}, playerGui)
+})
+local ok = pcall(function() gui.Parent = CoreGui end)
+if not ok then gui.Parent = playerGui end
 
+-- ── Janela principal ─────────────────────────
 local win = o("Frame", {
     Size = UDim2.new(0, menuW, 0, fullHeight),
-    Position = UDim2.new(0.5, -80, 0.5, -100),
-    BackgroundColor3 = B, BorderSizePixel = 0,
+    Position = UDim2.new(0.5, -85, 0.5, -100),
+    BackgroundColor3 = BG, BorderSizePixel = 0,
     Active = true, ClipsDescendants = true,
 }, gui)
-stroke(win, 1)
+o("UICorner", { CornerRadius = UDim.new(0, 6) }, win)
+stroke(win, 1, LINE)
 
-local top = o("Frame", {
+local uiScale = o("UIScale", { Scale = scaleValue(_G.ShadersUIScale) }, win)
+
+-- ── Topbar ───────────────────────────────────
+local topBar = o("Frame", {
     Size = UDim2.new(1, 0, 0, topH),
-    BackgroundColor3 = B, BorderSizePixel = 0,
+    BackgroundColor3 = BG, BorderSizePixel = 0,
     Active = true, ZIndex = 10,
 }, win)
 
+-- Título
 o("TextLabel", {
-    Size = UDim2.new(1, -70, 1, 0), Position = UDim2.new(0, 8, 0, 0),
-    BackgroundTransparency = 1, Text = "> SHADERS <",
-    TextColor3 = W, TextSize = 10, Font = FONT,
-    TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10,
-}, top)
+    Size = UDim2.new(1, -150, 1, 0),
+    Position = UDim2.new(0, 12, 0, 0),
+    BackgroundTransparency = 1,
+    Text = "Rtx",
+    TextColor3 = W, TextSize = 12, Font = FONT,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 10,
+}, topBar)
 
-o("Frame", {Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-66,0,0), BackgroundColor3=W, BorderSizePixel=0, ZIndex=12}, top)
-o("Frame", {Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-33,0,0), BackgroundColor3=W, BorderSizePixel=0, ZIndex=12}, top)
+-- Stepper de GuiSize (62×18, lado direito antes do X)
+local stepperW, stepperH = 62, 18
+local stepperX = UDim2.new(1, -(33 + 6 + stepperW), 0.5, -stepperH/2)
+local stepper = o("Frame", {
+    Size = UDim2.new(0, stepperW, 0, stepperH),
+    Position = stepperX,
+    BackgroundColor3 = CARD, BorderSizePixel = 0,
+    ZIndex = 11,
+}, topBar)
+o("UICorner", { CornerRadius = UDim.new(0, 4) }, stepper)
+stroke(stepper, 1, LINE)
 
-local MinBtn = o("TextButton", {
-    Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-65,0,0),
-    BackgroundColor3=B, BorderSizePixel=0,
-    Text="-", TextColor3=W, TextSize=18, Font=FONT,
-    AutoButtonColor=false, ZIndex=11,
-}, top)
-local XBtn = o("TextButton", {
-    Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-32,0,0),
-    BackgroundColor3=B, BorderSizePixel=0,
-    Text="x", TextColor3=W, TextSize=14, Font=FONT,
-    AutoButtonColor=false, ZIndex=11,
-}, top)
-for _, b in ipairs({MinBtn, XBtn}) do
-    b.MouseEnter:Connect(function() b.BackgroundColor3 = D end)
-    b.MouseLeave:Connect(function() b.BackgroundColor3 = B end)
-end
-
+local btnPlus = o("TextButton", {
+    Size = UDim2.new(0, 18, 1, 0),
+    Position = UDim2.new(0, 0, 0, 0),
+    BackgroundTransparency = 1,
+    Text = "+", TextSize = 14, Font = FONT,
+    TextColor3 = MID, BorderSizePixel = 0,
+    ZIndex = 12,
+}, stepper)
 o("Frame", {
-    Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,0,topH),
-    BackgroundColor3=W, BorderSizePixel=0, ZIndex=20,
-}, win)
+    Size = UDim2.new(0, 1, 1, 0),
+    Position = UDim2.new(0, 18, 0, 0),
+    BackgroundColor3 = LINE, BorderSizePixel = 0,
+    ZIndex = 12,
+}, stepper)
+local stepBox = o("TextBox", {
+    Size = UDim2.new(0, stepperW - 38, 1, 0),
+    Position = UDim2.new(0, 19, 0, 0),
+    BackgroundTransparency = 1,
+    Text = tostring(_G.ShadersUIScale),
+    TextSize = 10, Font = FONT,
+    TextColor3 = MID, BorderSizePixel = 0,
+    ClearTextOnFocus = false,
+    ZIndex = 12,
+}, stepper)
+o("Frame", {
+    Size = UDim2.new(0, 1, 1, 0),
+    Position = UDim2.new(0, stepperW - 19, 0, 0),
+    BackgroundColor3 = LINE, BorderSizePixel = 0,
+    ZIndex = 12,
+}, stepper)
+local btnMinus = o("TextButton", {
+    Size = UDim2.new(0, 18, 1, 0),
+    Position = UDim2.new(1, -18, 0, 0),
+    BackgroundTransparency = 1,
+    Text = "−", TextSize = 14, Font = FONT,
+    TextColor3 = MID, BorderSizePixel = 0,
+    ZIndex = 12,
+}, stepper)
 
+local function applyScale(v)
+    v = math.clamp(math.floor(v), 1, 35)
+    _G.ShadersUIScale = v
+    uiScale.Scale = scaleValue(v)
+    stepBox.Text = tostring(v)
+end
+btnPlus.MouseButton1Click:Connect(function()
+    applyScale(_G.ShadersUIScale + 1)
+end)
+btnMinus.MouseButton1Click:Connect(function()
+    applyScale(_G.ShadersUIScale - 1)
+end)
+for _, b in ipairs({btnPlus, btnMinus}) do
+    b.MouseEnter:Connect(function() b.TextColor3 = W end)
+    b.MouseLeave:Connect(function() b.TextColor3 = MID end)
+end
+stepBox.FocusLost:Connect(function()
+    local v = tonumber(stepBox.Text)
+    if v then applyScale(v) else stepBox.Text = tostring(_G.ShadersUIScale) end
+end)
+
+-- Separador vertical entre stepper e X
+o("Frame", {
+    Size = UDim2.new(0, 1, 1, 0),
+    Position = UDim2.new(1, -33, 0, 0),
+    BackgroundColor3 = LINE, BorderSizePixel = 0,
+    ZIndex = 12,
+}, topBar)
+
+-- Botão X
+local XBtn = o("TextButton", {
+    Size = UDim2.new(0, 32, 1, 0),
+    Position = UDim2.new(1, -32, 0, 0),
+    BackgroundColor3 = BG, BorderSizePixel = 0,
+    Text = "×", TextSize = 16, Font = FONT,
+    TextColor3 = DIM, AutoButtonColor = false,
+    ZIndex = 11,
+}, topBar)
+XBtn.MouseEnter:Connect(function() XBtn.TextColor3 = W end)
+XBtn.MouseLeave:Connect(function() XBtn.TextColor3 = DIM end)
+
+-- Linha separadora base da topbar
+o("Frame", {
+    Size = UDim2.new(1, 0, 0, 1),
+    Position = UDim2.new(0, 0, 1, -1),
+    BackgroundColor3 = LINE, BorderSizePixel = 0,
+    ZIndex = 12,
+}, topBar)
+
+-- ── Drag da janela ────────────────────────────
 do
-    local dragging, dragStart, startPos = false, nil, nil
-    top.InputBegan:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1
-        or inp.UserInputType == Enum.UserInputType.Touch then
-            dragging  = true
-            dragStart = inp.Position
-            startPos  = win.Position
+    local dragging, dragMoved = false, false
+    local dragStart, startPos, _activeTouchId = nil, nil, nil
+
+    topBar.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if dragging then return end
+            dragging = true; dragMoved = false
+            dragStart = inp.Position; startPos = win.Position
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if _activeTouchId ~= nil then return end
+            _activeTouchId = inp; dragging = true; dragMoved = false
+            dragStart = inp.Position; startPos = win.Position
         end
     end)
-    top.InputEnded:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1
-        or inp.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
+
     UIS.InputChanged:Connect(function(inp)
-        if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement
-            or inp.UserInputType == Enum.UserInputType.Touch) then
-            local d = inp.Position - dragStart
+        if not dragging then return end
+        if inp.UserInputType == Enum.UserInputType.Touch
+            and inp ~= _activeTouchId then return end
+        if inp.UserInputType ~= Enum.UserInputType.MouseMovement
+            and inp.UserInputType ~= Enum.UserInputType.Touch then return end
+        local d = inp.Position - dragStart
+        if math.abs(d.X) + math.abs(d.Y) > 2 then
+            dragMoved = true
             win.Position = UDim2.new(
                 startPos.X.Scale, startPos.X.Offset + d.X,
                 startPos.Y.Scale, startPos.Y.Offset + d.Y
             )
         end
     end)
+
+    UIS.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false; dragStart = nil; startPos = nil; dragMoved = false
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if inp ~= _activeTouchId then return end
+            dragging = false; _activeTouchId = nil; dragStart = nil; startPos = nil; dragMoved = false
+        end
+    end)
 end
 
+-- ── Body ──────────────────────────────────────
 local body = o("Frame", {
-    Size = UDim2.new(1, 0, 1, -topH - 1),
-    Position = UDim2.new(0, 0, 0, topH + 1),
-    BackgroundColor3 = B, BorderSizePixel = 0,
-    ClipsDescendants = true,
+    Size = UDim2.new(1, 0, 1, -topH),
+    Position = UDim2.new(0, 0, 0, topH),
+    BackgroundColor3 = PANEL, BorderSizePixel = 0,
 }, win)
 
+-- Botões de shader
 for i, shader in ipairs(shaders) do
     local yPos = pad + (i - 1) * (btnH + btnGap)
     mkBtn(shader.label, body,
@@ -360,49 +497,86 @@ for i, shader in ipairs(shaders) do
     ).MouseButton1Click:Connect(shader.fn)
 end
 
+-- ── Pill ──────────────────────────────────────
 local pillGui = o("ScreenGui", {
     Name = "ShadersPill",
+    ZIndexBehavior = Enum.ZIndexBehavior.Global,
     ResetOnSpawn = false,
     IgnoreGuiInset = true,
     DisplayOrder = 9999,
 })
-local ok = pcall(function() pillGui.Parent = CoreGui end)
-if not ok then pillGui.Parent = playerGui end
+local ok2 = pcall(function() pillGui.Parent = CoreGui end)
+if not ok2 then pillGui.Parent = playerGui end
 
 local pill = o("Frame", {
-    Size = UDim2.new(0, 60, 0, 18),
-    Position = UDim2.new(1, -66, 1, -146),
-    BackgroundColor3 = B, BorderSizePixel = 0,
+    Size = UDim2.new(0, 80, 0, 20),
+    Position = UDim2.new(1, -86, 1, -80),
+    BackgroundColor3 = BG, BorderSizePixel = 0,
     Visible = false, ZIndex = 200,
 }, pillGui)
-stroke(pill, 1)
+o("UICorner", { CornerRadius = UDim.new(0, 5) }, pill)
+stroke(pill, 1, LINE)
 
 local pillBtn = o("TextButton", {
     Size = UDim2.new(1, 0, 1, 0),
     BackgroundTransparency = 1,
-    Text = "> shaders", TextSize = 9, Font = FONT,
-    TextColor3 = W, BorderSizePixel = 0,
+    Text = "shaders", TextSize = 9, Font = FONT,
+    TextColor3 = DIM, BorderSizePixel = 0,
     ZIndex = 201,
 }, pill)
+pillBtn.MouseEnter:Connect(function() pillBtn.TextColor3 = W end)
+pillBtn.MouseLeave:Connect(function() pillBtn.TextColor3 = DIM end)
 
-local minimized = false
-MinBtn.MouseButton1Click:Connect(function()
-    minimized = not minimized
-    if minimized then
-        win.Size    = UDim2.new(0, menuW, 0, topH)
-        MinBtn.Text = "+"
-    else
-        win.Size    = UDim2.new(0, menuW, 0, fullHeight)
-        MinBtn.Text = "-"
-    end
-end)
+-- Drag da pill
+do
+    local dragging, dragMoved = false, false
+    local dragStart, startPos, _activeTouchId = nil, nil, nil
 
+    pillBtn.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if dragging then return end
+            dragging = true; dragMoved = false
+            dragStart = inp.Position; startPos = pill.Position
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if _activeTouchId ~= nil then return end
+            _activeTouchId = inp; dragging = true; dragMoved = false
+            dragStart = inp.Position; startPos = pill.Position
+        end
+    end)
+
+    UIS.InputChanged:Connect(function(inp)
+        if not dragging then return end
+        if inp.UserInputType == Enum.UserInputType.Touch
+            and inp ~= _activeTouchId then return end
+        if inp.UserInputType ~= Enum.UserInputType.MouseMovement
+            and inp.UserInputType ~= Enum.UserInputType.Touch then return end
+        local d = inp.Position - dragStart
+        if math.abs(d.X) + math.abs(d.Y) > 2 then
+            dragMoved = true
+            pill.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + d.X,
+                startPos.Y.Scale, startPos.Y.Offset + d.Y
+            )
+        end
+    end)
+
+    UIS.InputEnded:Connect(function(inp)
+        local isMouse = inp.UserInputType == Enum.UserInputType.MouseButton1
+        local isTouch = inp.UserInputType == Enum.UserInputType.Touch
+        if isTouch and inp ~= _activeTouchId then return end
+        if isMouse or isTouch then
+            if not dragMoved then
+                win.Visible  = true
+                pill.Visible = false
+            end
+            dragging = false; _activeTouchId = nil
+            dragStart = nil; startPos = nil; dragMoved = false
+        end
+    end)
+end
+
+-- ── Botão X ───────────────────────────────────
 XBtn.MouseButton1Click:Connect(function()
     win.Visible  = false
     pill.Visible = true
-end)
-
-pillBtn.MouseButton1Click:Connect(function()
-    win.Visible  = true
-    pill.Visible = false
 end)
