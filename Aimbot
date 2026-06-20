@@ -59,7 +59,7 @@ function RobloxUI.new(title, version)
         BorderSizePixel = 0, Active = true, ClipsDescendants = true,
     }, self.gui)
     stroke(self.menuFrame, 1, LINE)
-    o("UICorner", { CornerRadius = UDim.new(0, 6) }, self.menuFrame)
+    o("UICorner", { CornerRadius = UDim.new(0, 0) }, self.menuFrame)
 
     local uiScaleObj = Instance.new("UIScale")
     uiScaleObj.Scale  = getUIScale(_G.RobloxUIScale)
@@ -101,7 +101,7 @@ function RobloxUI.new(title, version)
         BackgroundColor3 = CARD, BorderSizePixel = 0, ZIndex = 10,
     }, topBar)
     stroke(stepHolder, 1, LINE)
-    o("UICorner", { CornerRadius = UDim.new(0, 4) }, stepHolder)
+    o("UICorner", { CornerRadius = UDim.new(0, 0) }, stepHolder)
 
     local bsz = STEP_H
     local dv  = 1
@@ -636,7 +636,6 @@ end
 
 local espData   = {}
 local VIS_ON    = { Color = Color3.fromRGB(220, 220, 235), Fill = 0.5, Outline = 0.2 }
-local VIS_OFF   = { Color = Color3.fromRGB(110, 110, 130), Fill = 0.7, Outline = 0.5 }
 local TEAM_COL  = Color3.fromRGB(160, 210, 170)
 local ENEMY_COL = Color3.fromRGB(220, 60, 60)
 
@@ -655,22 +654,24 @@ local function createESP(player, char)
     if not head then return end
 
     local bb = Instance.new("BillboardGui", head)
-    bb.Size = UDim2.new(0, 200, 0, 50)
+    bb.Size = UDim2.new(0, 220, 0, 30)
     bb.StudsOffsetWorldSpace = Vector3.new(0, 3.5, 0)
     bb.AlwaysOnTop = true
 
     local nameL = Instance.new("TextLabel", bb)
-    nameL.Size = UDim2.new(1,0,0,25); nameL.Position = UDim2.new(0,0,0,0)
+    nameL.Size = UDim2.new(0.55, 0, 1, 0); nameL.Position = UDim2.new(0, 0, 0, 0)
     nameL.BackgroundTransparency = 1
-    nameL.Font = Enum.Font.GothamBold; nameL.TextSize = 18
+    nameL.Font = Enum.Font.GothamBold; nameL.TextSize = 14
     nameL.TextColor3 = Color3.new(1,1,1)
+    nameL.TextXAlignment = Enum.TextXAlignment.Right
     nameL.TextStrokeColor3 = Color3.new(0,0,0); nameL.TextStrokeTransparency = 0
 
     local distL = Instance.new("TextLabel", bb)
-    distL.Size = UDim2.new(1,0,0,20); distL.Position = UDim2.new(0,0,0,25)
+    distL.Size = UDim2.new(0.45, 0, 1, 0); distL.Position = UDim2.new(0.55, 6, 0, 0)
     distL.BackgroundTransparency = 1
-    distL.Font = Enum.Font.GothamMedium; distL.TextSize = 13
-    distL.TextColor3 = Color3.new(1,1,1)
+    distL.Font = Enum.Font.GothamMedium; distL.TextSize = 11
+    distL.TextColor3 = Color3.new(0.7, 0.7, 0.7)
+    distL.TextXAlignment = Enum.TextXAlignment.Left
     distL.TextStrokeColor3 = Color3.new(0,0,0); distL.TextStrokeTransparency = 0
 
     local existingHL = char:FindFirstChild("ESP_Highlight")
@@ -727,13 +728,11 @@ RunService.Heartbeat:Connect(function(dt)
             d.NameLabel.Visible = false; d.DistLabel.Visible = false
             if d.Highlight then d.Highlight.Enabled = false end; continue
         end
-        local vis = isVisible(char, player)
-        local cfg = vis and VIS_ON or VIS_OFF
 
         -- sem times → branco; aliado → verde; inimigo → vermelho
         local col
         if myTeam == nil then
-            col = cfg.Color
+            col = VIS_ON.Color
         elseif player.Team == myTeam then
             col = TEAM_COL
         else
@@ -743,8 +742,9 @@ RunService.Heartbeat:Connect(function(dt)
         if d.Highlight then
             if Settings.Highlight then
                 d.Highlight.Enabled = true; d.Highlight.FillColor = col
-                d.Highlight.OutlineColor = col; d.Highlight.FillTransparency = cfg.Fill
-                d.Highlight.OutlineTransparency = cfg.Outline
+                d.Highlight.OutlineColor = col
+                d.Highlight.FillTransparency = VIS_ON.Fill
+                d.Highlight.OutlineTransparency = VIS_ON.Outline
             else d.Highlight.Enabled = false end
         end
         d.NameLabel.Visible = Settings.Name
@@ -753,9 +753,9 @@ RunService.Heartbeat:Connect(function(dt)
         if Settings.Distance then
             local fd = math.floor(dist)
             if d.lastDist ~= fd then
-                d.DistLabel.Text = vis and (fd.."m") or (fd.."m 🛑"); d.lastDist = fd
+                d.DistLabel.Text = fd.."m"; d.lastDist = fd
             end
-            d.DistLabel.TextColor3 = col
+            d.DistLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
         end
     end
 end)
