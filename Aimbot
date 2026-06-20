@@ -634,10 +634,11 @@ local function isVisible(char, player)
     return visible
 end
 
-local espData  = {}
-local VIS_ON   = { Color = Color3.fromRGB(220, 220, 235), Fill = 0.5,  Outline = 0.2 }
-local VIS_OFF  = { Color = Color3.fromRGB(110, 110, 130), Fill = 0.7,  Outline = 0.5 }
-local TEAM_COL = Color3.fromRGB(160, 210, 170)
+local espData   = {}
+local VIS_ON    = { Color = Color3.fromRGB(220, 220, 235), Fill = 0.5, Outline = 0.2 }
+local VIS_OFF   = { Color = Color3.fromRGB(110, 110, 130), Fill = 0.7, Outline = 0.5 }
+local TEAM_COL  = Color3.fromRGB(160, 210, 170)
+local ENEMY_COL = Color3.fromRGB(220, 60, 60)
 
 local function destroyESP(player)
     local d = espData[player]
@@ -653,19 +654,22 @@ local function createESP(player, char)
     local head = char:WaitForChild("Head", 5)
     if not head then return end
 
-    -- ── Billboard maior e mais visível ────────────
     local bb = Instance.new("BillboardGui", head)
-    bb.Size = UDim2.new(0, 200, 0, 60); bb.StudsOffset = Vector3.new(0, 6, 0); bb.AlwaysOnTop = true
+    bb.Size = UDim2.new(0, 200, 0, 50)
+    bb.StudsOffsetWorldSpace = Vector3.new(0, 3.5, 0)
+    bb.AlwaysOnTop = true
 
     local nameL = Instance.new("TextLabel", bb)
-    nameL.Size = UDim2.new(1,0,0,28); nameL.BackgroundTransparency = 1
+    nameL.Size = UDim2.new(1,0,0,25); nameL.Position = UDim2.new(0,0,0,0)
+    nameL.BackgroundTransparency = 1
     nameL.Font = Enum.Font.GothamBold; nameL.TextSize = 18
     nameL.TextColor3 = Color3.new(1,1,1)
     nameL.TextStrokeColor3 = Color3.new(0,0,0); nameL.TextStrokeTransparency = 0
 
     local distL = Instance.new("TextLabel", bb)
-    distL.Size = UDim2.new(1,0,0,24); distL.Position = UDim2.new(0,0,0,30)
-    distL.BackgroundTransparency = 1; distL.Font = Enum.Font.GothamMedium; distL.TextSize = 15
+    distL.Size = UDim2.new(1,0,0,20); distL.Position = UDim2.new(0,0,0,25)
+    distL.BackgroundTransparency = 1
+    distL.Font = Enum.Font.GothamMedium; distL.TextSize = 13
     distL.TextColor3 = Color3.new(1,1,1)
     distL.TextStrokeColor3 = Color3.new(0,0,0); distL.TextStrokeTransparency = 0
 
@@ -725,7 +729,17 @@ RunService.Heartbeat:Connect(function(dt)
         end
         local vis = isVisible(char, player)
         local cfg = vis and VIS_ON or VIS_OFF
-        local col = (myTeam and player.Team == myTeam) and TEAM_COL or cfg.Color
+
+        -- sem times → branco; aliado → verde; inimigo → vermelho
+        local col
+        if myTeam == nil then
+            col = cfg.Color
+        elseif player.Team == myTeam then
+            col = TEAM_COL
+        else
+            col = ENEMY_COL
+        end
+
         if d.Highlight then
             if Settings.Highlight then
                 d.Highlight.Enabled = true; d.Highlight.FillColor = col
@@ -739,7 +753,6 @@ RunService.Heartbeat:Connect(function(dt)
         if Settings.Distance then
             local fd = math.floor(dist)
             if d.lastDist ~= fd then
-                -- 🛑 indica player atrás de parede
                 d.DistLabel.Text = vis and (fd.."m") or (fd.."m 🛑"); d.lastDist = fd
             end
             d.DistLabel.TextColor3 = col
@@ -814,7 +827,7 @@ fovCircle.BackgroundTransparency = 1; fovCircle.BorderSizePixel = 0
 Instance.new("UICorner", fovCircle).CornerRadius = UDim.new(1, 0)
 
 local fovStroke = Instance.new("UIStroke", fovCircle)
-fovStroke.Color           = Color3.fromRGB(255, 255, 255)  -- branco
+fovStroke.Color           = Color3.fromRGB(255, 255, 255)
 fovStroke.Thickness       = 1
 fovStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
