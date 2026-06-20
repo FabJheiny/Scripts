@@ -63,7 +63,7 @@ local win = o("Frame", {
     Active = true, ClipsDescendants = true,
 }, sg)
 stroke(win, 1, LINE)
-o("UICorner", { CornerRadius = UDim.new(0, 6) }, win)
+o("UICorner", { CornerRadius = UDim.new(0, 0) }, win)
 
 local uiScaleObj = Instance.new("UIScale")
 uiScaleObj.Scale  = getUIScale(_G.FlingUIScale)
@@ -95,7 +95,7 @@ local stepHolder = o("Frame", {
     BackgroundColor3 = CARD, BorderSizePixel = 0, ZIndex = 10,
 }, top)
 stroke(stepHolder, 1, LINE)
-o("UICorner", { CornerRadius = UDim.new(0, 4) }, stepHolder)
+o("UICorner", { CornerRadius = UDim.new(0, 0) }, stepHolder)
 
 local bsz = STEP_H
 local dv  = 1
