@@ -315,7 +315,7 @@ local win = o("Frame", {
     BackgroundColor3 = BG, BorderSizePixel = 0,
     Active = true, ClipsDescendants = true,
 }, gui)
-o("UICorner", { CornerRadius = UDim.new(0, 6) }, win)
+o("UICorner", { CornerRadius = UDim.new(0, 0) }, win)
 stroke(win, 1, LINE)
 
 local uiScale = o("UIScale", { Scale = scaleValue(_G.ShadersUIScale) }, win)
@@ -347,7 +347,7 @@ local stepper = o("Frame", {
     BackgroundColor3 = CARD, BorderSizePixel = 0,
     ZIndex = 11,
 }, topBar)
-o("UICorner", { CornerRadius = UDim.new(0, 4) }, stepper)
+o("UICorner", { CornerRadius = UDim.new(0, 0) }, stepper)
 stroke(stepper, 1, LINE)
 
 local btnPlus = o("TextButton", {
