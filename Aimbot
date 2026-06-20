@@ -138,7 +138,7 @@ function RobloxUI.new(title, version)
 
     local stepCv = _G.RobloxUIScale
     local function stepApply(v)
-        v = math.clamp(math.floor(v), 1, 35)   -- máximo 35
+        v = math.clamp(math.floor(v), 1, 35)
         stepCv = v; _G.RobloxUIScale = v
         stepBox.Text = tostring(v)
         uiScaleObj.Scale = getUIScale(v)
@@ -653,18 +653,21 @@ local function createESP(player, char)
     local head = char:WaitForChild("Head", 5)
     if not head then return end
 
+    -- ── Billboard maior e mais visível ────────────
     local bb = Instance.new("BillboardGui", head)
-    bb.Size = UDim2.new(0, 120, 0, 28); bb.StudsOffset = Vector3.new(0, 5, 0); bb.AlwaysOnTop = true
+    bb.Size = UDim2.new(0, 200, 0, 60); bb.StudsOffset = Vector3.new(0, 6, 0); bb.AlwaysOnTop = true
 
     local nameL = Instance.new("TextLabel", bb)
-    nameL.Size = UDim2.new(1,0,0,12); nameL.BackgroundTransparency = 1
-    nameL.Font = Enum.Font.GothamMedium; nameL.TextSize = 9
-    nameL.TextColor3 = Color3.new(1,1,1); nameL.TextStrokeTransparency = 0.5
+    nameL.Size = UDim2.new(1,0,0,28); nameL.BackgroundTransparency = 1
+    nameL.Font = Enum.Font.GothamBold; nameL.TextSize = 18
+    nameL.TextColor3 = Color3.new(1,1,1)
+    nameL.TextStrokeColor3 = Color3.new(0,0,0); nameL.TextStrokeTransparency = 0
 
     local distL = Instance.new("TextLabel", bb)
-    distL.Size = UDim2.new(1,0,0,12); distL.Position = UDim2.new(0,0,0,14)
-    distL.BackgroundTransparency = 1; distL.Font = Enum.Font.GothamMedium; distL.TextSize = 9
-    distL.TextColor3 = Color3.new(1,1,1); distL.TextStrokeTransparency = 0.5
+    distL.Size = UDim2.new(1,0,0,24); distL.Position = UDim2.new(0,0,0,30)
+    distL.BackgroundTransparency = 1; distL.Font = Enum.Font.GothamMedium; distL.TextSize = 15
+    distL.TextColor3 = Color3.new(1,1,1)
+    distL.TextStrokeColor3 = Color3.new(0,0,0); distL.TextStrokeTransparency = 0
 
     local existingHL = char:FindFirstChild("ESP_Highlight")
     if existingHL then existingHL:Destroy() end
@@ -736,7 +739,8 @@ RunService.Heartbeat:Connect(function(dt)
         if Settings.Distance then
             local fd = math.floor(dist)
             if d.lastDist ~= fd then
-                d.DistLabel.Text = vis and (fd.."m") or (fd.."m [w]"); d.lastDist = fd
+                -- 🛑 indica player atrás de parede
+                d.DistLabel.Text = vis and (fd.."m") or (fd.."m 🛑"); d.lastDist = fd
             end
             d.DistLabel.TextColor3 = col
         end
@@ -810,7 +814,7 @@ fovCircle.BackgroundTransparency = 1; fovCircle.BorderSizePixel = 0
 Instance.new("UICorner", fovCircle).CornerRadius = UDim.new(1, 0)
 
 local fovStroke = Instance.new("UIStroke", fovCircle)
-fovStroke.Color           = Color3.fromRGB(1, 1, 1)
+fovStroke.Color           = Color3.fromRGB(255, 255, 255)  -- branco
 fovStroke.Thickness       = 1
 fovStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
