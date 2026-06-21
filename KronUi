@@ -78,6 +78,17 @@ function KronUI.new(title, pillImage)
         DisplayOrder = 10,
     }, pg)
 
+    -- ── Som de clique ─────────────────────────────────
+    local clickSound = o("Sound", {
+        SoundId = "rbxassetid://6042053626",
+        Volume  = 0.6,
+        RollOffMaxDistance = 0,
+    }, self.gui)
+
+    local function playClick()
+        clickSound:Play()
+    end
+
     -- ── Janela principal ─────────────────────────────
     local MENU_W, MENU_H = 250, 340
     self.menuFrame = o("Frame", {
@@ -373,6 +384,36 @@ function KronUI.new(title, pillImage)
     pillBtn.MouseEnter:Connect(function() tween(pillIcon, EASE_OUT(0.12), { ImageColor3 = ACCENT }) end)
     pillBtn.MouseLeave:Connect(function() tween(pillIcon, EASE_OUT(0.12), { ImageColor3 = W }) end)
 
+    -- ── Press FX na pill ──────────────────────────────
+    local pillScale = o("UIScale", { Scale = 1 }, pill)
+    pillBtn.MouseButton1Down:Connect(function()
+        tween(pillScale, EASE_OUT(0.08), { Scale = 0.9 })
+    end)
+    pillBtn.MouseButton1Up:Connect(function()
+        tween(pillScale, EASE_OUT(0.12), { Scale = 1 })
+    end)
+    pillBtn.MouseLeave:Connect(function()
+        tween(pillScale, EASE_OUT(0.12), { Scale = 1 })
+    end)
+
+    -- ── Frost burst na pill ───────────────────────────
+    local function frostBurst()
+        local ring = o("Frame", {
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Size = UDim2.new(0, PILL_SIZE, 0, PILL_SIZE),
+            BackgroundTransparency = 1,
+            ZIndex = 250,
+        }, self.btnGui)
+        corner(ring, "pill")
+        local rStroke = stroke(ring, 2, ACCENT)
+        tween(ring, EASE_OUT(0.45), {
+            Size = UDim2.new(0, PILL_SIZE + 60, 0, PILL_SIZE + 60),
+        })
+        tween(rStroke, EASE_OUT(0.45), { Transparency = 1 })
+        task.delay(0.45, function() ring:Destroy() end)
+    end
+
     -- ── Transições abrir/fechar ───────────────────────
     local function showPill()
         pill.Visible = true
@@ -394,6 +435,7 @@ function KronUI.new(title, pillImage)
     end
 
     xBtn.MouseButton1Click:Connect(function()
+        playClick()
         hideMenu()
         showPill()
     end)
@@ -430,14 +472,24 @@ function KronUI.new(title, pillImage)
             if inp.UserInputType == Enum.UserInputType.MouseButton1 then
                 if not dragging then return end
                 dragging = false
-                if not dragMoved then hidePill(); showMenu() end
+                if not dragMoved then
+                    playClick()
+                    frostBurst()
+                    hidePill()
+                    showMenu()
+                end
                 dragStart = nil; startPos = nil
             elseif inp.UserInputType == Enum.UserInputType.Touch then
                 if inp ~= _activeTouchId then return end
                 local wasMoved = dragMoved
                 dragging = false; dragMoved = false
                 _activeTouchId = nil; dragStart = nil; startPos = nil
-                if not wasMoved then hidePill(); showMenu() end
+                if not wasMoved then
+                    playClick()
+                    frostBurst()
+                    hidePill()
+                    showMenu()
+                end
             end
         end))
     end
