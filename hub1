@@ -255,7 +255,7 @@ task.spawn(function()
     end
 end)
 
--- ══ MODAL (JANELA DE EXECUÇÃO) AGORA COM FUNDO BRANCO ══
+-- ══ MODAL (JANELA DE EXECUÇÃO) ══
 local modal=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BackgroundTransparency=1,BorderSizePixel=0,Visible=false,ZIndex=50},sg)
 local modalBg=o("TextButton",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text="",ZIndex=51},modal)
 local mbox=o("Frame",{
@@ -280,10 +280,10 @@ o("Frame",{
 local mBtnBar=o("Frame",{Size=UDim2.new(1,0,0,34),Position=UDim2.new(0,0,1,-34),BackgroundTransparency=1,BorderSizePixel=0,ZIndex=53},mbox)
 o("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,HorizontalAlignment=Enum.HorizontalAlignment.Center,VerticalAlignment=Enum.VerticalAlignment.Center,Padding=UDim.new(0,6),SortOrder=Enum.SortOrder.LayoutOrder},mBtnBar)
 local function mBtn(txt,lo)
-    local b=o("TextButton",{Size=UDim2.new(0,62,0,22),BackgroundColor3=D,BorderSizePixel=0,Text=txt,TextColor3=W,TextSize=10,Font=FONT_MAIN,AutoButtonColor=false,LayoutOrder=lo,ZIndex=54},mBtnBar)
+    local b=o("TextButton",{Size=UDim2.new(0,62,0,22),BackgroundColor3=W,BackgroundTransparency=1,BorderSizePixel=0,Text=txt,TextColor3=W,TextSize=10,Font=FONT_MAIN,AutoButtonColor=false,LayoutOrder=lo,ZIndex=54},mBtnBar)
     stroke(b,1); addPressFX(b)
-    b.MouseEnter:Connect(function() tween(b,{BackgroundColor3=Color3.fromRGB(22,42,68)},0.12) end)
-    b.MouseLeave:Connect(function() tween(b,{BackgroundColor3=D},0.12) end)
+    b.MouseEnter:Connect(function() tween(b,{BackgroundTransparency=0.88},0.12) end)
+    b.MouseLeave:Connect(function() tween(b,{BackgroundTransparency=1},0.12) end)
     return b
 end
 local mCopy=mBtn("Copiar",1) local mCancel=mBtn("Cancelar",2) local mExec=mBtn("Executar",3)
@@ -329,10 +329,10 @@ local function makeTabBtn(name,idx)
     },tlist)
     stroke(tb,1)
     tb.MouseEnter:Connect(function()
-        if cur~=idx then tween(tb,{BackgroundColor3=Color3.fromRGB(12,24,40)},0.12) playSfx(SFX.Hover,0.15) end
+        if cur~=idx then tween(tb,{BackgroundColor3=W,BackgroundTransparency=0.88},0.12) playSfx(SFX.Hover,0.15) end
     end)
     tb.MouseLeave:Connect(function()
-        if cur~=idx then tween(tb,{BackgroundColor3=B},0.12) end
+        if cur~=idx then tween(tb,{BackgroundColor3=B,BackgroundTransparency=0},0.12) end
     end)
     return tb
 end
@@ -501,8 +501,8 @@ do
             if n then apply(n) else box.Text=tostring(cv) end
         end)
         for _,btn in ipairs({plusBtn,minusBtn}) do
-            btn.MouseEnter:Connect(function() tween(btn,{BackgroundColor3=D},0.12) end)
-            btn.MouseLeave:Connect(function() tween(btn,{BackgroundColor3=B},0.12) end)
+            btn.MouseEnter:Connect(function() tween(btn,{BackgroundColor3=W,BackgroundTransparency=0.88},0.12) end)
+            btn.MouseLeave:Connect(function() tween(btn,{BackgroundColor3=B,BackgroundTransparency=0},0.12) end)
         end
     end
 
@@ -598,8 +598,8 @@ do
         else local n=tonumber(txt) if n then lsApply(n) else lsBox.Text=lsCv and tostring(lsCv) or "" end end
     end)
     for _,btn in ipairs({lsPlus,lsMinus}) do
-        btn.MouseEnter:Connect(function() tween(btn,{BackgroundColor3=D},0.12) end)
-        btn.MouseLeave:Connect(function() tween(btn,{BackgroundColor3=B},0.12) end)
+        btn.MouseEnter:Connect(function() tween(btn,{BackgroundColor3=W,BackgroundTransparency=0.88},0.12) end)
+        btn.MouseLeave:Connect(function() tween(btn,{BackgroundColor3=B,BackgroundTransparency=0},0.12) end)
     end
 
     -- Inf Jump
@@ -627,8 +627,8 @@ do
         toast("Inf Jump: "..(state and "ON" or "OFF"))
     end
     ijBtn.MouseButton1Click:Connect(function() setInfJump(not ijActive) end)
-    ijBtn.MouseEnter:Connect(function() if not ijActive then tween(ijBtn,{BackgroundColor3=D},0.12) end end)
-    ijBtn.MouseLeave:Connect(function() if not ijActive then tween(ijBtn,{BackgroundColor3=B},0.12) end end)
+    ijBtn.MouseEnter:Connect(function() if not ijActive then tween(ijBtn,{BackgroundColor3=W,BackgroundTransparency=0.88},0.12) end end)
+    ijBtn.MouseLeave:Connect(function() if not ijActive then tween(ijBtn,{BackgroundColor3=B,BackgroundTransparency=0},0.12) end end)
 
     -- No Clip
     o("TextLabel",{
@@ -668,8 +668,8 @@ do
         toast("No Clip: "..(state and "ON" or "OFF"))
     end
     ncBtn.MouseButton1Click:Connect(function() setNoClip(not ncActive) end)
-    ncBtn.MouseEnter:Connect(function() if not ncActive then tween(ncBtn,{BackgroundColor3=D},0.12) end end)
-    ncBtn.MouseLeave:Connect(function() if not ncActive then tween(ncBtn,{BackgroundColor3=B},0.12) end end)
+    ncBtn.MouseEnter:Connect(function() if not ncActive then tween(ncBtn,{BackgroundColor3=W,BackgroundTransparency=0.88},0.12) end end)
+    ncBtn.MouseLeave:Connect(function() if not ncActive then tween(ncBtn,{BackgroundColor3=B,BackgroundTransparency=0},0.12) end end)
 
     -- Reset
     o("TextLabel",{
@@ -681,8 +681,8 @@ do
         BackgroundColor3=B,BorderSizePixel=0, Text="Reset",TextColor3=W,TextSize=10,Font=FONT_MAIN, AutoButtonColor=false,
     },pg)
     local resetStroke=stroke(resetBtn,1); addPressFX(resetBtn)
-    resetBtn.MouseEnter:Connect(function() tween(resetBtn,{BackgroundColor3=D},0.12) end)
-    resetBtn.MouseLeave:Connect(function() tween(resetBtn,{BackgroundColor3=B},0.12) end)
+    resetBtn.MouseEnter:Connect(function() tween(resetBtn,{BackgroundColor3=W,BackgroundTransparency=0.88},0.12) end)
+    resetBtn.MouseLeave:Connect(function() tween(resetBtn,{BackgroundColor3=B,BackgroundTransparency=0},0.12) end)
     resetBtn.MouseButton1Click:Connect(function()
         playSfx(SFX.Click,0.4,0.9); flashStroke(resetStroke)
         if LP.Character then local hum=LP.Character:FindFirstChildOfClass("Humanoid") if hum then hum.Health=0 end end
@@ -690,7 +690,7 @@ do
     end)
 end
 
--- ══ EXECUTOR TAB (ORIGINAL, SEM ALTERAÇÕES) ══
+-- ══ EXECUTOR TAB ══
 do
     local i=2
     local tb=makeTabBtn("Executor",i)
@@ -711,8 +711,8 @@ do
     local function mkBtn(txt,lo)
         local b=o("TextButton",{Size=UDim2.new(0,70,0,22),BackgroundColor3=B,BorderSizePixel=0,Text=txt,TextColor3=W,TextSize=10,Font=FONT_MAIN,AutoButtonColor=false,LayoutOrder=lo},bb)
         stroke(b,1); addPressFX(b)
-        b.MouseEnter:Connect(function() tween(b,{BackgroundColor3=D},0.12) end)
-        b.MouseLeave:Connect(function() tween(b,{BackgroundColor3=B},0.12) end)
+        b.MouseEnter:Connect(function() tween(b,{BackgroundColor3=W,BackgroundTransparency=0.88},0.12) end)
+        b.MouseLeave:Connect(function() tween(b,{BackgroundColor3=B,BackgroundTransparency=0},0.12) end)
         return b
     end
     local cBtn=mkBtn("Copy",1) local clBtn=mkBtn("Clear",2) local eBtn=mkBtn("Execute",3)
@@ -736,7 +736,7 @@ function Hub:Tab(name)
     local hotbar=o("Frame",{Size=UDim2.new(1,0,0,20),BackgroundColor3=B,BorderSizePixel=0,Active=false},pg)
     local searchW=120
     -- Barra de pesquisa sem fundo, texto branco
-    local search=o("TextBox",{Size=UDim2.new(0,searchW,1,0),BackgroundTransparency=1,BorderSizePixel=0,PlaceholderText="Search...",PlaceholderColor3=Color3.fromRGB(100,120,140),Text="",TextColor3=W,TextSize=11,Font=FONT_MAIN,ClearTextOnFocus=false,TextXAlignment=Enum.TextXAlignment.Left},hotbar)
+    local search=o("TextBox",{Size=UDim2.new(0,searchW,1,0),BackgroundTransparency=1,BorderSizePixel=0,PlaceholderText="Search...",PlaceholderColor3=W,Text="",TextColor3=W,TextSize=11,Font=FONT_MAIN,ClearTextOnFocus=false,TextXAlignment=Enum.TextXAlignment.Left},hotbar)
     local searchStroke=stroke(search,1,W); searchStroke.Transparency=1
     search.Focused:Connect(function() tween(searchStroke,{Transparency=0,Thickness=1.4},0.15) end)
     search.FocusLost:Connect(function() tween(searchStroke,{Transparency=1,Thickness=1},0.2) end)
@@ -771,8 +771,8 @@ function Hub:Tab(name)
         local b=o("TextButton",{Name=txt,BackgroundColor3=B,BorderSizePixel=0,Text=txt,TextColor3=W,TextSize=10,Font=FONT_MAIN,AutoButtonColor=false,TextWrapped=true,LineHeight=1.1},scroll)
         stroke(b,1)
         local bScale=o("UIScale",{Scale=1},b)
-        b.MouseEnter:Connect(function() tween(b,{BackgroundColor3=Color3.fromRGB(16,32,50)},0.15) playSfx(SFX.Hover,0.15) end)
-        b.MouseLeave:Connect(function() tween(b,{BackgroundColor3=B},0.15) end)
+        b.MouseEnter:Connect(function() tween(b,{BackgroundColor3=W,BackgroundTransparency=0.88},0.15) playSfx(SFX.Hover,0.15) end)
+        b.MouseLeave:Connect(function() tween(b,{BackgroundColor3=B,BackgroundTransparency=0},0.15) end)
         b.MouseButton1Down:Connect(function() tween(bScale,{Scale=0.92},0.08) end)
         b.MouseButton1Up:Connect(function() tween(bScale,{Scale=1},0.12) end)
         local copyTxt='loadstring(game:HttpGet("'..url..'"))()'
