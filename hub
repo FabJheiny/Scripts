@@ -255,17 +255,28 @@ task.spawn(function()
     end
 end)
 
+-- ══ MODAL (JANELA DE EXECUÇÃO) AGORA COM FUNDO BRANCO ══
 local modal=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BackgroundTransparency=1,BorderSizePixel=0,Visible=false,ZIndex=50},sg)
 local modalBg=o("TextButton",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text="",ZIndex=51},modal)
-local mbox=o("Frame",{Size=UDim2.new(0,220,0,90),Position=UDim2.new(.5,-110,.5,-45),BackgroundColor3=B,BorderSizePixel=0,ZIndex=52},modal)
-stroke(mbox,1)
+local mbox=o("Frame",{
+    Size=UDim2.new(0,220,0,90), Position=UDim2.new(.5,-110,.5,-45),
+    BackgroundColor3=W,  -- fundo branco
+    BorderSizePixel=0, ZIndex=52,
+},modal)
+stroke(mbox,1,B)  -- borda escura para contraste
 local mTitle=o("TextLabel",{
     Size=UDim2.new(1,0,0,28),Position=UDim2.new(0,0,0,0),
-    BackgroundColor3=Color3.fromRGB(12,20,36),BorderSizePixel=0,
-    Text="",TextColor3=W,TextSize=11,Font=FONT_MAIN,
+    BackgroundColor3=W,  -- título branco
+    BorderSizePixel=0,
+    Text="", TextColor3=B,  -- texto escuro
+    TextSize=11,Font=FONT_MAIN,
     TextXAlignment=Enum.TextXAlignment.Center,TextWrapped=true,ZIndex=53,
 },mbox)
-o("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=W,BorderSizePixel=0,ZIndex=53},mTitle)
+o("Frame",{
+    Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,1,-1),
+    BackgroundColor3=B,  -- linha escura
+    BorderSizePixel=0, ZIndex=53,
+},mTitle)
 local mBtnBar=o("Frame",{Size=UDim2.new(1,0,0,34),Position=UDim2.new(0,0,1,-34),BackgroundTransparency=1,BorderSizePixel=0,ZIndex=53},mbox)
 o("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,HorizontalAlignment=Enum.HorizontalAlignment.Center,VerticalAlignment=Enum.VerticalAlignment.Center,Padding=UDim.new(0,6),SortOrder=Enum.SortOrder.LayoutOrder},mBtnBar)
 local function mBtn(txt,lo)
@@ -679,7 +690,7 @@ do
     end)
 end
 
--- ══ EXECUTOR TAB ══
+-- ══ EXECUTOR TAB (ORIGINAL, SEM ALTERAÇÕES) ══
 do
     local i=2
     local tb=makeTabBtn("Executor",i)
@@ -724,8 +735,9 @@ function Hub:Tab(name)
     local pg=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BorderSizePixel=0,Visible=false,Active=false},area)
     local hotbar=o("Frame",{Size=UDim2.new(1,0,0,20),BackgroundColor3=B,BorderSizePixel=0,Active=false},pg)
     local searchW=120
-    local search=o("TextBox",{Size=UDim2.new(0,searchW,1,0),BackgroundColor3=B,BorderSizePixel=0,PlaceholderText="Search...",PlaceholderColor3=Color3.fromRGB(100,140,160),Text="",TextColor3=W,TextSize=11,Font=FONT_MAIN,ClearTextOnFocus=false,TextXAlignment=Enum.TextXAlignment.Left},hotbar)
-    local searchStroke=stroke(search,1); searchStroke.Transparency=1
+    -- Barra de pesquisa branca com texto escuro (conforme solicitado anteriormente)
+    local search=o("TextBox",{Size=UDim2.new(0,searchW,1,0),BackgroundColor3=W,BorderSizePixel=0,PlaceholderText="Search...",PlaceholderColor3=Color3.fromRGB(150,150,150),Text="",TextColor3=B,TextSize=11,Font=FONT_MAIN,ClearTextOnFocus=false,TextXAlignment=Enum.TextXAlignment.Left},hotbar)
+    local searchStroke=stroke(search,1,B); searchStroke.Transparency=1
     search.Focused:Connect(function() tween(searchStroke,{Transparency=0,Thickness=1.4},0.15) end)
     search.FocusLost:Connect(function() tween(searchStroke,{Transparency=1,Thickness=1},0.2) end)
     o("UIPadding",{PaddingLeft=UDim.new(0,6)},search)
