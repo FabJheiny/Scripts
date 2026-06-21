@@ -310,9 +310,9 @@ mCopy.MouseButton1Click:Connect(function() if _mTxt and setclipboard then pcall(
 local tabBtns,tabPages,cur={},{},nil
 local function sw(idx)
     if cur==idx then return end
-    if cur then tween(tabBtns[cur],{BackgroundColor3=B,TextColor3=W},0.15) end
+    if cur then tween(tabBtns[cur],{BackgroundColor3=B,TextColor3=W,BackgroundTransparency=0},0.15) end
     cur=idx
-    tween(tabBtns[idx],{BackgroundColor3=W,TextColor3=B},0.15)
+    tween(tabBtns[idx],{BackgroundColor3=W,TextColor3=B,BackgroundTransparency=0},0.15)
     playSfx(SFX.Click,0.3,1.1)
     for j,p in ipairs(tabPages) do
         if j==idx then
