@@ -1,341 +1,30 @@
-local Players       = game:GetService("Players")
-local RunService    = game:GetService("RunService")
-local CoreGui       = game:GetService("CoreGui")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UIS           = game:GetService("UserInputService")
-local Player        = Players.LocalPlayer
+--══════════════════════════════════════════════════════
+--  KronUI Loader + Multi Fling
+--══════════════════════════════════════════════════════
 
-local BG    = Color3.fromRGB(28, 28, 32)
-local PANEL = Color3.fromRGB(34, 34, 40)
-local CARD  = Color3.fromRGB(40, 40, 48)
-local HOVER = Color3.fromRGB(48, 48, 58)
-local LINE  = Color3.fromRGB(58, 58, 70)
-local DIM   = Color3.fromRGB(140, 140, 160)
-local MID   = Color3.fromRGB(185, 185, 205)
-local W     = Color3.fromRGB(235, 235, 245)
-local FONT  = Enum.Font.GothamMedium
+local Players           = game:GetService("Players")
+local RunService         = game:GetService("RunService")
+local ReplicatedStorage  = game:GetService("ReplicatedStorage")
+local Player             = Players.LocalPlayer
 
-local function o(cls, props, par)
-    local x = Instance.new(cls)
-    for k, v in pairs(props) do x[k] = v end
-    if par then x.Parent = par end
-    return x
-end
-local function stroke(par, t, c)
-    o("UIStroke", {
-        Color = c or LINE, Thickness = t or 1,
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-    }, par)
-end
-local function mkBtn(txt, parent, sz, pos)
-    local b = o("TextButton", {
-        Size = sz, Position = pos,
-        BackgroundColor3 = CARD, BorderSizePixel = 0,
-        Text = txt, TextColor3 = MID, TextSize = 10,
-        Font = FONT, AutoButtonColor = false,
-    }, parent)
-    stroke(b, 1, LINE)
-    o("UICorner", { CornerRadius = UDim.new(0, 5) }, b)
-    b.MouseEnter:Connect(function() b.BackgroundColor3 = HOVER; b.TextColor3 = W end)
-    b.MouseLeave:Connect(function() b.BackgroundColor3 = CARD;  b.TextColor3 = MID end)
-    b.MouseButton1Down:Connect(function() b.BackgroundColor3 = Color3.fromRGB(52,52,62) end)
-    b.MouseButton1Up:Connect(function()   b.BackgroundColor3 = HOVER end)
-    return b
-end
+-- ── 1. URL da lib no GitHub (raw) ────────────────────
+local LIB_URL = "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/KronUi"
+-- ── 2. Imagem do pill ────────────────────────────────
+local PILL_IMAGE = "rbxassetid://100932674765762"
 
--- ── ScreenGui ────────────────────────────────
-local sg = o("ScreenGui", {
-    Name = "MultiFlingGUI", ResetOnSpawn = false,
-    IgnoreGuiInset = true, DisplayOrder = 2147483647,
-    ZIndexBehavior = Enum.ZIndexBehavior.Global,
-})
-local ok = pcall(function() sg.Parent = CoreGui end)
-if not ok then sg.Parent = Player:WaitForChild("PlayerGui") end
-
--- ── Janela ───────────────────────────────────
-_G.FlingUIScale = _G.FlingUIScale or 10
-local function getUIScale(s) return 0.45 + (s - 1) * 0.04 end
-
-local win = o("Frame", {
-    Size = UDim2.new(0, 210, 0, 370),
-    Position = UDim2.new(0.5, -105, 0.5, -185),
-    BackgroundColor3 = BG, BorderSizePixel = 0,
-    Active = true, ClipsDescendants = true,
-}, sg)
-stroke(win, 1, LINE)
-o("UICorner", { CornerRadius = UDim.new(0, 0) }, win)
-
-local uiScaleObj = Instance.new("UIScale")
-uiScaleObj.Scale  = getUIScale(_G.FlingUIScale)
-uiScaleObj.Parent = win
-
--- ── TopBar ───────────────────────────────────
-local topH = 30
-local top  = o("Frame", {
-    Size = UDim2.new(1, 0, 0, topH),
-    BackgroundColor3 = BG, BorderSizePixel = 0,
-    Active = true, ZIndex = 10,
-}, win)
-
-o("TextLabel", {
-    Size = UDim2.new(1, -150, 1, 0), Position = UDim2.new(0, 12, 0, 0),
-    BackgroundTransparency = 1, Text = "Multi Fling",
-    TextColor3 = W, TextSize = 12, Font = FONT,
-    TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10,
-}, top)
-
--- ── GuiSize stepper ──────────────────────────
-local STEP_W = 62
-local STEP_H = 18
-local stepX  = -(33 + 6 + STEP_W)
-
-local stepHolder = o("Frame", {
-    Size = UDim2.new(0, STEP_W, 0, STEP_H),
-    Position = UDim2.new(1, stepX, 0.5, -STEP_H / 2),
-    BackgroundColor3 = CARD, BorderSizePixel = 0, ZIndex = 10,
-}, top)
-stroke(stepHolder, 1, LINE)
-o("UICorner", { CornerRadius = UDim.new(0, 0) }, stepHolder)
-
-local bsz = STEP_H
-local dv  = 1
-local nw  = STEP_W - 2 * bsz - 2 * dv
-
-local stepPlus = o("TextButton", {
-    Size = UDim2.new(0, bsz, 1, 0),
-    BackgroundColor3 = CARD, BorderSizePixel = 0,
-    Text = "+", TextColor3 = MID, TextSize = 14, Font = FONT,
-    AutoButtonColor = false, ZIndex = 11,
-}, stepHolder)
-o("Frame", {
-    Size = UDim2.new(0, dv, 1, 0), Position = UDim2.new(0, bsz, 0, 0),
-    BackgroundColor3 = LINE, BorderSizePixel = 0, ZIndex = 11,
-}, stepHolder)
-local stepBox = o("TextBox", {
-    Size = UDim2.new(0, nw, 1, 0), Position = UDim2.new(0, bsz + dv, 0, 0),
-    BackgroundTransparency = 1,
-    Text = tostring(_G.FlingUIScale),
-    TextColor3 = W, TextSize = 10, Font = FONT,
-    TextXAlignment = Enum.TextXAlignment.Center,
-    ClearTextOnFocus = false, ZIndex = 11,
-}, stepHolder)
-o("Frame", {
-    Size = UDim2.new(0, dv, 1, 0), Position = UDim2.new(0, bsz + dv + nw, 0, 0),
-    BackgroundColor3 = LINE, BorderSizePixel = 0, ZIndex = 11,
-}, stepHolder)
-local stepMinus = o("TextButton", {
-    Size = UDim2.new(0, bsz, 1, 0), Position = UDim2.new(0, bsz + dv + nw + dv, 0, 0),
-    BackgroundColor3 = CARD, BorderSizePixel = 0,
-    Text = "−", TextColor3 = MID, TextSize = 14, Font = FONT,
-    AutoButtonColor = false, ZIndex = 11,
-}, stepHolder)
-
-local stepCv = _G.FlingUIScale
-local function stepApply(v)
-    v = math.clamp(math.floor(v), 1, 35)
-    stepCv = v; _G.FlingUIScale = v
-    stepBox.Text = tostring(v)
-    uiScaleObj.Scale = getUIScale(v)
-end
-stepPlus.MouseButton1Click:Connect(function()  stepApply(stepCv + 1) end)
-stepMinus.MouseButton1Click:Connect(function() stepApply(stepCv - 1) end)
-stepBox.FocusLost:Connect(function()
-    local n = tonumber(stepBox.Text)
-    if n then stepApply(n) else stepBox.Text = tostring(stepCv) end
+-- ── Carregamento ─────────────────────────────────────
+local ok, result = pcall(function()
+    return loadstring(game:HttpGet(LIB_URL))()
 end)
-for _, btn in ipairs({ stepPlus, stepMinus }) do
-    btn.MouseEnter:Connect(function() btn.TextColor3 = W end)
-    btn.MouseLeave:Connect(function() btn.TextColor3 = MID end)
+if not ok then
+    warn("[KronUI] Falha ao carregar a lib: " .. tostring(result))
+    return
 end
-
--- separador + X
-o("Frame", {
-    Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-33,0,0),
-    BackgroundColor3=LINE, BorderSizePixel=0, ZIndex=12,
-}, top)
-
-local XBtn = o("TextButton", {
-    Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-32,0,0),
-    BackgroundColor3=BG, BorderSizePixel=0, Text="×",
-    TextColor3=DIM, TextSize=16, Font=FONT, AutoButtonColor=false, ZIndex=11,
-}, top)
-XBtn.MouseEnter:Connect(function() XBtn.TextColor3 = W end)
-XBtn.MouseLeave:Connect(function() XBtn.TextColor3 = DIM end)
-
--- linha TopBar → body
-o("Frame", {
-    Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,1,-1),
-    BackgroundColor3=LINE, BorderSizePixel=0, ZIndex=12,
-}, top)
-
--- ── Drag da janela ────────────────────────────
-do
-    local dragging, dragMoved, dragStart, startPos, _activeTouchId =
-        false, false, nil, nil, nil
-    top.InputBegan:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-            if dragging then return end
-            dragging=true; dragMoved=false
-            dragStart=inp.Position; startPos=win.Position
-        elseif inp.UserInputType == Enum.UserInputType.Touch then
-            if _activeTouchId ~= nil then return end
-            _activeTouchId=inp; dragging=true; dragMoved=false
-            dragStart=inp.Position; startPos=win.Position
-        end
-    end)
-    UIS.InputChanged:Connect(function(inp)
-        if not dragging then return end
-        local isM = inp.UserInputType == Enum.UserInputType.MouseMovement
-        local isT = inp.UserInputType == Enum.UserInputType.Touch
-        if isT and inp ~= _activeTouchId then return end
-        if isM or isT then
-            local d = inp.Position - dragStart
-            if math.abs(d.X)+math.abs(d.Y) > 2 then
-                dragMoved = true
-                win.Position = UDim2.new(
-                    startPos.X.Scale, startPos.X.Offset + d.X,
-                    startPos.Y.Scale, startPos.Y.Offset + d.Y)
-            end
-        end
-    end)
-    UIS.InputEnded:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-            if not dragging then return end
-            dragging=false; dragStart=nil; startPos=nil
-        elseif inp.UserInputType == Enum.UserInputType.Touch then
-            if inp ~= _activeTouchId then return end
-            dragging=false; dragMoved=false
-            _activeTouchId=nil; dragStart=nil; startPos=nil
-        end
-    end)
-end
-
--- ── Body ─────────────────────────────────────
-local body = o("Frame", {
-    Size = UDim2.new(1, 0, 1, -topH),
-    Position = UDim2.new(0, 0, 0, topH),
-    BackgroundColor3 = PANEL, BorderSizePixel = 0,
-}, win)
-
-local StatusLabel = o("TextLabel", {
-    Position = UDim2.new(0, 10, 0, 8),
-    Size = UDim2.new(1, -20, 0, 14),
-    BackgroundTransparency = 1,
-    Text = "Select targets to fling",
-    TextColor3 = DIM, Font = FONT, TextSize = 10,
-    TextXAlignment = Enum.TextXAlignment.Left,
-}, body)
-
-local PlayerListFrame = o("Frame", {
-    Position = UDim2.new(0, 8, 0, 28),
-    Size = UDim2.new(1, -16, 0, 188),
-    BackgroundColor3 = CARD, BorderSizePixel = 0,
-}, body)
-stroke(PlayerListFrame, 1, LINE)
-o("UICorner", { CornerRadius = UDim.new(0, 5) }, PlayerListFrame)
-
-local PlayerScrollFrame = o("ScrollingFrame", {
-    Position = UDim2.new(0, 4, 0, 4),
-    Size = UDim2.new(1, -8, 1, -8),
-    BackgroundTransparency = 1, BorderSizePixel = 0,
-    ScrollBarThickness = 2, ScrollBarImageColor3 = LINE,
-    CanvasSize = UDim2.new(0,0,0,0), ClipsDescendants = true,
-}, PlayerListFrame)
-
-local half  = UDim2.new(0.5, -10, 0, 24)
-local halfS = UDim2.new(0.5, -10, 0, 22)
-
-local StartButton    = mkBtn("Start",    body, half,  UDim2.new(0, 8,   0, 224))
-local StopButton     = mkBtn("Stop",     body, half,  UDim2.new(0.5, 2, 0, 224))
-local SelectAllBtn   = mkBtn("All",      body, halfS, UDim2.new(0, 8,   0, 254))
-local DeselectAllBtn = mkBtn("None",     body, halfS, UDim2.new(0.5, 2, 0, 254))
-
-o("Frame", {
-    Size=UDim2.new(1,-16,0,1), Position=UDim2.new(0,8,0,282),
-    BackgroundColor3=LINE, BorderSizePixel=0,
-}, body)
-
-local AntiFlingBtn  = mkBtn("AntiFling",  body, halfS, UDim2.new(0, 8,   0, 289))
-local TouchFlingBtn = mkBtn("TouchFling", body, halfS, UDim2.new(0.5, 2, 0, 289))
-
--- ── Pill ──────────────────────────────────────
-local PillGui = o("ScreenGui", {
-    Name="MultiFlingPillGui", ResetOnSpawn=false,
-    IgnoreGuiInset=true, DisplayOrder=9999,
-    ZIndexBehavior=Enum.ZIndexBehavior.Global,
-})
-local ok2 = pcall(function() PillGui.Parent = CoreGui end)
-if not ok2 then PillGui.Parent = Player:WaitForChild("PlayerGui") end
-
-local pill = o("Frame", {
-    Name="PillFling",
-    Size=UDim2.new(0,80,0,20), Position=UDim2.new(1,-86,1,-80),
-    BackgroundColor3=BG, BorderSizePixel=0, Visible=false, ZIndex=200,
-}, PillGui)
-stroke(pill, 1, LINE)
-o("UICorner", { CornerRadius=UDim.new(0,5) }, pill)
-
-local pillBtn = o("TextButton", {
-    Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
-    Text="multi fling", TextSize=9, Font=FONT,
-    TextColor3=DIM, BorderSizePixel=0, ZIndex=201,
-}, pill)
-pillBtn.MouseEnter:Connect(function() pillBtn.TextColor3 = W end)
-pillBtn.MouseLeave:Connect(function() pillBtn.TextColor3 = DIM end)
-
--- ── Drag da pill ──────────────────────────────
-do
-    local dragging, dragMoved, dragStart, startPos, _activeTouchId =
-        false, false, nil, nil, nil
-    pillBtn.InputBegan:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-            if dragging then return end
-            dragging=true; dragMoved=false
-            dragStart=inp.Position; startPos=pill.Position
-        elseif inp.UserInputType == Enum.UserInputType.Touch then
-            if _activeTouchId ~= nil then return end
-            _activeTouchId=inp; dragging=true; dragMoved=false
-            dragStart=inp.Position; startPos=pill.Position
-        end
-    end)
-    UIS.InputChanged:Connect(function(inp)
-        if not dragging then return end
-        local isM = inp.UserInputType == Enum.UserInputType.MouseMovement
-        local isT = inp.UserInputType == Enum.UserInputType.Touch
-        if isT and inp ~= _activeTouchId then return end
-        if isM or isT then
-            local d = inp.Position - dragStart
-            if math.abs(d.X)+math.abs(d.Y) > 2 then
-                dragMoved = true
-                pill.Position = UDim2.new(
-                    startPos.X.Scale, startPos.X.Offset + d.X,
-                    startPos.Y.Scale, startPos.Y.Offset + d.Y)
-            end
-        end
-    end)
-    UIS.InputEnded:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-            if not dragging then return end
-            dragging = false
-            if not dragMoved then win.Visible=true; pill.Visible=false end
-            dragStart=nil; startPos=nil
-        elseif inp.UserInputType == Enum.UserInputType.Touch then
-            if inp ~= _activeTouchId then return end
-            local wasMoved = dragMoved
-            dragging=false; dragMoved=false
-            _activeTouchId=nil; dragStart=nil; startPos=nil
-            if not wasMoved then win.Visible=true; pill.Visible=false end
-        end
-    end)
-end
-
-XBtn.MouseButton1Click:Connect(function()
-    if FlingActive then FlingActive = false end
-    win.Visible = false; pill.Visible = true
-end)
+local KronUI = result
+local ui = KronUI.new("Multi Fling", PILL_IMAGE)
 
 -- ══════════════════════════════════════════════
---  LÓGICA
+--  ESTADO
 -- ══════════════════════════════════════════════
 local AntiFlingActive  = false
 local TouchFlingActive = false
@@ -343,11 +32,13 @@ local antiFlingTracked = {}
 local antiFlingConnections = {}
 local antiFlingRenderConn  = nil
 local SelectedTargets = {}
-local PlayerEntries   = {}
 local FlingActive     = false
 getgenv().OldPos = nil
 getgenv().FPDH   = workspace.FallenPartsDestroyHeight
 
+-- ══════════════════════════════════════════════
+--  ANTI-FLING
+-- ══════════════════════════════════════════════
 local function disableCanCollide(part)
     if part:IsA("BasePart") and part.CanCollide then part.CanCollide = false end
 end
@@ -381,29 +72,9 @@ local function stopAntiFling()
     if antiFlingRenderConn then antiFlingRenderConn:Disconnect(); antiFlingRenderConn = nil end
 end
 
--- ── Toggle visual: acende igual ao scroll de jogadores ───────────────────────
-AntiFlingBtn.MouseLeave:Connect(function()
-    task.defer(function()
-        if AntiFlingActive then
-            AntiFlingBtn.BackgroundColor3 = HOVER
-            AntiFlingBtn.TextColor3 = W
-        end
-    end)
-end)
-
-AntiFlingBtn.MouseButton1Click:Connect(function()
-    AntiFlingActive = not AntiFlingActive
-    if AntiFlingActive then
-        startAntiFling()
-        AntiFlingBtn.BackgroundColor3 = HOVER
-        AntiFlingBtn.TextColor3 = W
-    else
-        stopAntiFling()
-        AntiFlingBtn.BackgroundColor3 = CARD
-        AntiFlingBtn.TextColor3 = MID
-    end
-end)
-
+-- ══════════════════════════════════════════════
+--  TOUCH FLING
+-- ══════════════════════════════════════════════
 local function runTouchFling()
     local lp = Players.LocalPlayer
     local movel = 0.1
@@ -423,93 +94,9 @@ local function runTouchFling()
     end
 end
 
-TouchFlingBtn.MouseLeave:Connect(function()
-    task.defer(function()
-        if TouchFlingActive then
-            TouchFlingBtn.BackgroundColor3 = HOVER
-            TouchFlingBtn.TextColor3 = W
-        end
-    end)
-end)
-
-TouchFlingBtn.MouseButton1Click:Connect(function()
-    TouchFlingActive = not TouchFlingActive
-    if TouchFlingActive then
-        if not ReplicatedStorage:FindFirstChild("juisdfj0i32i0eidsuf0iok") then
-            local d = Instance.new("Decal")
-            d.Name = "juisdfj0i32i0eidsuf0iok"; d.Parent = ReplicatedStorage
-        end
-        TouchFlingBtn.BackgroundColor3 = HOVER
-        TouchFlingBtn.TextColor3 = W
-        coroutine.resume(coroutine.create(runTouchFling))
-    else
-        TouchFlingBtn.BackgroundColor3 = CARD
-        TouchFlingBtn.TextColor3 = MID
-    end
-end)
-
--- ─────────────────────────────────────────────
-local function UpdateStatus()
-    local count = 0
-    for _ in pairs(SelectedTargets) do count += 1 end
-    StatusLabel.Text = FlingActive
-        and ("Flinging " .. count .. " target(s)")
-        or  (count .. " target(s) selected")
-end
-
-local function RefreshPlayerList()
-    for _, child in pairs(PlayerScrollFrame:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
-    PlayerEntries = {}
-    local list = Players:GetPlayers()
-    table.sort(list, function(a, b) return a.Name:lower() < b.Name:lower() end)
-    local yPos = 2
-    for _, op in ipairs(list) do
-        if op ~= Player then
-            local sel = SelectedTargets[op.Name] ~= nil
-            local row = o("TextButton", {
-                Size = UDim2.new(1, -8, 0, 22), Position = UDim2.new(0, 4, 0, yPos),
-                BackgroundColor3 = sel and HOVER or CARD,
-                BorderSizePixel = 0, AutoButtonColor = false,
-                Text = op.Name, TextColor3 = sel and W or DIM,
-                TextSize = 10, Font = FONT,
-                TextXAlignment = Enum.TextXAlignment.Left,
-            }, PlayerScrollFrame)
-            o("UICorner", { CornerRadius = UDim.new(0, 4) }, row)
-            o("UIPadding", { PaddingLeft = UDim.new(0, 8) }, row)
-            row.MouseEnter:Connect(function()
-                if not SelectedTargets[op.Name] then
-                    row.BackgroundColor3 = HOVER; row.TextColor3 = W
-                end
-            end)
-            row.MouseLeave:Connect(function()
-                if not SelectedTargets[op.Name] then
-                    row.BackgroundColor3 = CARD; row.TextColor3 = DIM
-                end
-            end)
-            row.MouseButton1Click:Connect(function()
-                if SelectedTargets[op.Name] then SelectedTargets[op.Name] = nil
-                else SelectedTargets[op.Name] = op end
-                RefreshPlayerList(); UpdateStatus()
-            end)
-            PlayerEntries[op.Name] = row
-            yPos += 26
-        end
-    end
-    PlayerScrollFrame.CanvasSize = UDim2.new(0, 0, 0, yPos + 4)
-end
-
-local function ToggleAll(select)
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= Player then
-            if select then SelectedTargets[p.Name] = p
-            else SelectedTargets[p.Name] = nil end
-        end
-    end
-    RefreshPlayerList(); UpdateStatus()
-end
-
+-- ══════════════════════════════════════════════
+--  SKID FLING
+-- ══════════════════════════════════════════════
 local function SkidFling(TargetPlayer)
     local Character = Player.Character
     local Humanoid  = Character and Character:FindFirstChildOfClass("Humanoid")
@@ -598,42 +185,91 @@ local function SkidFling(TargetPlayer)
     end
 end
 
+-- ══════════════════════════════════════════════
+--  START / STOP
+-- ══════════════════════════════════════════════
+local function GetSelectedList()
+    local list = {}
+    for name, plr in pairs(SelectedTargets) do
+        if plr and plr.Parent then table.insert(list, plr)
+        else SelectedTargets[name] = nil end
+    end
+    return list
+end
+
 local function StartFling()
     if FlingActive then return end
-    local count = 0; for _ in pairs(SelectedTargets) do count += 1 end
-    if count == 0 then StatusLabel.Text = "No targets selected!"; task.wait(1); UpdateStatus(); return end
-    FlingActive = true; UpdateStatus()
+    if #GetSelectedList() == 0 then return end
+    FlingActive = true
     task.spawn(function()
         while FlingActive do
-            local valid = {}
-            for name, player in pairs(SelectedTargets) do
-                if player and player.Parent then valid[name] = player
-                else SelectedTargets[name] = nil end
-            end
-            for _, player in pairs(valid) do
+            for _, player in pairs(GetSelectedList()) do
                 if not FlingActive then break end
-                SkidFling(player); task.wait(0.1)
+                SkidFling(player)
+                task.wait(0.1)
             end
-            RefreshPlayerList(); UpdateStatus(); task.wait(0.5)
+            task.wait(0.5)
         end
     end)
 end
-
 local function StopFling()
-    if not FlingActive then return end
-    FlingActive = false; UpdateStatus()
+    FlingActive = false
 end
 
-StartButton.MouseButton1Click:Connect(StartFling)
-StopButton.MouseButton1Click:Connect(StopFling)
-SelectAllBtn.MouseButton1Click:Connect(function() ToggleAll(true) end)
-DeselectAllBtn.MouseButton1Click:Connect(function() ToggleAll(false) end)
+-- ══════════════════════════════════════════════
+--  UI (KronUI)
+-- ══════════════════════════════════════════════
+local function GetPlayerNames()
+    local names = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= Player then table.insert(names, p.Name) end
+    end
+    table.sort(names)
+    return names
+end
 
-Players.PlayerAdded:Connect(RefreshPlayerList)
-Players.PlayerRemoving:Connect(function(player)
-    if SelectedTargets[player.Name] then SelectedTargets[player.Name] = nil end
-    RefreshPlayerList(); UpdateStatus()
+ui:AddSectionLabel("Multi Fling")
+
+local TargetsDropdown = ui:AddDropdown("Targets", GetPlayerNames(), {}, function(sel)
+    SelectedTargets = {}
+    for _, name in ipairs(sel) do
+        local plr = Players:FindFirstChild(name)
+        if plr then SelectedTargets[name] = plr end
+    end
 end)
 
-RefreshPlayerList()
-UpdateStatus()
+local function RefreshTargets()
+    if TargetsDropdown and TargetsDropdown.SetOptions then
+        TargetsDropdown:SetOptions(GetPlayerNames())
+    end
+end
+
+ui:AddButton("Atualizar Lista", RefreshTargets)
+ui:AddButton("Start Fling", function() StartFling() end)
+ui:AddButton("Stop Fling", function() StopFling() end)
+
+ui:AddDivider()
+ui:AddSectionLabel("Extras")
+
+ui:AddToggle("Anti-Fling", false, function(state)
+    AntiFlingActive = state
+    if state then startAntiFling() else stopAntiFling() end
+end)
+
+ui:AddToggle("Touch Fling", false, function(state)
+    TouchFlingActive = state
+    if state then
+        if not ReplicatedStorage:FindFirstChild("Kron") then
+            local d = Instance.new("Decal")
+            d.Name = "Kron"; d.Parent = ReplicatedStorage
+        end
+        coroutine.resume(coroutine.create(runTouchFling))
+    end
+end)
+
+-- ── Mantém a lista de targets atualizada automaticamente ──
+Players.PlayerAdded:Connect(RefreshTargets)
+Players.PlayerRemoving:Connect(function(player)
+    SelectedTargets[player.Name] = nil
+    RefreshTargets()
+end)
