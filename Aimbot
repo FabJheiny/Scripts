@@ -1,585 +1,12 @@
-local RobloxUI = {}
-RobloxUI.__index = RobloxUI
+--══════════════════════════════════════════════════════
+--  KronUI Loader — ESP/AIMBOT
+--══════════════════════════════════════════════════════
 
-local BG     = Color3.fromRGB(28, 28, 32)
-local PANEL  = Color3.fromRGB(34, 34, 40)
-local CARD   = Color3.fromRGB(40, 40, 48)
-local HOVER  = Color3.fromRGB(48, 48, 58)
-local LINE   = Color3.fromRGB(58, 58, 70)
-local DIM    = Color3.fromRGB(140, 140, 160)
-local MID    = Color3.fromRGB(185, 185, 205)
-local W      = Color3.fromRGB(235, 235, 245)
-local FONT   = Enum.Font.GothamMedium
-
-local function o(cls, props, par)
-    local x = Instance.new(cls)
-    for k, v in pairs(props) do x[k] = v end
-    if par then x.Parent = par end
-    return x
-end
-local function stroke(par, t, c)
-    o("UIStroke", {
-        Color = c or LINE, Thickness = t or 1,
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-    }, par)
-end
-
-function RobloxUI.new(title, version)
-    local self = setmetatable({}, RobloxUI)
-
-    local Players = game:GetService("Players")
-    local UIS     = game:GetService("UserInputService")
-    local CoreGui = game:GetService("CoreGui")
-    local player  = Players.LocalPlayer
-    local pg      = player:WaitForChild("PlayerGui", 10) or player.PlayerGui
-
-    local old    = pg:FindFirstChild("RobloxUI_Lib")
-    local oldBtn = CoreGui:FindFirstChild("RobloxUI_FloatBtn") or pg:FindFirstChild("RobloxUI_FloatBtn")
-    if old    then old:Destroy()    end
-    if oldBtn then oldBtn:Destroy() end
-
-    self._connections = {}
-    self._UIS         = UIS
-    self._layoutOrder = 0
-
-    _G.RobloxUIScale = _G.RobloxUIScale or 10
-    local function getUIScale(s) return 0.45 + (s - 1) * 0.04 end
-
-    self.gui = o("ScreenGui", {
-        Name = "RobloxUI_Lib", ResetOnSpawn = false,
-        IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Global,
-        DisplayOrder = 10,
-    }, pg)
-
-    self.menuFrame = o("Frame", {
-        Name = "MenuFrame",
-        Size = UDim2.new(0, 245, 0, 330),
-        Position = UDim2.new(.5, -122, .5, -165),
-        BackgroundColor3 = BG,
-        BorderSizePixel = 0, Active = true, ClipsDescendants = true,
-    }, self.gui)
-    stroke(self.menuFrame, 1, LINE)
-    o("UICorner", { CornerRadius = UDim.new(0, 0) }, self.menuFrame)
-
-    local uiScaleObj = Instance.new("UIScale")
-    uiScaleObj.Scale  = getUIScale(_G.RobloxUIScale)
-    uiScaleObj.Parent = self.menuFrame
-
-    -- ── TopBar ───────────────────────────────────
-    local topH   = 30
-    local topBar = o("Frame", {
-        Name = "TopBar",
-        Size = UDim2.new(1, 0, 0, topH),
-        BackgroundColor3 = BG,
-        BorderSizePixel = 0, Active = true, ZIndex = 10,
-    }, self.menuFrame)
-
-    o("TextLabel", {
-        Size = UDim2.new(1, -150, 1, 0),
-        Position = UDim2.new(0, 12, 0, 0),
-        BackgroundTransparency = 1,
-        Text = title or "ESP/AIMBOT",
-        TextColor3 = W, TextSize = 12, Font = FONT,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 10,
-    }, topBar)
-
-    o("Frame", {
-        Size = UDim2.new(1, 0, 0, 1),
-        Position = UDim2.new(0, 0, 1, -1),
-        BackgroundColor3 = LINE, BorderSizePixel = 0, ZIndex = 12,
-    }, topBar)
-
-    -- ── GuiSize stepper ──────────────────────────
-    local STEP_W = 62
-    local STEP_H = 18
-    local stepX  = -(33 + 6 + STEP_W)
-
-    local stepHolder = o("Frame", {
-        Size = UDim2.new(0, STEP_W, 0, STEP_H),
-        Position = UDim2.new(1, stepX, 0.5, -STEP_H / 2),
-        BackgroundColor3 = CARD, BorderSizePixel = 0, ZIndex = 10,
-    }, topBar)
-    stroke(stepHolder, 1, LINE)
-    o("UICorner", { CornerRadius = UDim.new(0, 0) }, stepHolder)
-
-    local bsz = STEP_H
-    local dv  = 1
-    local nw  = STEP_W - 2 * bsz - 2 * dv
-
-    local stepPlus = o("TextButton", {
-        Size = UDim2.new(0, bsz, 1, 0),
-        BackgroundColor3 = CARD, BorderSizePixel = 0,
-        Text = "+", TextColor3 = MID, TextSize = 14, Font = FONT,
-        AutoButtonColor = false, ZIndex = 11,
-    }, stepHolder)
-    o("Frame", {
-        Size = UDim2.new(0, dv, 1, 0), Position = UDim2.new(0, bsz, 0, 0),
-        BackgroundColor3 = LINE, BorderSizePixel = 0, ZIndex = 11,
-    }, stepHolder)
-    local stepBox = o("TextBox", {
-        Size = UDim2.new(0, nw, 1, 0), Position = UDim2.new(0, bsz + dv, 0, 0),
-        BackgroundTransparency = 1,
-        Text = tostring(_G.RobloxUIScale),
-        TextColor3 = W, TextSize = 10, Font = FONT,
-        TextXAlignment = Enum.TextXAlignment.Center,
-        ClearTextOnFocus = false, ZIndex = 11,
-    }, stepHolder)
-    o("Frame", {
-        Size = UDim2.new(0, dv, 1, 0), Position = UDim2.new(0, bsz + dv + nw, 0, 0),
-        BackgroundColor3 = LINE, BorderSizePixel = 0, ZIndex = 11,
-    }, stepHolder)
-    local stepMinus = o("TextButton", {
-        Size = UDim2.new(0, bsz, 1, 0), Position = UDim2.new(0, bsz + dv + nw + dv, 0, 0),
-        BackgroundColor3 = CARD, BorderSizePixel = 0,
-        Text = "−", TextColor3 = MID, TextSize = 14, Font = FONT,
-        AutoButtonColor = false, ZIndex = 11,
-    }, stepHolder)
-
-    local stepCv = _G.RobloxUIScale
-    local function stepApply(v)
-        v = math.clamp(math.floor(v), 1, 35)
-        stepCv = v; _G.RobloxUIScale = v
-        stepBox.Text = tostring(v)
-        uiScaleObj.Scale = getUIScale(v)
-    end
-    stepPlus.MouseButton1Click:Connect(function()  stepApply(stepCv + 1) end)
-    stepMinus.MouseButton1Click:Connect(function() stepApply(stepCv - 1) end)
-    stepBox.FocusLost:Connect(function()
-        local n = tonumber(stepBox.Text)
-        if n then stepApply(n) else stepBox.Text = tostring(stepCv) end
-    end)
-    for _, btn in ipairs({ stepPlus, stepMinus }) do
-        btn.MouseEnter:Connect(function() btn.TextColor3 = W end)
-        btn.MouseLeave:Connect(function() btn.TextColor3 = MID end)
-    end
-
-    o("Frame", {
-        Size = UDim2.new(0, 1, 1, 0), Position = UDim2.new(1, -33, 0, 0),
-        BackgroundColor3 = LINE, BorderSizePixel = 0, ZIndex = 12,
-    }, topBar)
-
-    local xBtn = o("TextButton", {
-        Size = UDim2.new(0, 32, 1, 0), Position = UDim2.new(1, -32, 0, 0),
-        BackgroundColor3 = BG, BorderSizePixel = 0,
-        Text = "×", TextColor3 = DIM, TextSize = 16, Font = FONT,
-        AutoButtonColor = false, ZIndex = 11,
-    }, topBar)
-    xBtn.MouseEnter:Connect(function() xBtn.TextColor3 = W end)
-    xBtn.MouseLeave:Connect(function() xBtn.TextColor3 = DIM end)
-
-    -- ── Drag do menu ──────────────────────────────
-    do
-        local dragging, dragMoved, dragStart, startPos, _activeTouchId =
-            false, false, nil, nil, nil
-        table.insert(self._connections, topBar.InputBegan:Connect(function(inp)
-            if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-                if dragging then return end
-                dragging = true; dragMoved = false
-                dragStart = inp.Position; startPos = self.menuFrame.Position
-            elseif inp.UserInputType == Enum.UserInputType.Touch then
-                if _activeTouchId ~= nil then return end
-                _activeTouchId = inp; dragging = true; dragMoved = false
-                dragStart = inp.Position; startPos = self.menuFrame.Position
-            end
-        end))
-        table.insert(self._connections, UIS.InputChanged:Connect(function(inp)
-            if not dragging then return end
-            local isM = inp.UserInputType == Enum.UserInputType.MouseMovement
-            local isT = inp.UserInputType == Enum.UserInputType.Touch
-            if isT and inp ~= _activeTouchId then return end
-            if isM or isT then
-                local d = inp.Position - dragStart
-                if math.abs(d.X) + math.abs(d.Y) > 2 then
-                    dragMoved = true
-                    self.menuFrame.Position = UDim2.new(
-                        startPos.X.Scale, startPos.X.Offset + d.X,
-                        startPos.Y.Scale, startPos.Y.Offset + d.Y)
-                end
-            end
-        end))
-        table.insert(self._connections, UIS.InputEnded:Connect(function(inp)
-            if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-                if not dragging then return end
-                dragging = false; dragStart = nil; startPos = nil
-            elseif inp.UserInputType == Enum.UserInputType.Touch then
-                if inp ~= _activeTouchId then return end
-                dragging = false; dragMoved = false
-                _activeTouchId = nil; dragStart = nil; startPos = nil
-            end
-        end))
-    end
-
-    -- ── Content ───────────────────────────────────
-    self.contentFrame = o("Frame", {
-        Size = UDim2.new(1, 0, 1, -topH),
-        Position = UDim2.new(0, 0, 0, topH),
-        BackgroundColor3 = PANEL,
-        BorderSizePixel = 0,
-    }, self.menuFrame)
-
-    self.container = o("ScrollingFrame", {
-        Size = UDim2.new(1, -8, 1, -6),
-        Position = UDim2.new(0, 4, 0, 4),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ScrollBarThickness = 2,
-        ScrollBarImageColor3 = LINE,
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        CanvasSize = UDim2.new(),
-        Visible = true,
-    }, self.contentFrame)
-    o("UIListLayout", {
-        Padding = UDim.new(0, 4),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-    }, self.container)
-    o("UIPadding", {
-        PaddingLeft   = UDim.new(0, 2),
-        PaddingRight  = UDim.new(0, 2),
-        PaddingTop    = UDim.new(0, 4),
-        PaddingBottom = UDim.new(0, 4),
-    }, self.container)
-
-    -- ── Pill ──────────────────────────────────────
-    self.btnGui = o("ScreenGui", {
-        Name = "RobloxUI_FloatBtn", ResetOnSpawn = false,
-        IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Global,
-        DisplayOrder = 9999,
-    })
-    local okPill = pcall(function() self.btnGui.Parent = CoreGui end)
-    if not okPill then self.btnGui.Parent = pg end
-
-    local pill = o("Frame", {
-        Name = "PillUI",
-        Size = UDim2.new(0, 80, 0, 20),
-        Position = UDim2.new(1, -86, 1, -252),
-        BackgroundColor3 = BG, BorderSizePixel = 0,
-        Visible = false, ZIndex = 200,
-    }, self.btnGui)
-    stroke(pill, 1, LINE)
-    o("UICorner", { CornerRadius = UDim.new(0, 5) }, pill)
-    self._pill = pill
-
-    local pillBtn = o("TextButton", {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text = "esp/aimbot",
-        TextSize = 9, Font = FONT,
-        TextColor3 = DIM, BorderSizePixel = 0, ZIndex = 201,
-    }, pill)
-    pillBtn.MouseEnter:Connect(function() pillBtn.TextColor3 = W end)
-    pillBtn.MouseLeave:Connect(function() pillBtn.TextColor3 = DIM end)
-
-    xBtn.MouseButton1Click:Connect(function()
-        self.menuFrame.Visible = false
-        pill.Visible = true
-    end)
-
-    -- ── Drag da pill ──────────────────────────────
-    do
-        local dragging, dragMoved, dragStart, startPos, _activeTouchId =
-            false, false, nil, nil, nil
-        table.insert(self._connections, pillBtn.InputBegan:Connect(function(inp)
-            if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-                if dragging then return end
-                dragging = true; dragMoved = false
-                dragStart = inp.Position; startPos = pill.Position
-            elseif inp.UserInputType == Enum.UserInputType.Touch then
-                if _activeTouchId ~= nil then return end
-                _activeTouchId = inp; dragging = true; dragMoved = false
-                dragStart = inp.Position; startPos = pill.Position
-            end
-        end))
-        table.insert(self._connections, UIS.InputChanged:Connect(function(inp)
-            if not dragging then return end
-            local isM = inp.UserInputType == Enum.UserInputType.MouseMovement
-            local isT = inp.UserInputType == Enum.UserInputType.Touch
-            if isT and inp ~= _activeTouchId then return end
-            if isM or isT then
-                local d = inp.Position - dragStart
-                if math.abs(d.X) + math.abs(d.Y) > 2 then
-                    dragMoved = true
-                    pill.Position = UDim2.new(
-                        startPos.X.Scale, startPos.X.Offset + d.X,
-                        startPos.Y.Scale, startPos.Y.Offset + d.Y)
-                end
-            end
-        end))
-        table.insert(self._connections, UIS.InputEnded:Connect(function(inp)
-            if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-                if not dragging then return end
-                dragging = false
-                if not dragMoved then
-                    self.menuFrame.Visible = true
-                    pill.Visible = false
-                end
-                dragStart = nil; startPos = nil
-            elseif inp.UserInputType == Enum.UserInputType.Touch then
-                if inp ~= _activeTouchId then return end
-                local wasMoved = dragMoved
-                dragging = false; dragMoved = false
-                _activeTouchId = nil; dragStart = nil; startPos = nil
-                if not wasMoved then
-                    self.menuFrame.Visible = true
-                    pill.Visible = false
-                end
-            end
-        end))
-    end
-
-    return self
-end
-
-function RobloxUI:Destroy()
-    for _, conn in ipairs(self._connections) do conn:Disconnect() end
-    self._connections = {}
-    if self.gui    then self.gui:Destroy()    end
-    if self.btnGui then self.btnGui:Destroy() end
-end
-
-function RobloxUI:_nextOrder()
-    self._layoutOrder = self._layoutOrder + 1
-    return self._layoutOrder
-end
-
-function RobloxUI:AddSectionLabel(text)
-    local holder = o("Frame", {
-        Size = UDim2.new(1, 0, 0, 26),
-        BackgroundTransparency = 1,
-        LayoutOrder = self:_nextOrder(),
-    }, self.container)
-    o("TextLabel", {
-        Size = UDim2.new(1, -8, 1, 0),
-        Position = UDim2.new(0, 4, 0, 0),
-        BackgroundTransparency = 1,
-        Text = string.upper(text or ""),
-        Font = FONT, TextSize = 10,
-        TextColor3 = MID,
-        TextXAlignment = Enum.TextXAlignment.Left,
-    }, holder)
-    o("Frame", {
-        Size = UDim2.new(1, 0, 0, 1),
-        Position = UDim2.new(0, 0, 1, -1),
-        BackgroundColor3 = LINE, BorderSizePixel = 0,
-    }, holder)
-end
-
-function RobloxUI:AddDivider()
-    local holder = o("Frame", {
-        Size = UDim2.new(1, 0, 0, 10),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        LayoutOrder = self:_nextOrder(),
-    }, self.container)
-    o("Frame", {
-        Size = UDim2.new(1, 0, 0, 1),
-        Position = UDim2.new(0, 0, 0.5, 0),
-        BackgroundColor3 = LINE, BorderSizePixel = 0,
-    }, holder)
-end
-
-function RobloxUI:AddToggle(side, text, default, callback)
-    local state = default or false
-    local TS    = game:GetService("TweenService")
-
-    local btn = o("TextButton", {
-        Size = UDim2.new(1, -4, 0, 30),
-        BackgroundColor3 = CARD,
-        BorderSizePixel = 0, AutoButtonColor = false, Text = "",
-        LayoutOrder = self:_nextOrder(),
-    }, self.container)
-    stroke(btn, 1, LINE)
-    o("UICorner", { CornerRadius = UDim.new(0, 5) }, btn)
-
-    local label = o("TextLabel", {
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0, 11, 0, 0),
-        Size = UDim2.new(1, -52, 1, 0),
-        Font = FONT, TextSize = 11,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Text = text,
-    }, btn)
-
-    local trackW, trackH = 28, 12
-    local track = o("Frame", {
-        Size = UDim2.new(0, trackW, 0, trackH),
-        Position = UDim2.new(1, -(trackW + 10), 0.5, -trackH / 2),
-        BackgroundColor3 = PANEL, BorderSizePixel = 0,
-    }, btn)
-    o("UICorner", { CornerRadius = UDim.new(1, 0) }, track)
-    stroke(track, 1, LINE)
-
-    local knob = o("Frame", {
-        Size = UDim2.new(0, 8, 0, 8),
-        Position = UDim2.new(0, 2, 0.5, -4),
-        BackgroundColor3 = DIM, BorderSizePixel = 0,
-    }, track)
-    o("UICorner", { CornerRadius = UDim.new(1, 0) }, knob)
-
-    local function refresh(animate)
-        if state then
-            label.TextColor3 = W
-            if animate then
-                TS:Create(knob,  TweenInfo.new(0.12), { Position = UDim2.new(1, -10, 0.5, -4), BackgroundColor3 = W }):Play()
-                TS:Create(track, TweenInfo.new(0.12), { BackgroundColor3 = Color3.fromRGB(60, 62, 75) }):Play()
-            else
-                knob.Position          = UDim2.new(1, -10, 0.5, -4)
-                knob.BackgroundColor3  = W
-                track.BackgroundColor3 = Color3.fromRGB(60, 62, 75)
-            end
-        else
-            label.TextColor3 = DIM
-            if animate then
-                TS:Create(knob,  TweenInfo.new(0.12), { Position = UDim2.new(0, 2, 0.5, -4), BackgroundColor3 = DIM }):Play()
-                TS:Create(track, TweenInfo.new(0.12), { BackgroundColor3 = PANEL }):Play()
-            else
-                knob.Position          = UDim2.new(0, 2, 0.5, -4)
-                knob.BackgroundColor3  = DIM
-                track.BackgroundColor3 = PANEL
-            end
-        end
-    end
-    refresh(false)
-
-    btn.MouseEnter:Connect(function() btn.BackgroundColor3 = HOVER end)
-    btn.MouseLeave:Connect(function() btn.BackgroundColor3 = CARD end)
-
-    table.insert(self._connections, btn.MouseButton1Click:Connect(function()
-        state = not state
-        refresh(true)
-        if callback then task.spawn(callback, state) end
-    end))
-
-    return {
-        SetState = function(v) state = v refresh(false) end,
-        GetState = function() return state end,
-    }
-end
-
-function RobloxUI:AddButton(side, text, callback)
-    local btn = o("TextButton", {
-        Size = UDim2.new(1, -4, 0, 30),
-        BackgroundColor3 = CARD,
-        BorderSizePixel = 0, AutoButtonColor = false,
-        Font = FONT, TextSize = 11,
-        Text = text, TextColor3 = MID,
-        LayoutOrder = self:_nextOrder(),
-    }, self.container)
-    stroke(btn, 1, LINE)
-    o("UICorner", { CornerRadius = UDim.new(0, 5) }, btn)
-
-    btn.MouseEnter:Connect(function() btn.BackgroundColor3 = HOVER; btn.TextColor3 = W end)
-    btn.MouseLeave:Connect(function() btn.BackgroundColor3 = CARD;  btn.TextColor3 = MID end)
-    table.insert(self._connections, btn.MouseButton1Down:Connect(function()
-        btn.BackgroundColor3 = Color3.fromRGB(52, 52, 62)
-    end))
-    table.insert(self._connections, btn.MouseButton1Up:Connect(function()
-        btn.BackgroundColor3 = HOVER
-    end))
-    table.insert(self._connections, btn.MouseButton1Click:Connect(function()
-        if callback then task.spawn(callback) end
-    end))
-    return btn
-end
-
-function RobloxUI:AddSlider(side, text, min, max, default, callback)
-    local UIS      = self._UIS
-    local value    = math.clamp(default or min, min, max)
-    local dragging = false
-
-    local holder = o("Frame", {
-        Size = UDim2.new(1, -4, 0, 48),
-        BackgroundColor3 = CARD,
-        BorderSizePixel = 0,
-        LayoutOrder = self:_nextOrder(),
-    }, self.container)
-    stroke(holder, 1, LINE)
-    o("UICorner", { CornerRadius = UDim.new(0, 5) }, holder)
-
-    local label = o("TextLabel", {
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0, 11, 0, 0),
-        Size = UDim2.new(1, -14, 0, 26),
-        Font = FONT, TextSize = 11,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextColor3 = MID,
-    }, holder)
-
-    local track = o("Frame", {
-        Size = UDim2.new(1, -22, 0, 3),
-        Position = UDim2.new(0, 11, 0, 34),
-        BackgroundColor3 = LINE,
-        BorderSizePixel = 0,
-    }, holder)
-    o("UICorner", { CornerRadius = UDim.new(1, 0) }, track)
-
-    local fill = o("Frame", {
-        Size = UDim2.new(0, 0, 1, 0),
-        BackgroundColor3 = W,
-        BorderSizePixel = 0,
-    }, track)
-    o("UICorner", { CornerRadius = UDim.new(1, 0) }, fill)
-
-    local knob = o("Frame", {
-        Size = UDim2.new(0, 9, 0, 9),
-        AnchorPoint = Vector2.new(.5, .5),
-        Position = UDim2.new(0, 0, .5, 0),
-        BackgroundColor3 = W, BorderSizePixel = 0,
-    }, track)
-    o("UICorner", { CornerRadius = UDim.new(1, 0) }, knob)
-
-    local function redraw()
-        local rel = (value - min) / (max - min)
-        fill.Size     = UDim2.new(rel, 0, 1, 0)
-        knob.Position = UDim2.new(rel, 0, .5, 0)
-        label.Text    = text .. "   " .. tostring(math.floor(value))
-    end
-
-    local function update(x)
-        local rel = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
-        value = math.floor(min + (max - min) * rel)
-        redraw()
-        if callback then task.spawn(callback, value) end
-    end
-
-    redraw()
-
-    table.insert(self._connections, track.InputBegan:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1
-        or inp.UserInputType == Enum.UserInputType.Touch then
-            dragging = true update(inp.Position.X)
-        end
-    end))
-    table.insert(self._connections, knob.InputBegan:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1
-        or inp.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-        end
-    end))
-    table.insert(self._connections, UIS.InputChanged:Connect(function(inp)
-        if not dragging then return end
-        if inp.UserInputType == Enum.UserInputType.MouseMovement
-        or inp.UserInputType == Enum.UserInputType.Touch then
-            update(inp.Position.X)
-        end
-    end))
-    table.insert(self._connections, UIS.InputEnded:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1
-        or inp.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end))
-
-    return {
-        GetValue = function() return value end,
-        SetValue = function(v) value = math.clamp(v, min, max) redraw() end,
-    }
-end
-
-_G.RobloxUI = RobloxUI
+local LIB_URL    = "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/KronUi"
+local PILL_IMAGE = "rbxassetid://78186286433275"
 
 -- ══════════════════════════════════════════════
---  SCRIPT
+--  SETUP
 -- ══════════════════════════════════════════════
 local Players     = game:GetService("Players")
 local RunService  = game:GetService("RunService")
@@ -589,20 +16,20 @@ local Camera      = workspace.CurrentCamera
 local Settings       = { Highlight = true, Name = false, Distance = true }
 local AimbotSettings = { Enabled = true, FOV = 90, IgnoreWall = false }
 
-local ui = RobloxUI.new("ESP/AIMBOT")
+local ui = KronUI.new("ESP/AIMBOT", PILL_IMAGE)
 
 ui:AddSectionLabel("ESP")
-ui:AddToggle("left", "Player Esp",   Settings.Highlight, function(s) Settings.Highlight = s end)
-ui:AddToggle("left", "Name Esp",     Settings.Name,      function(s) Settings.Name      = s end)
-ui:AddToggle("left", "Distance Esp", Settings.Distance,  function(s) Settings.Distance  = s end)
+ui:AddToggle("Player Esp",   Settings.Highlight, function(s) Settings.Highlight = s end)
+ui:AddToggle("Name Esp",     Settings.Name,      function(s) Settings.Name      = s end)
+ui:AddToggle("Distance Esp", Settings.Distance,  function(s) Settings.Distance  = s end)
 ui:AddDivider()
 ui:AddSectionLabel("Aimbot")
-ui:AddSlider("right", "FOV",         20, 500, AimbotSettings.FOV,       function(v) AimbotSettings.FOV        = v end)
-ui:AddToggle("right", "Aimbot",      AimbotSettings.Enabled,            function(s) AimbotSettings.Enabled    = s end)
-ui:AddToggle("right", "Ignore Wall", AimbotSettings.IgnoreWall,         function(s) AimbotSettings.IgnoreWall = s end)
+ui:AddSlider("FOV", 20, 500, AimbotSettings.FOV, function(v) AimbotSettings.FOV = v end)
+ui:AddToggle("Aimbot",      AimbotSettings.Enabled,    function(s) AimbotSettings.Enabled    = s end)
+ui:AddToggle("Ignore Wall", AimbotSettings.IgnoreWall, function(s) AimbotSettings.IgnoreWall = s end)
 
 -- ══════════════════════════════════════════════
---  LÓGICA ESP (corrigida – ícone adaptativo)
+--  LOGICA ESP
 -- ══════════════════════════════════════════════
 local myTeamCache, teamCacheTime = nil, 0
 local function getMyTeam()
@@ -612,7 +39,7 @@ local function getMyTeam()
     return myTeamCache
 end
 
-local visCache  = {}
+local visCache   = {}
 local BODY_PARTS = { "Head", "HumanoidRootPart", "UpperTorso" }
 
 local function isVisible(char, player)
@@ -624,7 +51,7 @@ local function isVisible(char, player)
     if char then table.insert(filterList, char) end
     filter.FilterDescendantsInstances = filterList
     filter.IgnoreWater = true
-    local origin = Camera.CFrame.Position
+    local origin  = Camera.CFrame.Position
     local visible = false
     for _, name in ipairs(BODY_PARTS) do
         local part = char:FindFirstChild(name)
@@ -656,35 +83,38 @@ local function createESP(player, char)
     if not head then return end
 
     local bb = Instance.new("BillboardGui", head)
-    bb.Size = UDim2.new(0, 220, 0, 30)   -- largura total disponível
+    bb.Size = UDim2.new(0, 220, 0, 30)
     bb.StudsOffsetWorldSpace = Vector3.new(0, 3.5, 0)
     bb.AlwaysOnTop = true
 
-    -- Ícone de parede (🛑)
     local wallIcon = Instance.new("TextLabel", bb)
     wallIcon.BackgroundTransparency = 1
-    wallIcon.Text = "🛑"
+    wallIcon.Text    = ""
+    wallIcon.Visible = false
     wallIcon.Font = Enum.Font.GothamBold
     wallIcon.TextSize = 14
     wallIcon.TextColor3 = Color3.fromRGB(255, 80, 80)
-    wallIcon.TextStrokeColor3 = Color3.new(0,0,0)
+    wallIcon.TextStrokeColor3 = Color3.new(0, 0, 0)
     wallIcon.TextStrokeTransparency = 0
-    wallIcon.Visible = false
 
     local nameL = Instance.new("TextLabel", bb)
     nameL.BackgroundTransparency = 1
+    nameL.Text    = ""
+    nameL.Visible = false
     nameL.Font = Enum.Font.GothamBold
     nameL.TextSize = 14
-    nameL.TextColor3 = Color3.new(1,1,1)
-    nameL.TextStrokeColor3 = Color3.new(0,0,0)
+    nameL.TextColor3 = Color3.new(1, 1, 1)
+    nameL.TextStrokeColor3 = Color3.new(0, 0, 0)
     nameL.TextStrokeTransparency = 0
 
     local distL = Instance.new("TextLabel", bb)
     distL.BackgroundTransparency = 1
-    distL.Font = Enum.Font.GothamMedium
-    distL.TextSize = 11
-    distL.TextColor3 = Color3.new(0.7, 0.7, 0.7)
-    distL.TextStrokeColor3 = Color3.new(0,0,0)
+    distL.Text    = ""
+    distL.Visible = false
+    distL.Font = Enum.Font.GothamBold
+    distL.TextSize = 14
+    distL.TextColor3 = Color3.new(1, 1, 1)
+    distL.TextStrokeColor3 = Color3.new(0, 0, 0)
     distL.TextStrokeTransparency = 0
 
     local existingHL = char:FindFirstChild("ESP_Highlight")
@@ -697,7 +127,7 @@ local function createESP(player, char)
 
     espData[player] = {
         Billboard = bb, NameLabel = nameL, DistLabel = distL,
-        WallIcon = wallIcon, Highlight = hl, Character = char, lastDist = -1,
+        WallIcon = wallIcon, Highlight = hl, Character = char,
     }
 end
 
@@ -711,21 +141,22 @@ for _, p in ipairs(Players:GetPlayers()) do setupPlayer(p) end
 Players.PlayerAdded:Connect(setupPlayer)
 Players.PlayerRemoving:Connect(function(p) destroyESP(p) end)
 
--- Serviço para medir texto
 local TextService = game:GetService("TextService")
 
-local espTimer = 0
+local espTimer    = 0
+local spacing     = 6
+local distSpacing = 12
+
 RunService.Heartbeat:Connect(function(dt)
     espTimer = espTimer + dt
     if espTimer < 0.3 then return end
     espTimer = 0
+
     local myChar = LocalPlayer.Character
     local myHRP  = myChar and myChar:FindFirstChild("HumanoidRootPart")
     if not myHRP then return end
     local myTeam = getMyTeam()
     local myPos  = myHRP.Position
-
-    local spacing = 6   -- espaçamento fixo entre os elementos
 
     for player, d in pairs(espData) do
         local char = d.Character
@@ -733,24 +164,28 @@ RunService.Heartbeat:Connect(function(dt)
         local hum = char:FindFirstChildOfClass("Humanoid")
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if not hum or not hrp or hum.Health <= 0 then
-            d.NameLabel.Visible = false; d.DistLabel.Visible = false; d.WallIcon.Visible = false
-            if d.Highlight then d.Highlight.Enabled = false end; continue
+            d.NameLabel.Visible = false; d.DistLabel.Visible = false
+            d.WallIcon.Visible  = false
+            if d.Highlight then d.Highlight.Enabled = false end
+            continue
         end
         local _, onScreen = Camera:WorldToViewportPoint(hrp.Position)
         if not onScreen then
-            d.NameLabel.Visible = false; d.DistLabel.Visible = false; d.WallIcon.Visible = false
-            if d.Highlight then d.Highlight.Enabled = false end; continue
+            d.NameLabel.Visible = false; d.DistLabel.Visible = false
+            d.WallIcon.Visible  = false
+            if d.Highlight then d.Highlight.Enabled = false end
+            continue
         end
         local dist = (myPos - hrp.Position).Magnitude
         if dist > 2500 then
-            d.NameLabel.Visible = false; d.DistLabel.Visible = false; d.WallIcon.Visible = false
-            if d.Highlight then d.Highlight.Enabled = false end; continue
+            d.NameLabel.Visible = false; d.DistLabel.Visible = false
+            d.WallIcon.Visible  = false
+            if d.Highlight then d.Highlight.Enabled = false end
+            continue
         end
 
-        -- Visibilidade
         local visible = isVisible(char, player)
 
-        -- Cor
         local col
         if myTeam == nil then
             col = VIS_ON.Color
@@ -760,7 +195,6 @@ RunService.Heartbeat:Connect(function(dt)
             col = ENEMY_COL
         end
 
-        -- Highlight
         if d.Highlight then
             if Settings.Highlight then
                 d.Highlight.Enabled = true
@@ -773,78 +207,67 @@ RunService.Heartbeat:Connect(function(dt)
             end
         end
 
-        local showName = Settings.Name
-        local showDist = Settings.Distance
-        local wallIconVisible = not visible   -- só aparece se obstruído
-
-        -- Prepara tamanhos de texto (0 se não for exibido)
-        local nameText = showName and player.Name or ""
-        local distText = showDist and (math.floor(dist) .. "m") or ""
+        local showName        = Settings.Name
+        local showDist        = Settings.Distance
+        local wallIconVisible = not visible
+        local nameText        = showName and player.Name or ""
+        local distText        = showDist and (math.floor(dist) .. "m") or ""
 
         local nameWidth = 0
         if showName then
-            local size = TextService:GetTextSize(nameText, 14, Enum.Font.GothamBold, Vector2.new(9999, 30))
-            nameWidth = size.X
+            nameWidth = TextService:GetTextSize(
+                nameText, 14, Enum.Font.GothamBold, Vector2.new(9999, 30)).X
         end
 
         local distWidth = 0
         if showDist then
-            local size = TextService:GetTextSize(distText, 11, Enum.Font.GothamMedium, Vector2.new(9999, 30))
-            distWidth = size.X
+            distWidth = TextService:GetTextSize(
+                distText, 14, Enum.Font.GothamBold, Vector2.new(9999, 30)).X
         end
 
-        -- Largura total do grupo
         local totalWidth = 0
-        if wallIconVisible then
-            totalWidth = totalWidth + 20 + spacing   -- ícone (20) + espaçamento
-        end
+        if wallIconVisible then totalWidth = totalWidth + 20 + spacing end
         if showName then
             totalWidth = totalWidth + nameWidth
-            if showDist then   -- haverá espaçamento entre nome e distância
-                totalWidth = totalWidth + spacing
-            end
+            if showDist then totalWidth = totalWidth + distSpacing end
         end
-        if showDist then
-            totalWidth = totalWidth + distWidth
-        end
+        if showDist then totalWidth = totalWidth + distWidth end
 
-        -- Centraliza o grupo no BillboardGui (largura = 220)
-        local startX = math.max(0, (220 - totalWidth) / 2)
+        local cursorX = math.max(0, (220 - totalWidth) / 2)
 
-        -- Posiciona elementos da esquerda para a direita
-        local cursorX = startX
-
-        -- Ícone
         d.WallIcon.Visible = wallIconVisible
         if wallIconVisible then
-            d.WallIcon.Size = UDim2.new(0, 20, 1, 0)
-            d.WallIcon.Position = UDim2.new(0, cursorX, 0.5, -15)  -- AnchorPoint (0,0.5)
+            d.WallIcon.Text        = "[!]"
+            d.WallIcon.Size        = UDim2.new(0, 20, 1, 0)
+            d.WallIcon.Position    = UDim2.new(0, cursorX, 0.5, -15)
             d.WallIcon.AnchorPoint = Vector2.new(0, 0.5)
             cursorX = cursorX + 20 + spacing
         end
 
-        -- Nome
         d.NameLabel.Visible = showName
         if showName then
-            d.NameLabel.Size = UDim2.new(0, nameWidth, 1, 0)
-            d.NameLabel.Position = UDim2.new(0, cursorX, 0.5, -15)
-            d.NameLabel.AnchorPoint = Vector2.new(0, 0.5)
-            d.NameLabel.Text = nameText
+            d.NameLabel.Size           = UDim2.new(0, nameWidth, 1, 0)
+            d.NameLabel.Position       = UDim2.new(0, cursorX, 0.5, -15)
+            d.NameLabel.AnchorPoint    = Vector2.new(0, 0.5)
+            d.NameLabel.Text           = nameText
             d.NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-            d.NameLabel.TextColor3 = col
+            d.NameLabel.TextColor3     = col
             cursorX = cursorX + nameWidth
-            if showDist then cursorX = cursorX + spacing end
+            if showDist then cursorX = cursorX + distSpacing end
         end
 
-        -- Distância
         d.DistLabel.Visible = showDist
         if showDist then
-            d.DistLabel.Size = UDim2.new(0, distWidth, 1, 0)
-            d.DistLabel.Position = UDim2.new(0, cursorX, 0.5, -15)
-            d.DistLabel.AnchorPoint = Vector2.new(0, 0.5)
-            d.DistLabel.Text = distText
+            d.DistLabel.Size           = UDim2.new(0, distWidth, 1, 0)
+            d.DistLabel.Position       = UDim2.new(0, cursorX, 0.5, -15)
+            d.DistLabel.AnchorPoint    = Vector2.new(0, 0.5)
+            d.DistLabel.Text           = distText
             d.DistLabel.TextXAlignment = Enum.TextXAlignment.Left
-            d.DistLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+            d.DistLabel.TextColor3     = Color3.new(
+                math.min(1, col.R + (1 - col.R) * 0.35),
+                math.min(1, col.G + (1 - col.G) * 0.35),
+                math.min(1, col.B + (1 - col.B) * 0.35)
+            )
         end
     end
 end)
@@ -873,7 +296,7 @@ local function getClosestTarget()
         local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
         if not onScreen then continue end
         local sx = pos.X - halfX; local sy = pos.Y - halfY
-        if math.sqrt(sx*sx+sy*sy) > fov then continue end
+        if math.sqrt(sx*sx + sy*sy) > fov then continue end
         local wd = (myHRP.Position - hrp.Position).Magnitude
         if wd > 2000 then continue end
         if not AimbotSettings.IgnoreWall and not isVisible(char, player) then continue end
@@ -893,11 +316,18 @@ local curSmooth   = BASE_SMOOTH
 local lastCamCF   = Camera.CFrame
 
 RunService.RenderStepped:Connect(function()
-    if not cachedTarget then lastCamCF = Camera.CFrame; curSmooth = BASE_SMOOTH; return end
+    if not cachedTarget then
+        lastCamCF = Camera.CFrame; curSmooth = BASE_SMOOTH; return
+    end
     local delta = (Camera.CFrame.LookVector - lastCamCF.LookVector).Magnitude
-    if delta > 0.25 then cachedTarget = nil; curSmooth = 0; lastCamCF = Camera.CFrame; return end
-    if delta > 0.15 then curSmooth = math.max(0, curSmooth - delta * 3.5)
-    else curSmooth = curSmooth + (BASE_SMOOTH - curSmooth) * 0.05 end
+    if delta > 0.25 then
+        cachedTarget = nil; curSmooth = 0; lastCamCF = Camera.CFrame; return
+    end
+    if delta > 0.15 then
+        curSmooth = math.max(0, curSmooth - delta * 3.5)
+    else
+        curSmooth = curSmooth + (BASE_SMOOTH - curSmooth) * 0.05
+    end
     Camera.CFrame = Camera.CFrame:Lerp(
         CFrame.new(Camera.CFrame.Position, cachedTarget.Position), curSmooth)
     lastCamCF = Camera.CFrame
@@ -905,14 +335,17 @@ end)
 
 -- ── FOV Circle ───────────────────────────────
 local fovSGui = Instance.new("ScreenGui")
-fovSGui.Name = "RobloxUI_FOVCircle"; fovSGui.ResetOnSpawn = false
-fovSGui.IgnoreGuiInset = true; fovSGui.DisplayOrder = 5
-fovSGui.Parent = LocalPlayer.PlayerGui
+fovSGui.Name           = "RobloxUI_FOVCircle"
+fovSGui.ResetOnSpawn   = false
+fovSGui.IgnoreGuiInset = true
+fovSGui.DisplayOrder   = 5
+fovSGui.Parent         = LocalPlayer.PlayerGui
 
 local fovCircle = Instance.new("Frame", fovSGui)
-fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-fovCircle.Position    = UDim2.new(0.5, 0, 0.5, 0)
-fovCircle.BackgroundTransparency = 1; fovCircle.BorderSizePixel = 0
+fovCircle.AnchorPoint            = Vector2.new(0.5, 0.5)
+fovCircle.Position               = UDim2.new(0.5, 0, 0.5, 0)
+fovCircle.BackgroundTransparency = 1
+fovCircle.BorderSizePixel        = 0
 Instance.new("UICorner", fovCircle).CornerRadius = UDim.new(1, 0)
 
 local fovStroke = Instance.new("UIStroke", fovCircle)
@@ -925,5 +358,8 @@ RunService.RenderStepped:Connect(function()
     fovCircle.Visible = AimbotSettings.Enabled
     if not AimbotSettings.Enabled then return end
     local f = AimbotSettings.FOV
-    if f ~= lastFOV then fovCircle.Size = UDim2.new(0, f*2, 0, f*2); lastFOV = f end
+    if f ~= lastFOV then
+        fovCircle.Size = UDim2.new(0, f * 2, 0, f * 2)
+        lastFOV = f
+    end
 end)
