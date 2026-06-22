@@ -5,6 +5,17 @@
 local LIB_URL    = "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/KronUi"
 local PILL_IMAGE = "rbxassetid://78186286433275"
 
+local ok, result = pcall(function()
+    return loadstring(game:HttpGet(LIB_URL))()
+end)
+
+if not ok then
+    warn("[KronUI] Falha ao carregar a lib: " .. tostring(result))
+    return
+end
+
+local KronUI = result
+
 -- ══════════════════════════════════════════════
 --  SETUP
 -- ══════════════════════════════════════════════
