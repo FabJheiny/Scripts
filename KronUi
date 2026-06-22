@@ -852,7 +852,7 @@ function KronUI:AddDropdown(text, options, defaults, callback)
         Size = UDim2.new(0, 20, 1, 0),
         Font = FONTB, TextSize = 11, TextColor3 = DIM,
         TextXAlignment = Enum.TextXAlignment.Center,
-        Text = "▾", Rotation = 0,
+        Text = "▼", Rotation = 0,
     }, head)
 
     local LIST_MAX_H = 132
