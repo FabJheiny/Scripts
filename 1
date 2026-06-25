@@ -560,7 +560,8 @@ function KronUI:AddThemeDropdown()
     }
 
     local dropdown = self:AddDropdown("Tema", options, {}, function(selected)
-        local colorName = selected[1]
+        -- CORREÇÃO: selected já é a string (ou nil), não uma tabela
+        local colorName = selected
         if colorName and themeColors[colorName] then
             self:SetAccent(themeColors[colorName].primary, themeColors[colorName].secondary)
         else
