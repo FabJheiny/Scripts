@@ -1,0 +1,452 @@
+--══════════════════════════════════════════════════════
+--  KronUI Loader — ESP/AIMBOT
+--══════════════════════════════════════════════════════
+
+local LIB_URL    = "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/KronUi"
+local PILL_IMAGE = "rbxassetid://78186286433275"
+
+local ok, result = pcall(function()
+    return loadstring(game:HttpGet(LIB_URL))()
+end)
+
+if not ok then
+    warn("[KronUI] Falha ao carregar a lib: " .. tostring(result))
+    return
+end
+
+local KronUI = result
+
+-- ══════════════════════════════════════════════
+--  SETUP
+-- ══════════════════════════════════════════════
+local Players     = game:GetService("Players")
+local RunService  = game:GetService("RunService")
+local TextService = game:GetService("TextService")
+local LocalPlayer = Players.LocalPlayer
+local Camera      = workspace.CurrentCamera
+
+local Settings       = { Highlight = true, Name = false, Distance = true }
+local AimbotSettings = { Enabled = true, FOV = 90, IgnoreWall = false }
+local IgnoreList     = {}  -- { [playerName] = true }
+
+local ui
+
+local function buildUI()
+    if ui then ui:Destroy() end
+
+    local playerNames = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then table.insert(playerNames, p.Name) end
+    end
+
+    -- Remove do IgnoreList quem já saiu do jogo
+    local nameSet = {}
+    for _, n in ipairs(playerNames) do nameSet[n] = true end
+    local toRemove = {}
+    for name in pairs(IgnoreList) do
+        if not nameSet[name] then table.insert(toRemove, name) end
+    end
+    for _, name in ipairs(toRemove) do IgnoreList[name] = nil end
+
+    local currentIgnored = {}
+    for name in pairs(IgnoreList) do table.insert(currentIgnored, name) end
+
+    ui = KronUI.new("ESP/AIMBOT", PILL_IMAGE)
+
+    ui:AddSectionLabel("ESP")
+    ui:AddToggle("Body Esp",     Settings.Highlight, function(s) Settings.Highlight = s end)
+    ui:AddToggle("Name Esp",     Settings.Name,      function(s) Settings.Name      = s end)
+    ui:AddToggle("Distance Esp", Settings.Distance,  function(s) Settings.Distance  = s end)
+    ui:AddDivider()
+    ui:AddSectionLabel("Aimbot")
+    ui:AddSlider("FOV", 20, 500, AimbotSettings.FOV, function(v) AimbotSettings.FOV = v end)
+    ui:AddToggle("Aimbot",      AimbotSettings.Enabled,    function(s) AimbotSettings.Enabled    = s end)
+    ui:AddToggle("Ignore Wall", AimbotSettings.IgnoreWall, function(s) AimbotSettings.IgnoreWall = s end)
+    ui:AddDivider()
+    ui:AddSectionLabel("Ignorar no Aimbot")
+    ui:AddDropdown("Selecionar Players", playerNames, currentIgnored, function(sel)
+        IgnoreList = {}
+        for _, name in ipairs(sel) do IgnoreList[name] = true end
+    end)
+    ui:AddButton("↺ Recarregar Players", function()
+        task.defer(buildUI)
+    end)
+end
+
+buildUI()
+
+-- ══════════════════════════════════════════════
+--  LOGICA ESP
+-- ══════════════════════════════════════════════
+local myTeamCache, teamCacheTime = nil, 0
+local function getMyTeam()
+    if tick() - teamCacheTime > 2 then
+        myTeamCache = LocalPlayer.Team; teamCacheTime = tick()
+    end
+    return myTeamCache
+end
+
+local visCache   = {}
+local BODY_PARTS = { "Head", "HumanoidRootPart", "UpperTorso" }
+
+local function isVisible(char, player)
+    local cache = visCache[player]
+    if cache and tick() - cache.t < 0.5 then return cache.v end
+    local filter = RaycastParams.new()
+    filter.FilterType = Enum.RaycastFilterType.Blacklist
+    local filterList = { LocalPlayer.Character, Camera }
+    if char then table.insert(filterList, char) end
+    filter.FilterDescendantsInstances = filterList
+    filter.IgnoreWater = true
+    local origin  = Camera.CFrame.Position
+    local visible = false
+    for _, name in ipairs(BODY_PARTS) do
+        local part = char:FindFirstChild(name)
+        if not part then continue end
+        local ray = workspace:Raycast(origin, part.Position - origin, filter)
+        if not ray or char:IsAncestorOf(ray.Instance) then visible = true break end
+    end
+    visCache[player] = { v = visible, t = tick() }
+    return visible
+end
+
+local espData   = {}
+local VIS_ON    = { Color = Color3.fromRGB(220, 220, 235), Fill = 0.5, Outline = 0.2 }
+local TEAM_COL  = Color3.fromRGB(160, 210, 170)
+local ENEMY_COL = Color3.fromRGB(220, 60, 60)
+
+local function destroyESP(player)
+    local d = espData[player]
+    if not d then return end
+    if d.Billboard then d.Billboard:Destroy() end
+    if d.Highlight  then d.Highlight:Destroy()  end
+    espData[player] = nil; visCache[player] = nil
+end
+
+local function createESP(player, char)
+    if player == LocalPlayer then return end
+    destroyESP(player)
+    local head = char:WaitForChild("Head", 5)
+    if not head then return end
+
+    local bb = Instance.new("BillboardGui", head)
+    bb.Size = UDim2.new(0, 220, 0, 30)
+    bb.StudsOffsetWorldSpace = Vector3.new(0, 3.5, 0)
+    bb.AlwaysOnTop = true
+
+    local wallIcon = Instance.new("TextLabel", bb)
+    wallIcon.BackgroundTransparency = 1
+    wallIcon.Text    = ""
+    wallIcon.Visible = false
+    wallIcon.Font = Enum.Font.GothamBold
+    wallIcon.TextSize = 14
+    wallIcon.TextColor3 = Color3.fromRGB(255, 80, 80)
+    wallIcon.TextStrokeColor3 = Color3.new(0, 0, 0)
+    wallIcon.TextStrokeTransparency = 0
+
+    local nameL = Instance.new("TextLabel", bb)
+    nameL.BackgroundTransparency = 1
+    nameL.Text    = ""
+    nameL.Visible = false
+    nameL.Font = Enum.Font.GothamBold
+    nameL.TextSize = 14
+    nameL.TextColor3 = Color3.new(1, 1, 1)
+    nameL.TextStrokeColor3 = Color3.new(0, 0, 0)
+    nameL.TextStrokeTransparency = 0
+
+    local distL = Instance.new("TextLabel", bb)
+    distL.BackgroundTransparency = 1
+    distL.Text    = ""
+    distL.Visible = false
+    distL.Font = Enum.Font.GothamBold
+    distL.TextSize = 14
+    distL.TextColor3 = Color3.new(1, 1, 1)
+    distL.TextStrokeColor3 = Color3.new(0, 0, 0)
+    distL.TextStrokeTransparency = 0
+
+    local existingHL = char:FindFirstChild("ESP_Highlight")
+    if existingHL then existingHL:Destroy() end
+
+    local hl = Instance.new("Highlight")
+    hl.Name = "ESP_Highlight"; hl.FillTransparency = 0.6
+    hl.OutlineTransparency = 0; hl.Enabled = false
+    hl.Adornee = char; hl.Parent = char
+
+    espData[player] = {
+        Billboard = bb, NameLabel = nameL, DistLabel = distL,
+        WallIcon = wallIcon, Highlight = hl, Character = char,
+    }
+end
+
+local function setupPlayer(player)
+    player.CharacterAdded:Connect(function(char) task.wait(0.4) createESP(player, char) end)
+    player.CharacterRemoving:Connect(function() destroyESP(player) end)
+    if player.Character then createESP(player, player.Character) end
+end
+
+for _, p in ipairs(Players:GetPlayers()) do setupPlayer(p) end
+Players.PlayerAdded:Connect(setupPlayer)
+Players.PlayerRemoving:Connect(function(p) destroyESP(p) end)
+
+local espTimer    = 0
+local spacing     = 6
+local distSpacing = 12
+
+RunService.Heartbeat:Connect(function(dt)
+    espTimer = espTimer + dt
+    if espTimer < 0.3 then return end
+    espTimer = 0
+
+    local myChar = LocalPlayer.Character
+    local myHRP  = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    if not myHRP then return end
+    local myTeam = getMyTeam()
+    local myPos  = myHRP.Position
+
+    for player, d in pairs(espData) do
+        local char = d.Character
+        if not char or not char.Parent then continue end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hum or not hrp or hum.Health <= 0 then
+            d.NameLabel.Visible = false; d.DistLabel.Visible = false
+            d.WallIcon.Visible  = false
+            if d.Highlight then d.Highlight.Enabled = false end
+            continue
+        end
+        local _, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+        if not onScreen then
+            d.NameLabel.Visible = false; d.DistLabel.Visible = false
+            d.WallIcon.Visible  = false
+            if d.Highlight then d.Highlight.Enabled = false end
+            continue
+        end
+        local dist = (myPos - hrp.Position).Magnitude
+        if dist > 700 then
+            d.NameLabel.Visible = false; d.DistLabel.Visible = false
+            d.WallIcon.Visible  = false
+            if d.Highlight then d.Highlight.Enabled = false end
+            continue
+        end
+
+        local visible = isVisible(char, player)
+
+        local col
+        if myTeam == nil then
+            col = VIS_ON.Color
+        elseif player.Team == myTeam then
+            col = TEAM_COL
+        else
+            col = ENEMY_COL
+        end
+
+        if d.Highlight then
+            if Settings.Highlight then
+                d.Highlight.Enabled = true
+                d.Highlight.FillColor = col
+                d.Highlight.OutlineColor = col
+                d.Highlight.FillTransparency = VIS_ON.Fill
+                d.Highlight.OutlineTransparency = VIS_ON.Outline
+            else
+                d.Highlight.Enabled = false
+            end
+        end
+
+        local showName        = Settings.Name
+        local showDist        = Settings.Distance
+        local wallIconVisible = not visible
+
+        local distColor = Color3.new(
+            math.min(1, col.R + (1 - col.R) * 0.35),
+            math.min(1, col.G + (1 - col.G) * 0.35),
+            math.min(1, col.B + (1 - col.B) * 0.35)
+        )
+
+        if showName and showDist then
+            -- ── Layout vertical: nome em cima, dist abaixo ──
+            d.Billboard.Size = UDim2.new(0, 220, 0, 38)
+
+            local nameText = player.Name
+            local nameW    = TextService:GetTextSize(nameText, 14, Enum.Font.GothamBold, Vector2.new(9999, 30)).X
+            local iconW    = wallIconVisible and 26 or 0
+            local row1W    = iconW + nameW
+            local row1X    = math.max(0, (220 - row1W) / 2)
+
+            d.WallIcon.Visible = wallIconVisible
+            if wallIconVisible then
+                d.WallIcon.Text        = "[!]"
+                d.WallIcon.Size        = UDim2.new(0, 20, 0, 18)
+                d.WallIcon.Position    = UDim2.new(0, row1X, 0, 1)
+                d.WallIcon.AnchorPoint = Vector2.new(0, 0)
+                row1X = row1X + 26
+            end
+
+            d.NameLabel.Visible        = true
+            d.NameLabel.Size           = UDim2.new(0, nameW, 0, 18)
+            d.NameLabel.Position       = UDim2.new(0, row1X, 0, 1)
+            d.NameLabel.AnchorPoint    = Vector2.new(0, 0)
+            d.NameLabel.Text           = nameText
+            d.NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+            d.NameLabel.TextColor3     = col
+
+            d.DistLabel.Visible        = true
+            d.DistLabel.Size           = UDim2.new(1, 0, 0, 18)
+            d.DistLabel.Position       = UDim2.new(0, 0, 0, 20)
+            d.DistLabel.AnchorPoint    = Vector2.new(0, 0)
+            d.DistLabel.Text           = math.floor(dist) .. "m"
+            d.DistLabel.TextXAlignment = Enum.TextXAlignment.Center
+            d.DistLabel.TextColor3     = distColor
+
+        else
+            -- ── Layout horizontal (item único) ──
+            d.Billboard.Size = UDim2.new(0, 220, 0, 30)
+
+            local nameText = showName and player.Name or ""
+            local distText = showDist and (math.floor(dist) .. "m") or ""
+
+            local nameWidth = 0
+            if showName then
+                nameWidth = TextService:GetTextSize(nameText, 14, Enum.Font.GothamBold, Vector2.new(9999, 30)).X
+            end
+
+            local distWidth = 0
+            if showDist then
+                distWidth = TextService:GetTextSize(distText, 14, Enum.Font.GothamBold, Vector2.new(9999, 30)).X
+            end
+
+            local totalWidth = 0
+            if wallIconVisible then totalWidth = totalWidth + 20 + spacing end
+            if showName then
+                totalWidth = totalWidth + nameWidth
+                if showDist then totalWidth = totalWidth + distSpacing end
+            end
+            if showDist then totalWidth = totalWidth + distWidth end
+
+            local cursorX = math.max(0, (220 - totalWidth) / 2)
+
+            d.WallIcon.Visible = wallIconVisible
+            if wallIconVisible then
+                d.WallIcon.Text        = "[!]"
+                d.WallIcon.Size        = UDim2.new(0, 20, 1, 0)
+                d.WallIcon.Position    = UDim2.new(0, cursorX, 0.5, -15)
+                d.WallIcon.AnchorPoint = Vector2.new(0, 0.5)
+                cursorX = cursorX + 20 + spacing
+            end
+
+            d.NameLabel.Visible = showName
+            if showName then
+                d.NameLabel.Size           = UDim2.new(0, nameWidth, 1, 0)
+                d.NameLabel.Position       = UDim2.new(0, cursorX, 0.5, -15)
+                d.NameLabel.AnchorPoint    = Vector2.new(0, 0.5)
+                d.NameLabel.Text           = nameText
+                d.NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+                d.NameLabel.TextColor3     = col
+                cursorX = cursorX + nameWidth
+                if showDist then cursorX = cursorX + distSpacing end
+            end
+
+            d.DistLabel.Visible = showDist
+            if showDist then
+                d.DistLabel.Size           = UDim2.new(0, distWidth, 1, 0)
+                d.DistLabel.Position       = UDim2.new(0, cursorX, 0.5, -15)
+                d.DistLabel.AnchorPoint    = Vector2.new(0, 0.5)
+                d.DistLabel.Text           = distText
+                d.DistLabel.TextXAlignment = Enum.TextXAlignment.Left
+                d.DistLabel.TextColor3     = distColor
+            end
+        end
+    end
+end)
+
+-- ══════════════════════════════════════════════
+--  AIMBOT
+-- ══════════════════════════════════════════════
+local function getClosestTarget()
+    local myChar = LocalPlayer.Character
+    local myHRP  = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    if not myHRP then return nil end
+    local myTeam = getMyTeam()
+    local fov    = AimbotSettings.FOV
+    local halfX  = Camera.ViewportSize.X * 0.5
+    local halfY  = Camera.ViewportSize.Y * 0.5
+    local best, bestD = nil, math.huge
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player == LocalPlayer then continue end
+        if IgnoreList[player.Name] then continue end
+        local char = player.Character; if not char then continue end
+        if myTeam and player.Team == myTeam then continue end
+        local head = char:FindFirstChild("Head")
+        local hrp  = char:FindFirstChild("HumanoidRootPart")
+        if not head or not hrp then continue end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hum or hum.Health <= 0 then continue end
+        local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+        if not onScreen then continue end
+        local sx = pos.X - halfX; local sy = pos.Y - halfY
+        if math.sqrt(sx*sx + sy*sy) > fov then continue end
+        local wd = (myHRP.Position - hrp.Position).Magnitude
+        if wd > 2000 then continue end
+        if not AimbotSettings.IgnoreWall and not isVisible(char, player) then continue end
+        if wd < bestD then bestD = wd; best = head end
+    end
+    return best
+end
+
+local cachedTarget = nil
+RunService.Heartbeat:Connect(function()
+    if not AimbotSettings.Enabled then cachedTarget = nil return end
+    cachedTarget = getClosestTarget()
+end)
+
+local BASE_SMOOTH = 0.9
+local curSmooth   = BASE_SMOOTH
+local lastCamCF   = Camera.CFrame
+
+RunService.RenderStepped:Connect(function()
+    if not cachedTarget then
+        lastCamCF = Camera.CFrame; curSmooth = BASE_SMOOTH; return
+    end
+    local delta = (Camera.CFrame.LookVector - lastCamCF.LookVector).Magnitude
+    if delta > 0.25 then
+        cachedTarget = nil; curSmooth = 0; lastCamCF = Camera.CFrame; return
+    end
+    if delta > 0.15 then
+        curSmooth = math.max(0, curSmooth - delta * 3.5)
+    else
+        curSmooth = curSmooth + (BASE_SMOOTH - curSmooth) * 0.05
+    end
+    Camera.CFrame = Camera.CFrame:Lerp(
+        CFrame.new(Camera.CFrame.Position, cachedTarget.Position), curSmooth)
+    lastCamCF = Camera.CFrame
+end)
+
+-- ── FOV Circle ───────────────────────────────
+local fovSGui = Instance.new("ScreenGui")
+fovSGui.Name           = "RobloxUI_FOVCircle"
+fovSGui.ResetOnSpawn   = false
+fovSGui.IgnoreGuiInset = true
+fovSGui.DisplayOrder   = 5
+fovSGui.Parent         = LocalPlayer.PlayerGui
+
+local fovCircle = Instance.new("Frame", fovSGui)
+fovCircle.AnchorPoint            = Vector2.new(0.5, 0.5)
+fovCircle.Position               = UDim2.new(0.5, 0, 0.5, 0)
+fovCircle.BackgroundTransparency = 1
+fovCircle.BorderSizePixel        = 0
+Instance.new("UICorner", fovCircle).CornerRadius = UDim.new(1, 0)
+
+local fovStroke = Instance.new("UIStroke", fovCircle)
+fovStroke.Color           = Color3.fromRGB(255, 255, 255)
+fovStroke.Thickness       = 1
+fovStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+local lastFOV = -1
+RunService.RenderStepped:Connect(function()
+    fovCircle.Visible = AimbotSettings.Enabled
+    if not AimbotSettings.Enabled then return end
+    local f = AimbotSettings.FOV
+    if f ~= lastFOV then
+        fovCircle.Size = UDim2.new(0, f * 2, 0, f * 2)
+        lastFOV = f
+    end
+end)
