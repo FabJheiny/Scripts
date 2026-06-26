@@ -1,8 +1,5 @@
 --══════════════════════════════════════════════════════════════
 --  KronUI v2.0 — Ultra Premium Roblox Interface Library
---  Features: Notificações, TextInput, ColorPicker, Keybind,
---             Progress Bar, Tabs, Badge, Tooltip, Animações
---             aprimoradas, glassmorphism, parallax, e muito mais
 --══════════════════════════════════════════════════════════════
 
 local TweenService     = game:GetService("TweenService")
@@ -15,7 +12,6 @@ local TextService      = game:GetService("TextService")
 local KronUI = {}
 KronUI.__index = KronUI
 
--- ══════════════ PALETA DE CORES ══════════════
 local BG      = Color3.fromRGB(10, 8, 16)
 local PANEL   = Color3.fromRGB(16, 13, 26)
 local CARD    = Color3.fromRGB(22, 18, 34)
@@ -37,7 +33,6 @@ local INFO    = Color3.fromRGB(60, 180, 255)
 local FONT    = Enum.Font.GothamMedium
 local FONTB   = Enum.Font.GothamBold
 
--- ══════════════ HELPERS ══════════════
 local function o(cls, props, par)
     local x = Instance.new(cls)
     for k, v in pairs(props) do x[k] = v end
@@ -162,7 +157,6 @@ function KronUI.new(title, pillImage, config)
         end
     end
 
-    -- ── Setup GUI ──
     local player = Players.LocalPlayer
     local pg     = player:WaitForChild("PlayerGui", 10) or player.PlayerGui
 
@@ -176,14 +170,12 @@ function KronUI.new(title, pillImage, config)
     _G.KronUIScale = _G.KronUIScale or 10
     local function getUIScale(s) return 0.42 + (s - 1) * 0.04 end
 
-    -- ScreenGui principal
     self.gui = o("ScreenGui", {
         Name = "KronUI_Lib", ResetOnSpawn = false,
         IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Global,
         DisplayOrder = 10,
     }, pg)
 
-    -- Notificações GUI separado (sempre no topo)
     self.notifGui = o("ScreenGui", {
         Name = "KronUI_Notifs", ResetOnSpawn = false,
         IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Global,
@@ -208,7 +200,6 @@ function KronUI.new(title, pillImage, config)
     }, notifStack)
     self._notifStack = notifStack
 
-    -- Sons
     local clickSound = o("Sound", { SoundId = "rbxassetid://6895079853", Volume = 0.5 }, self.gui)
     local notifSound = o("Sound", { SoundId = "rbxassetid://9120386436", Volume = 0.4 }, self.gui)
     local openSound  = o("Sound", { SoundId = "rbxassetid://6026984224", Volume = 0.35}, self.gui)
@@ -219,7 +210,6 @@ function KronUI.new(title, pillImage, config)
     self._playOpen   = function() pcall(function() openSound:Play()  end) end
     self._playClose  = function() pcall(function() closeSound:Play() end) end
 
-    -- ── MenuFrame ──
     local MENU_W  = config.Width  or 270
     local MENU_H  = config.Height or 360
     local CORNER_R = 14
@@ -234,7 +224,6 @@ function KronUI.new(title, pillImage, config)
     }, self.gui)
     corner(self.menuFrame, CORNER_R)
 
-    -- Glass inner frame
     local glassInner = o("Frame", {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundColor3 = Color3.fromRGB(255,255,255),
@@ -256,7 +245,6 @@ function KronUI.new(title, pillImage, config)
         self._playOpen()
     end)
 
-    -- ── TopBar ──
     local topH = 36
     local topBar = o("Frame", {
         Name = "TopBar",
@@ -267,7 +255,6 @@ function KronUI.new(title, pillImage, config)
     }, self.menuFrame)
     corner(topBar, CORNER_R)
 
-    -- Cobertura do canto inferior redondo
     o("Frame", {
         Size = UDim2.new(0, CORNER_R, 0, CORNER_R),
         Position = UDim2.new(0, 0, 1, -CORNER_R),
@@ -279,7 +266,6 @@ function KronUI.new(title, pillImage, config)
         BackgroundColor3 = BG, BorderSizePixel = 0, ZIndex = 11,
     }, topBar)
 
-    -- Ícone de logo (pill icon pequeno no topbar)
     local topIcon = o("ImageLabel", {
         Size = UDim2.new(0, 18, 0, 18),
         Position = UDim2.new(0, 10, 0.5, -9),
@@ -300,7 +286,6 @@ function KronUI.new(title, pillImage, config)
         ZIndex = 12,
     }, topBar)
 
-    -- Linha shimmer no fundo da topbar
     local shimmer = o("Frame", {
         Size = UDim2.new(1, 0, 0, 2),
         Position = UDim2.new(0, 0, 1, -2),
@@ -324,7 +309,6 @@ function KronUI.new(title, pillImage, config)
     shimmerT:Play()
     self._shimmerTween = shimmerT
 
-    -- Stepper de escala
     local STEP_W, STEP_H = 60, 18
     local stepHolder = o("Frame", {
         Size = UDim2.new(0, STEP_W, 0, STEP_H),
@@ -380,13 +364,11 @@ function KronUI.new(title, pillImage, config)
         self:_registerThemeCallback(function(p) btn.TextColor3 = MID end)
     end
 
-    -- Divisor antes do botão X
     o("Frame", {
         Size = UDim2.new(0, 1, 1, 0), Position = UDim2.new(1, -35, 0, 0),
         BackgroundColor3 = LINE, BorderSizePixel = 0, ZIndex = 12,
     }, topBar)
 
-    -- Botão fechar
     local xBtn = o("TextButton", {
         Size = UDim2.new(0, 34, 1, 0), Position = UDim2.new(1, -34, 0, 0),
         BackgroundColor3 = BG, BorderSizePixel = 0,
@@ -411,7 +393,6 @@ function KronUI.new(title, pillImage, config)
         xBtn.TextColor3 = DIM
     end)
 
-    -- Drag do menu
     do
         local dragging, dragStart, startPos, _tid = false, nil, nil, nil
         table.insert(self._connections, topBar.InputBegan:Connect(function(inp)
@@ -445,7 +426,6 @@ function KronUI.new(title, pillImage, config)
         end))
     end
 
-    -- ── ContentFrame + TabBar ──
     self.tabBar = o("Frame", {
         Size = UDim2.new(1, 0, 0, 0),
         Position = UDim2.new(0, 0, 0, topH),
@@ -482,7 +462,6 @@ function KronUI.new(title, pillImage, config)
     o("Frame", { Size = UDim2.new(0, CORNER_R, 0, CORNER_R), Position = UDim2.new(1, -CORNER_R, 0, 0),
         BackgroundColor3 = PANEL, BorderSizePixel = 0 }, self.contentArea)
 
-    -- Container padrão (sem tabs)
     self.container = o("ScrollingFrame", {
         Size = UDim2.new(1, -4, 1, -6),
         Position = UDim2.new(0, 2, 0, 4),
@@ -503,7 +482,6 @@ function KronUI.new(title, pillImage, config)
         PaddingTop = UDim.new(0, 4),  PaddingBottom = UDim.new(0, 4),
     }, self.container)
 
-    -- ── Pill Button (ícone flutuante) ──
     self.btnGui = o("ScreenGui", {
         Name = "KronUI_FloatBtn", ResetOnSpawn = false,
         IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Global,
@@ -527,7 +505,6 @@ function KronUI.new(title, pillImage, config)
     self:_registerThemeItem(pillBorderInner, "Color", "accent")
     self._pill = pill
 
-    -- Brilho pulsante do pill
     local pillGlow = o("Frame", {
         AnchorPoint = Vector2.new(0.5, 0.5),
         Size = UDim2.new(1.4, 0, 1.4, 0),
@@ -571,7 +548,6 @@ function KronUI.new(title, pillImage, config)
     pillBtn.MouseButton1Up:Connect(function()    tween(pillScale, EASE_BACK(0.2), { Scale = 1 })   end)
     pillBtn.MouseLeave:Connect(function()        tween(pillScale, EASE_OUT(0.15), { Scale = 1 })   end)
 
-    -- Notif badge no pill
     local notifBadge = o("Frame", {
         Name = "NotifBadge",
         AnchorPoint = Vector2.new(1, 0),
@@ -636,7 +612,6 @@ function KronUI.new(title, pillImage, config)
         showPill()
     end)
 
-    -- Drag do pill
     do
         local dragging, dragMoved, dragStart, startPos, _tid = false, false, nil, nil, nil
         table.insert(self._connections, pillBtn.InputBegan:Connect(function(inp)
@@ -675,7 +650,6 @@ function KronUI.new(title, pillImage, config)
         end))
     end
 
-    -- ── Tema padrão embutido ──
     self:AddSectionLabel("🎨 Tema")
     self:AddThemeDropdown()
 
@@ -733,10 +707,8 @@ function KronUI:AddTab(name, icon)
         self._tabBarVisible = true
         self.tabBar.Visible = true
         self.tabBar.Size    = UDim2.new(1, 0, 0, TAB_H)
-        -- ajustar content area
         self.contentArea.Size     = UDim2.new(1, 0, 1, -(36 + TAB_H))
         self.contentArea.Position = UDim2.new(0, 0, 0, 36 + TAB_H)
-        -- esconder container padrão
         self.container.Visible = false
     end
 
@@ -842,7 +814,7 @@ function KronUI:AddSectionLabel(text)
         Font = FONTB, TextSize = 10,
         TextColor3 = MID,
         TextXAlignment = Enum.TextXAlignment.Left,
-        LetterSpacing = 2,
+        -- LetterSpacing removido: não é propriedade válida no executor
     }, holder)
     return holder
 end
@@ -958,7 +930,6 @@ function KronUI:AddToggle(text, default, callback, tooltip)
         if not state then
             tween(btn, EASE_OUT(0.1), { BackgroundColor3 = HOVER })
         end
-        -- Tooltip
         if tooltip then self:_showTooltip(tooltip, btn) end
     end)
     btn.MouseLeave:Connect(function()
@@ -982,7 +953,6 @@ end
 
 -- ══════════════ BUTTON ══════════════
 function KronUI:AddButton(text, callback, style, tooltip)
-    -- style: "primary" | "danger" | "success" | "ghost" | nil
     local isGhost   = style == "ghost"
     local isDanger  = style == "danger"
     local isSuccess = style == "success"
@@ -1021,7 +991,6 @@ function KronUI:AddButton(text, callback, style, tooltip)
         end)
     end
 
-    -- Ripple
     local function ripple(x, y)
         local r = o("Frame", {
             AnchorPoint = Vector2.new(0.5, 0.5),
@@ -1620,7 +1589,7 @@ function KronUI:AddTextInput(text, placeholder, default, callback, clearOnFocus)
         TextXAlignment = Enum.TextXAlignment.Left,
         TextColor3 = self._accent,
         Text = string.upper(text or ""),
-        LetterSpacing = 1,
+        -- LetterSpacing removido: não é propriedade válida no executor
     }, holder)
     self:_registerThemeCallback(function(p) holder:FindFirstChildWhichIsA("TextLabel").TextColor3 = p end)
 
@@ -1647,7 +1616,6 @@ function KronUI:AddTextInput(text, placeholder, default, callback, clearOnFocus)
         ClipsDescendants = true,
     }, inputBg)
 
-    -- Contador de caracteres
     local charCount = o("TextLabel", {
         AnchorPoint = Vector2.new(1, 0.5),
         Position = UDim2.new(1, -8, 0.5, 0),
@@ -1675,10 +1643,6 @@ function KronUI:AddTextInput(text, placeholder, default, callback, clearOnFocus)
         tween(holderStroke, EASE_OUT(0.14), { Color = LINE, Transparency = 0 })
         charCount.Visible = false
         if callback and entered then task.spawn(callback, inputBox.Text) end
-    end)
-
-    self:_registerThemeCallback(function(p)
-        -- atualiza se em foco
     end)
 
     return {
@@ -1819,7 +1783,6 @@ function KronUI:AddProgressBar(text, value, max, color)
         }),
     }, fill)
 
-    -- Shimmer animado no fill
     local fillShimmer = o("Frame", {
         Size = UDim2.new(0, 20, 1, 0),
         Position = UDim2.new(-0.2, 0, 0, 0),
@@ -1922,7 +1885,6 @@ function KronUI:AddColorPicker(text, default, callback)
     o("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8),
         PaddingTop = UDim.new(0, 6) }, pickerContent)
 
-    -- Gradient SV (quadrado de saturação/valor)
     local svBox = o("ImageLabel", {
         Size = UDim2.new(1, -50, 0, 80),
         BackgroundColor3 = Color3.fromHSV(h, 1, 1),
@@ -1945,7 +1907,6 @@ function KronUI:AddColorPicker(text, default, callback)
     local svBtn = o("TextButton", { Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1, Text = "", ZIndex = 6 }, svBox)
 
-    -- Hue bar
     local hueBar = o("ImageLabel", {
         Position = UDim2.new(1, -42, 0, 0),
         Size = UDim2.new(0, 12, 0, 80),
@@ -1980,7 +1941,6 @@ function KronUI:AddColorPicker(text, default, callback)
     local hueBtn = o("TextButton", { Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1, Text = "", ZIndex = 6 }, hueBar)
 
-    -- Hex display
     local hexRow = o("Frame", {
         Size = UDim2.new(1, 0, 0, 28),
         Position = UDim2.new(0, 0, 0, 86),
@@ -2101,7 +2061,7 @@ function KronUI:AddColorPicker(text, default, callback)
     }
 end
 
--- ══════════════ LABEL (display de info) ══════════════
+-- ══════════════ LABEL ══════════════
 function KronUI:AddLabel(text, subtext, icon)
     local holder = o("Frame", {
         Size = UDim2.new(1, 0, 0, subtext and 42 or 32),
@@ -2159,7 +2119,7 @@ function KronUI:AddLabel(text, subtext, icon)
     }
 end
 
--- ══════════════ BADGE / STAT ══════════════
+-- ══════════════ BADGE ══════════════
 function KronUI:AddBadge(text, value, color)
     color = color or self._accent
     local holder = o("Frame", {
@@ -2203,7 +2163,7 @@ function KronUI:AddBadge(text, value, color)
     }
 end
 
--- ══════════════ TOOLTIP INTERNO ══════════════
+-- ══════════════ TOOLTIP ══════════════
 function KronUI:_showTooltip(text, target)
     self:_hideTooltip()
     if not text or text == "" then return end
@@ -2244,7 +2204,7 @@ function KronUI:Notify(opts)
     local title    = opts.Title    or "Notificação"
     local message  = opts.Message  or ""
     local duration = opts.Duration or 4
-    local ntype    = opts.Type     or "info"  -- "info"|"success"|"error"|"warning"
+    local ntype    = opts.Type     or "info"
     local icon     = opts.Icon     or (ntype == "success" and "✅" or ntype == "error" and "❌" or ntype == "warning" and "⚠️" or "ℹ️")
 
     local typeColor = ntype == "success" and SUCCESS or ntype == "error" and ERROR or ntype == "warning" and WARNING or INFO
@@ -2267,7 +2227,6 @@ function KronUI:Notify(opts)
     corner(card, 10)
     stroke(card, 1.5, typeColor, 0.5)
 
-    -- Barra colorida na esquerda
     local colorBar = o("Frame", {
         Size = UDim2.new(0, 3, 1, 0),
         BackgroundColor3 = typeColor,
@@ -2305,7 +2264,6 @@ function KronUI:Notify(opts)
         Text = message, ZIndex = 2,
     }, card)
 
-    -- Barra de progresso de tempo
     local timerTrack = o("Frame", {
         Position = UDim2.new(0, 3, 1, -3),
         Size = UDim2.new(1, -6, 0, 2),
@@ -2323,17 +2281,14 @@ function KronUI:Notify(opts)
 
     self._playNotif()
 
-    -- Entrada
     local TARGET_H = message ~= "" and 62 or 38
     tween(card, EASE_BACK(0.32), { Size = UDim2.new(1, 0, 0, TARGET_H) })
 
-    -- Timer fill
     task.delay(0.1, function()
         tween(timerFill, TweenInfo.new(duration - 0.1, Enum.EasingStyle.Linear),
             { Size = UDim2.new(0, 0, 1, 0) })
     end)
 
-    -- Saída
     task.delay(duration, function()
         tween(card, EASE_IN(0.25), { Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1 })
         task.delay(0.28, function()
@@ -2347,7 +2302,6 @@ function KronUI:Notify(opts)
         end)
     end)
 
-    -- Fechar ao clicar
     local closeBtn = o("TextButton", {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
