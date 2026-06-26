@@ -332,9 +332,11 @@ function KronUI.new(title, pillImage)
         BackgroundColor3 = PANEL, BorderSizePixel = 0,
     }, self.contentFrame)
 
+    -- FIX 3: container com padding lateral aumentado para 6px cada lado,
+    -- garantindo que o UIStroke (1px) dos itens não seja clipado na direita.
     self.container = o("ScrollingFrame", {
-        Size = UDim2.new(1, -8, 1, -6),
-        Position = UDim2.new(0, 4, 0, 4),
+        Size = UDim2.new(1, -4, 1, -6),
+        Position = UDim2.new(0, 2, 0, 4),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         ScrollBarThickness = 3,
@@ -351,8 +353,8 @@ function KronUI.new(title, pillImage)
         SortOrder = Enum.SortOrder.LayoutOrder,
     }, self.container)
     o("UIPadding", {
-        PaddingLeft   = UDim.new(0, 4),
-        PaddingRight  = UDim.new(0, 4),
+        PaddingLeft   = UDim.new(0, 6),
+        PaddingRight  = UDim.new(0, 6),
         PaddingTop    = UDim.new(0, 4),
         PaddingBottom = UDim.new(0, 4),
     }, self.container)
@@ -519,6 +521,8 @@ function KronUI.new(title, pillImage)
         end))
     end
 
+    -- FIX 2: Seção 🎨 TEMA antes do dropdown de tema
+    self:AddSectionLabel("🎨 Tema")
     self:AddThemeDropdown()
 
     return self
@@ -608,8 +612,9 @@ end
 function KronUI:AddToggle(text, default, callback)
     local state = default or false
 
+    -- FIX 3: Size 1,0 — o padding do container (6px cada lado) já faz o recuo lateral
     local btn = o("TextButton", {
-        Size = UDim2.new(1, -8, 0, 32),
+        Size = UDim2.new(1, 0, 0, 32),
         BackgroundColor3 = CARD,
         BorderSizePixel = 0, AutoButtonColor = false, Text = "",
         LayoutOrder = self:_nextOrder(),
@@ -683,8 +688,9 @@ function KronUI:AddToggle(text, default, callback)
 end
 
 function KronUI:AddButton(text, callback)
+    -- FIX 3: Size 1,0
     local btn = o("TextButton", {
-        Size = UDim2.new(1, -8, 0, 32),
+        Size = UDim2.new(1, 0, 0, 32),
         BackgroundColor3 = CARD,
         BorderSizePixel = 0, AutoButtonColor = false, ClipsDescendants = true,
         Font = FONT, TextSize = 12,
@@ -741,8 +747,9 @@ function KronUI:AddSlider(text, min, max, default, callback)
     local dragging    = false
     local activeTouch = nil
 
+    -- FIX 3: Size 1,0
     local holder = o("Frame", {
-        Size = UDim2.new(1, -8, 0, 50),
+        Size = UDim2.new(1, 0, 0, 50),
         BackgroundColor3 = CARD,
         BorderSizePixel = 0,
         LayoutOrder = self:_nextOrder(),
@@ -871,8 +878,9 @@ function KronUI:AddDropdown(text, options, default, callback)
     end
     local open = false
 
+    -- FIX 3: Size 1,0
     local holder = o("Frame", {
-        Size = UDim2.new(1, -8, 0, 32),
+        Size = UDim2.new(1, 0, 0, 32),
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundColor3 = CARD,
         BorderSizePixel = 0, ClipsDescendants = true,
@@ -907,11 +915,12 @@ function KronUI:AddDropdown(text, options, default, callback)
     }, head)
     self:_registerThemeItem(selectedLabel, "TextColor3", "accent")
 
+    -- FIX 1: Seta maior (TextSize 11 → 16)
     local arrow = o("TextLabel", {
         BackgroundTransparency = 1,
         Position = UDim2.new(1, -26, 0, 0),
         Size = UDim2.new(0, 20, 1, 0),
-        Font = FONTB, TextSize = 11, TextColor3 = DIM,
+        Font = FONTB, TextSize = 16, TextColor3 = DIM,
         TextXAlignment = Enum.TextXAlignment.Center,
         Text = "▼", Rotation = 0,
     }, head)
@@ -978,6 +987,7 @@ function KronUI:AddDropdown(text, options, default, callback)
 
     local setOpen
     for i, opt in ipairs(options) do
+        -- FIX 3: rows com Size 1,0 dentro do list que já tem padding via position/size
         local row = o("TextButton", {
             Size = UDim2.new(1, 0, 0, ROW_H),
             BackgroundColor3 = PANEL,
@@ -1060,7 +1070,7 @@ function KronUI:AddDropdown(text, options, default, callback)
 end
 
 -- ══════════════════════════════════════════════════════
--- AddMultiDropdown — CORRIGIDO: expõe Frame e UpdateOptions
+-- AddMultiDropdown — expõe Frame e UpdateOptions
 -- ══════════════════════════════════════════════════════
 function KronUI:AddMultiDropdown(text, options, defaults, callback)
     options  = options  or {}
@@ -1077,8 +1087,9 @@ function KronUI:AddMultiDropdown(text, options, defaults, callback)
     local LIST_MAX_H = 132
     local ROW_H      = 26
 
+    -- FIX 3: Size 1,0
     local holder = o("Frame", {
-        Size = UDim2.new(1, -8, 0, 32),
+        Size = UDim2.new(1, 0, 0, 32),
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundColor3 = CARD,
         BorderSizePixel = 0, ClipsDescendants = true,
@@ -1113,11 +1124,12 @@ function KronUI:AddMultiDropdown(text, options, defaults, callback)
     }, head)
     self:_registerThemeItem(selectedLabel, "TextColor3", "accent")
 
+    -- FIX 1: Seta maior (TextSize 11 → 16)
     local arrow = o("TextLabel", {
         BackgroundTransparency = 1,
         Position = UDim2.new(1, -26, 0, 0),
         Size = UDim2.new(0, 20, 1, 0),
-        Font = FONTB, TextSize = 11, TextColor3 = DIM,
+        Font = FONTB, TextSize = 16, TextColor3 = DIM,
         TextXAlignment = Enum.TextXAlignment.Center,
         Text = "▼", Rotation = 0,
     }, head)
@@ -1147,7 +1159,6 @@ function KronUI:AddMultiDropdown(text, options, defaults, callback)
         SortOrder = Enum.SortOrder.LayoutOrder,
     }, list)
 
-    -- Funções internas
     local function updateRowState(opt, animate)
         local data = rows[opt]; if not data then return end
         local row      = data.row
@@ -1198,20 +1209,18 @@ function KronUI:AddMultiDropdown(text, options, defaults, callback)
         list.ScrollBarImageColor3   = self._accent
     end)
 
-    -- ── buildRows: reconstrói os botões internos sem mexer no holder ──
     local function buildRows(optList)
-        -- Destroi só os botões, mantém o UIListLayout
         for _, child in ipairs(list:GetChildren()) do
             if not child:IsA("UIListLayout") then child:Destroy() end
         end
         rows = {}
 
-        -- Remove seleções que já não existem
         for opt in pairs(selectedSet) do
             if not table.find(optList, opt) then selectedSet[opt] = nil end
         end
 
         for i, opt in ipairs(optList) do
+            -- FIX 3: rows com Size 1,0
             local row = o("TextButton", {
                 Size = UDim2.new(1, 0, 0, ROW_H),
                 BackgroundColor3 = PANEL,
@@ -1277,7 +1286,6 @@ function KronUI:AddMultiDropdown(text, options, defaults, callback)
         rebuildSelectionText()
     end
 
-    -- Build inicial
     buildRows(options)
 
     local function setOpen(v)
@@ -1296,7 +1304,7 @@ function KronUI:AddMultiDropdown(text, options, defaults, callback)
     end))
 
     return {
-        Frame = holder,   -- ← EXPOSTO: necessário para o script principal
+        Frame = holder,
         GetSelected = function()
             local sel = {}
             for opt, flag in pairs(selectedSet) do
@@ -1315,7 +1323,7 @@ function KronUI:AddMultiDropdown(text, options, defaults, callback)
             updateAllRows(true)
             rebuildSelectionText()
         end,
-        UpdateOptions = function(newOptions)  -- ← NOVO: atualiza lista sem recriar o dropdown
+        UpdateOptions = function(newOptions)
             if open then setOpen(false) end
             buildRows(newOptions or {})
         end,
