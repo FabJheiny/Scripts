@@ -531,7 +531,7 @@ function KronUI.new(title, pillImage)
     end
 
     -- FIX 2: Seção 🎨 TEMA antes do dropdown de tema
-    self:AddSectionLabel("🎨 Tema")
+    self:AddSectionLabel("🎨 Theme")
     self:AddThemeDropdown()
 
     return self
@@ -551,7 +551,7 @@ function KronUI:AddThemeDropdown()
         Verde    = {primary = Color3.fromRGB(80, 220, 80),   secondary = Color3.fromRGB(40, 170, 40)},
     }
 
-    self:AddDropdown("Tema", options, {}, function(selected)
+    self:AddDropdown("Select Theme", options, {}, function(selected)
         local colorName = selected
         if colorName and themeColors[colorName] then
             self:SetAccent(themeColors[colorName].primary, themeColors[colorName].secondary)
