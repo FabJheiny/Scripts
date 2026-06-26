@@ -8,7 +8,7 @@ local ReplicatedStorage  = game:GetService("ReplicatedStorage")
 local Player             = Players.LocalPlayer
 
 -- ── 1. URL da lib no GitHub (raw) ────────────────────
-local LIB_URL = "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/KronUi"
+local LIB_URL = "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/1"
 -- ── 2. Imagem do pill ────────────────────────────────
 local PILL_IMAGE = "rbxassetid://100932674765762"
 
