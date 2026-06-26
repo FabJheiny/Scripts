@@ -2,7 +2,7 @@
 --  KronUI Loader — ESP/AIMBOT
 --══════════════════════════════════════════════════════
 
-local LIB_URL    = "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/3"
+local LIB_URL    = "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/5"
 local PILL_IMAGE = "rbxassetid://78186286433275"
 
 local ok, result = pcall(function()
