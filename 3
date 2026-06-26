@@ -38,6 +38,15 @@ local function stroke(par, t, c, transp)
     }, par)
 end
 
+-- strokeIn: usa Contextual (stroke por dentro), nunca clipado pelo pai
+local function strokeIn(par, t, c, transp)
+    return o("UIStroke", {
+        Color = c or LINE, Thickness = t or 1,
+        Transparency = transp or 0,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
+    }, par)
+end
+
 local function corner(par, r)
     return o("UICorner", { CornerRadius = (r == "pill") and UDim.new(1, 0) or UDim.new(0, r or 8) }, par)
 end
@@ -529,8 +538,9 @@ function KronUI.new(title, pillImage)
 end
 
 function KronUI:AddThemeDropdown()
-    local options = {"Branco", "Azul", "Amarelo", "Vermelho", "Laranja", "Ciano", "Rosa", "Verde"}
+    local options = {"Roxo", "Branco", "Azul", "Amarelo", "Vermelho", "Laranja", "Ciano", "Rosa", "Verde"}
     local themeColors = {
+        Roxo     = {primary = Color3.fromRGB(150, 90, 255),  secondary = Color3.fromRGB(95, 60, 200)},
         Branco   = {primary = Color3.fromRGB(242, 240, 250), secondary = Color3.fromRGB(195, 190, 215)},
         Azul     = {primary = Color3.fromRGB(50, 120, 255),  secondary = Color3.fromRGB(30, 80, 200)},
         Amarelo  = {primary = Color3.fromRGB(255, 210, 50),  secondary = Color3.fromRGB(200, 160, 30)},
@@ -612,14 +622,13 @@ end
 function KronUI:AddToggle(text, default, callback)
     local state = default or false
 
-    -- FIX 3: Size 1,0 — o padding do container (6px cada lado) já faz o recuo lateral
     local btn = o("TextButton", {
         Size = UDim2.new(1, 0, 0, 32),
         BackgroundColor3 = CARD,
         BorderSizePixel = 0, AutoButtonColor = false, Text = "",
         LayoutOrder = self:_nextOrder(),
     }, self.container)
-    local btnStroke = stroke(btn, 1, LINE)
+    local btnStroke = strokeIn(btn, 1, LINE)
     corner(btn, 8)
 
     local label = o("TextLabel", {
@@ -697,7 +706,7 @@ function KronUI:AddButton(text, callback)
         Text = text, TextColor3 = MID,
         LayoutOrder = self:_nextOrder(),
     }, self.container)
-    local btnStroke = stroke(btn, 1, LINE)
+    local btnStroke = strokeIn(btn, 1, LINE)
     corner(btn, 8)
 
     local function ripple(x, y)
@@ -754,7 +763,7 @@ function KronUI:AddSlider(text, min, max, default, callback)
         BorderSizePixel = 0,
         LayoutOrder = self:_nextOrder(),
     }, self.container)
-    stroke(holder, 1, LINE)
+    strokeIn(holder, 1, LINE)
     corner(holder, 8)
 
     local label = o("TextLabel", {
@@ -886,7 +895,7 @@ function KronUI:AddDropdown(text, options, default, callback)
         BorderSizePixel = 0, ClipsDescendants = true,
         LayoutOrder = self:_nextOrder(),
     }, self.container)
-    stroke(holder, 1, LINE)
+    strokeIn(holder, 1, LINE)
     corner(holder, 8)
 
     local head = o("TextButton", {
@@ -1095,7 +1104,7 @@ function KronUI:AddMultiDropdown(text, options, defaults, callback)
         BorderSizePixel = 0, ClipsDescendants = true,
         LayoutOrder = self:_nextOrder(),
     }, self.container)
-    stroke(holder, 1, LINE)
+    strokeIn(holder, 1, LINE)
     corner(holder, 8)
 
     local head = o("TextButton", {
