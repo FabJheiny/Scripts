@@ -2,7 +2,7 @@
 --  KronUI Loader — ESP/AIMBOT
 --══════════════════════════════════════════════════════
 
-local LIB_URL    = "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/KronUi"
+local LIB_URL    = "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/3"
 local PILL_IMAGE = "rbxassetid://78186286433275"
 
 local ok, result = pcall(function()
@@ -35,50 +35,137 @@ local InstaSettings  = { Enabled = false }
 local IgnoreList     = {}
 
 local ui
+local ignoreDropdown  = nil
+local allIgnoreFrames = {}
+local uiReady         = false
 
-local function buildUI()
-    if ui then ui:Destroy() end
-
-    local playerNames = {}
+-- ══════════════════════════════════════════════
+--  IGNORE — helpers
+-- ══════════════════════════════════════════════
+local function getPlayerNames()
+    local names = {}
     for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer then table.insert(playerNames, p.Name) end
+        if p ~= LocalPlayer then table.insert(names, p.Name) end
+    end
+    return names
+end
+
+local function onDropdownSelection(selectedNames)
+    IgnoreList = {}
+    for _, name in ipairs(selectedNames) do
+        IgnoreList[name] = true
+    end
+end
+
+local function rebuildIgnoreDropdown()
+    if not ui then return end
+
+    -- 1. Salva o LayoutOrder do frame atual antes de destruir
+    local savedOrder = nil
+    if ignoreDropdown and ignoreDropdown.Frame and ignoreDropdown.Frame.Parent then
+        savedOrder = ignoreDropdown.Frame.LayoutOrder
     end
 
+    -- 2. Destrói TODOS os frames registrados (evita acúmulo)
+    for _, frame in ipairs(allIgnoreFrames) do
+        if frame and frame.Parent then
+            frame:Destroy()
+        end
+    end
+    table.clear(allIgnoreFrames)
+    ignoreDropdown = nil
+
+    -- 3. Remove da IgnoreList quem já saiu do servidor
+    local playerNames = getPlayerNames()
     local nameSet = {}
     for _, n in ipairs(playerNames) do nameSet[n] = true end
     for name in pairs(IgnoreList) do
         if not nameSet[name] then IgnoreList[name] = nil end
     end
 
-    local currentIgnored = {}
-    for name in pairs(IgnoreList) do table.insert(currentIgnored, name) end
+    -- 4. Monta lista das seleções que ainda são válidas
+    local validSelected = {}
+    for name in pairs(IgnoreList) do
+        table.insert(validSelected, name)
+    end
 
+    -- 5. Cria UM novo dropdown
+    ignoreDropdown = ui:AddMultiDropdown(
+        "Selecionar Jogadores", playerNames, validSelected, onDropdownSelection
+    )
+
+    -- 6. Registra o frame novo e restaura a posição exata
+    if ignoreDropdown and ignoreDropdown.Frame then
+        table.insert(allIgnoreFrames, ignoreDropdown.Frame)
+        if savedOrder then
+            ignoreDropdown.Frame.LayoutOrder = savedOrder
+        end
+    end
+end
+
+-- Debounce — evita rebuilds em rafada
+local rebuildPending = false
+local function scheduleRebuild()
+    if not uiReady or rebuildPending then return end
+    rebuildPending = true
+    task.delay(0.3, function()
+        rebuildPending = false
+        rebuildIgnoreDropdown()
+    end)
+end
+
+-- ══════════════════════════════════════════════
+--  UI
+-- ══════════════════════════════════════════════
+local function buildUI()
+    if ui then return end
     ui = KronUI.new("ESP/AIMBOT", PILL_IMAGE)
 
-    ui:AddSectionLabel("ESP")
+    -- ESP
+    ui:AddSectionLabel("👁️ ESP")
     ui:AddToggle("Esp do Corpo",     Settings.Highlight, function(s) Settings.Highlight = s end)
     ui:AddToggle("Esp do Nome",      Settings.Name,      function(s) Settings.Name      = s end)
     ui:AddToggle("Esp de Distância", Settings.Distance,  function(s) Settings.Distance  = s end)
     ui:AddToggle("Ícone de Parede",  Settings.WallIcon,  function(s) Settings.WallIcon  = s end)
     ui:AddDivider()
-    ui:AddSectionLabel("Aimbot")
+
+    -- AIMBOT
+    ui:AddSectionLabel("🎯 AIMBOT")
     ui:AddSlider("FOV", 20, 500, AimbotSettings.FOV, function(v) AimbotSettings.FOV = v end)
-    ui:AddToggle("Aimbot",                AimbotSettings.Enabled,     function(s) AimbotSettings.Enabled     = s end)
-    ui:AddToggle("Círculo FOV",           AimbotSettings.ShowFOV,     function(s) AimbotSettings.ShowFOV     = s end)
-    ui:AddToggle("Ignorar Paredes",       AimbotSettings.IgnoreWall,  function(s) AimbotSettings.IgnoreWall  = s end)
-    ui:AddToggle("Aimbot Instantâneo",    InstaSettings.Enabled,      function(s) InstaSettings.Enabled      = s end)
+    ui:AddToggle("Aimbot",             AimbotSettings.Enabled,    function(s) AimbotSettings.Enabled    = s end)
+    ui:AddToggle("Círculo FOV",        AimbotSettings.ShowFOV,    function(s) AimbotSettings.ShowFOV    = s end)
+    ui:AddToggle("Ignorar Paredes",    AimbotSettings.IgnoreWall, function(s) AimbotSettings.IgnoreWall = s end)
+    ui:AddToggle("Aimbot Instantâneo", InstaSettings.Enabled,     function(s) InstaSettings.Enabled     = s end)
     ui:AddDivider()
-    ui:AddSectionLabel("Ignorar no Aimbot")
-    ui:AddDropdown("Selecionar Jogadores", playerNames, currentIgnored, function(sel)
-        IgnoreList = {}
-        for _, name in ipairs(sel) do IgnoreList[name] = true end
-    end)
-    ui:AddButton("Recarregar Jogadores", function()
-        task.defer(buildUI)
+
+    -- IGNORE
+    ui:AddSectionLabel("🚫 IGNORE")
+
+    -- Dropdown inicial
+    ignoreDropdown = ui:AddMultiDropdown(
+        "Selecionar Jogadores", getPlayerNames(), {}, onDropdownSelection
+    )
+    -- Registra o frame inicial na lista
+    if ignoreDropdown and ignoreDropdown.Frame then
+        table.insert(allIgnoreFrames, ignoreDropdown.Frame)
+    end
+
+    -- Botão de reload manual (backup)
+    ui:AddButton("🔄 Recarregar Jogadores", function()
+        task.defer(rebuildIgnoreDropdown)
     end)
 end
 
 buildUI()
+uiReady = true  -- libera o auto-refresh só depois da UI estar montada
+
+-- Auto-refresh quando jogadores entram/saem
+Players.PlayerAdded:Connect(function()
+    scheduleRebuild()
+end)
+Players.PlayerRemoving:Connect(function()
+    task.delay(0.1, scheduleRebuild)  -- pequeno delay para o jogador já sair de GetPlayers()
+end)
 
 -- ══════════════════════════════════════════════
 --  CORES / VISIBILIDADE
@@ -128,10 +215,8 @@ local ENEMY_COL = Color3.fromRGB(255, 100, 100)
 local NEUT_COL  = Color3.fromRGB(220, 220, 235)
 local VIS_ON    = { Fill = 0.5, Outline = 0.2 }
 
--- dist = cor mais saturada/viva (shift de hue via HSV)
 local function vividColor(c)
     local h, s, v = Color3.toHSV(c)
-    -- satura mais e clareia um toque
     s = math.min(1, s * 1.25)
     v = math.min(1, v * 1.15)
     return Color3.fromHSV(h, s, v)
@@ -178,7 +263,7 @@ local function createESP(player, char)
 
     local bb = Instance.new("BillboardGui", head)
     bb.Size                  = UDim2.new(0, 300, 0, 18)
-    bb.StudsOffsetWorldSpace = Vector3.new(0, 4.4, 0)  -- mais alto
+    bb.StudsOffsetWorldSpace = Vector3.new(0, 4.4, 0)
     bb.AlwaysOnTop           = true
     bb.LightInfluence        = 0
 
@@ -191,10 +276,9 @@ local function createESP(player, char)
     layout.FillDirection       = Enum.FillDirection.Horizontal
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     layout.VerticalAlignment   = Enum.VerticalAlignment.Center
-    layout.Padding             = UDim.new(0, 4)  -- gap uniforme entre slots visíveis
+    layout.Padding             = UDim.new(0, 4)
     layout.SortOrder           = Enum.SortOrder.LayoutOrder
 
-    -- sem spacerLbl — o padding do UIListLayout já separa os itens visíveis
     local wallLbl = makeSlot(frame, 1, Color3.fromRGB(255, 165, 0))
     local nameLbl = makeSlot(frame, 2, Color3.new(1, 1, 1))
     local distLbl = makeSlot(frame, 3, Color3.new(1, 1, 1))
@@ -286,7 +370,6 @@ RunService.Heartbeat:Connect(function(dt)
         local _, onScreen = Camera:WorldToViewportPoint(hrp.Position)
         if not onScreen then hideAll(d) continue end
 
-        -- Cor base
         local col
         if IgnoreList[player.Name] then
             col = TEAM_COL
@@ -300,7 +383,6 @@ RunService.Heartbeat:Connect(function(dt)
 
         local visible = isVisible(char, player)
 
-        -- Body Highlight
         if Settings.Highlight and dist <= 700 then
             d.Highlight.Enabled             = true
             d.Highlight.FillColor           = col
@@ -311,10 +393,8 @@ RunService.Heartbeat:Connect(function(dt)
             d.Highlight.Enabled = false
         end
 
-        -- Wall Icon (only when behind wall)
         d.WallIcon.Visible = Settings.WallIcon and (not visible)
 
-        -- Nome
         if Settings.Name then
             d.NameLabel.Visible    = true
             d.NameLabel.Text       = player.Name
@@ -323,7 +403,6 @@ RunService.Heartbeat:Connect(function(dt)
             d.NameLabel.Visible = false
         end
 
-        -- Distância (cor mais viva que o name)
         if Settings.Distance then
             d.DistLabel.Visible    = true
             d.DistLabel.Text       = math.floor(dist) .. "m"
