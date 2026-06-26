@@ -60,13 +60,11 @@ end
 local function rebuildIgnoreDropdown()
     if not ui then return end
 
-    -- 1. Salva o LayoutOrder do frame atual antes de destruir
     local savedOrder = nil
     if ignoreDropdown and ignoreDropdown.Frame and ignoreDropdown.Frame.Parent then
         savedOrder = ignoreDropdown.Frame.LayoutOrder
     end
 
-    -- 2. Destrói TODOS os frames registrados (evita acúmulo)
     for _, frame in ipairs(allIgnoreFrames) do
         if frame and frame.Parent then
             frame:Destroy()
@@ -75,7 +73,6 @@ local function rebuildIgnoreDropdown()
     table.clear(allIgnoreFrames)
     ignoreDropdown = nil
 
-    -- 3. Remove da IgnoreList quem já saiu do servidor
     local playerNames = getPlayerNames()
     local nameSet = {}
     for _, n in ipairs(playerNames) do nameSet[n] = true end
@@ -83,18 +80,15 @@ local function rebuildIgnoreDropdown()
         if not nameSet[name] then IgnoreList[name] = nil end
     end
 
-    -- 4. Monta lista das seleções que ainda são válidas
     local validSelected = {}
     for name in pairs(IgnoreList) do
         table.insert(validSelected, name)
     end
 
-    -- 5. Cria UM novo dropdown
     ignoreDropdown = ui:AddMultiDropdown(
-        "Selecionar Jogadores", playerNames, validSelected, onDropdownSelection
+        "Select Players", playerNames, validSelected, onDropdownSelection
     )
 
-    -- 6. Registra o frame novo e restaura a posição exata
     if ignoreDropdown and ignoreDropdown.Frame then
         table.insert(allIgnoreFrames, ignoreDropdown.Frame)
         if savedOrder then
@@ -103,7 +97,6 @@ local function rebuildIgnoreDropdown()
     end
 end
 
--- Debounce — evita rebuilds em rafada
 local rebuildPending = false
 local function scheduleRebuild()
     if not uiReady or rebuildPending then return end
@@ -123,48 +116,44 @@ local function buildUI()
 
     -- ESP
     ui:AddSectionLabel("👁️ ESP")
-    ui:AddToggle("Esp do Corpo",     Settings.Highlight, function(s) Settings.Highlight = s end)
-    ui:AddToggle("Esp do Nome",      Settings.Name,      function(s) Settings.Name      = s end)
-    ui:AddToggle("Esp de Distância", Settings.Distance,  function(s) Settings.Distance  = s end)
-    ui:AddToggle("Ícone de Parede",  Settings.WallIcon,  function(s) Settings.WallIcon  = s end)
+    ui:AddToggle("Body ESP",      Settings.Highlight, function(s) Settings.Highlight = s end)
+    ui:AddToggle("Name ESP",      Settings.Name,      function(s) Settings.Name      = s end)
+    ui:AddToggle("Distance ESP",  Settings.Distance,  function(s) Settings.Distance  = s end)
+    ui:AddToggle("Wall Icon",     Settings.WallIcon,  function(s) Settings.WallIcon  = s end)
     ui:AddDivider()
 
     -- AIMBOT
     ui:AddSectionLabel("🎯 AIMBOT")
     ui:AddSlider("FOV", 20, 500, AimbotSettings.FOV, function(v) AimbotSettings.FOV = v end)
-    ui:AddToggle("Aimbot",             AimbotSettings.Enabled,    function(s) AimbotSettings.Enabled    = s end)
-    ui:AddToggle("Círculo FOV",        AimbotSettings.ShowFOV,    function(s) AimbotSettings.ShowFOV    = s end)
-    ui:AddToggle("Ignorar Paredes",    AimbotSettings.IgnoreWall, function(s) AimbotSettings.IgnoreWall = s end)
-    ui:AddToggle("Aimbot Instantâneo", InstaSettings.Enabled,     function(s) InstaSettings.Enabled     = s end)
+    ui:AddToggle("Aimbot",         AimbotSettings.Enabled,    function(s) AimbotSettings.Enabled    = s end)
+    ui:AddToggle("FOV Circle",     AimbotSettings.ShowFOV,    function(s) AimbotSettings.ShowFOV    = s end)
+    ui:AddToggle("Ignore Walls",   AimbotSettings.IgnoreWall, function(s) AimbotSettings.IgnoreWall = s end)
+    ui:AddToggle("Instant Aimbot", InstaSettings.Enabled,     function(s) InstaSettings.Enabled     = s end)
     ui:AddDivider()
 
     -- IGNORE
     ui:AddSectionLabel("🚫 IGNORE")
 
-    -- Dropdown inicial
     ignoreDropdown = ui:AddMultiDropdown(
-        "Selecionar Jogadores", getPlayerNames(), {}, onDropdownSelection
+        "Select Players", getPlayerNames(), {}, onDropdownSelection
     )
-    -- Registra o frame inicial na lista
     if ignoreDropdown and ignoreDropdown.Frame then
         table.insert(allIgnoreFrames, ignoreDropdown.Frame)
     end
 
-    -- Botão de reload manual (backup)
-    ui:AddButton("Atualizar Lista", function()
+    ui:AddButton("Refresh List", function()
         task.defer(rebuildIgnoreDropdown)
     end)
 end
 
 buildUI()
-uiReady = true  -- libera o auto-refresh só depois da UI estar montada
+uiReady = true
 
--- Auto-refresh quando jogadores entram/saem
 Players.PlayerAdded:Connect(function()
     scheduleRebuild()
 end)
 Players.PlayerRemoving:Connect(function()
-    task.delay(0.1, scheduleRebuild)  -- pequeno delay para o jogador já sair de GetPlayers()
+    task.delay(0.1, scheduleRebuild)
 end)
 
 -- ══════════════════════════════════════════════
