@@ -151,7 +151,7 @@ local function buildUI()
     end
 
     -- Botão de reload manual (backup)
-    ui:AddButton("🔄 Recarregar Jogadores", function()
+    ui:AddButton("Atualizar Lista", function()
         task.defer(rebuildIgnoreDropdown)
     end)
 end
