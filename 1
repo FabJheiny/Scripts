@@ -1,0 +1,2166 @@
+--══════════════════════════════════════════════════════
+--  KronUI v2 — biblioteca de interface Roblox
+--  Novidades: Tabs, Input, Textarea, Keybind, ColorPicker,
+--  ProgressBar, StatusBadge, Label, Notify (toast),
+--  Theme swatches visuais, animações aprimoradas
+--══════════════════════════════════════════════════════
+
+local TweenService     = game:GetService("TweenService")
+local Players          = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui          = game:GetService("CoreGui")
+local RunService       = game:GetService("RunService")
+
+local KronUI = {}
+KronUI.__index = KronUI
+
+-- ── Paleta base ──────────────────────────────────────
+local BG      = Color3.fromRGB(16, 14, 22)
+local PANEL   = Color3.fromRGB(22, 19, 31)
+local CARD    = Color3.fromRGB(28, 24, 39)
+local HOVER   = Color3.fromRGB(40, 34, 54)
+local LINE    = Color3.fromRGB(54, 46, 70)
+local ACCENT  = Color3.fromRGB(150, 90, 255)
+local ACCENT2 = Color3.fromRGB(95, 60, 200)
+local DIM     = Color3.fromRGB(150, 145, 165)
+local MID     = Color3.fromRGB(195, 190, 215)
+local W       = Color3.fromRGB(242, 240, 250)
+local SUCCESS = Color3.fromRGB(80, 220, 110)
+local WARN    = Color3.fromRGB(255, 200, 50)
+local ERROR   = Color3.fromRGB(255, 70, 70)
+local INFO    = Color3.fromRGB(80, 170, 255)
+local FONT    = Enum.Font.GothamMedium
+local FONTB   = Enum.Font.GothamBold
+
+-- ── Utilitários ──────────────────────────────────────
+local function o(cls, props, par)
+    local x = Instance.new(cls)
+    for k, v in pairs(props) do x[k] = v end
+    if par then x.Parent = par end
+    return x
+end
+
+local function stroke(par, t, c, transp)
+    return o("UIStroke", {
+        Color = c or LINE, Thickness = t or 1,
+        Transparency = transp or 0,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+    }, par)
+end
+
+local function strokeIn(par, t, c, transp)
+    return o("UIStroke", {
+        Color = c or LINE, Thickness = t or 1,
+        Transparency = transp or 0,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
+    }, par)
+end
+
+local function corner(par, r)
+    return o("UICorner", {
+        CornerRadius = (r == "pill") and UDim.new(1, 0) or UDim.new(0, r or 8)
+    }, par)
+end
+
+local function tween(obj, info, props)
+    local t = TweenService:Create(obj, info, props)
+    t:Play(); return t
+end
+
+local EASE_OUT  = function(d) return TweenInfo.new(d or 0.18, Enum.EasingStyle.Quad,  Enum.EasingDirection.Out) end
+local EASE_BACK = function(d) return TweenInfo.new(d or 0.4,  Enum.EasingStyle.Back,  Enum.EasingDirection.Out) end
+local EASE_SINE = function(d) return TweenInfo.new(d or 0.25, Enum.EasingStyle.Sine,  Enum.EasingDirection.InOut) end
+
+-- ── HSV helpers ──────────────────────────────────────
+local function hsvToRgb(h, s, v)
+    if s == 0 then return Color3.new(v, v, v) end
+    local i = math.floor(h * 6)
+    local f = h * 6 - i; local p = v*(1-s); local q = v*(1-f*s); local t2 = v*(1-(1-f)*s)
+    local r, g, b
+    local m = i % 6
+    if m == 0 then r,g,b = v,t2,p
+    elseif m == 1 then r,g,b = q,v,p
+    elseif m == 2 then r,g,b = p,v,t2
+    elseif m == 3 then r,g,b = p,q,v
+    elseif m == 4 then r,g,b = t2,p,v
+    else r,g,b = v,p,q end
+    return Color3.new(r,g,b)
+end
+
+local function rgbToHsv(c)
+    local r,g,b = c.R, c.G, c.B
+    local max = math.max(r,g,b); local min = math.min(r,g,b); local d = max-min
+    local h,s,v = 0, (max==0 and 0 or d/max), max
+    if d ~= 0 then
+        if max == r then h = (g-b)/d % 6
+        elseif max == g then h = (b-r)/d + 2
+        else h = (r-g)/d + 4 end
+        h = h / 6
+    end
+    return h, s, v
+end
+
+local function colorToHex(c)
+    return string.format("%02X%02X%02X",
+        math.floor(c.R*255+.5), math.floor(c.G*255+.5), math.floor(c.B*255+.5))
+end
+
+local function hexToColor(hex)
+    hex = hex:gsub("#","")
+    if #hex ~= 6 then return nil end
+    local r = tonumber(hex:sub(1,2),16)
+    local g = tonumber(hex:sub(3,4),16)
+    local b = tonumber(hex:sub(5,6),16)
+    if not (r and g and b) then return nil end
+    return Color3.fromRGB(r,g,b)
+end
+
+-- ══════════════════════════════════════════════════════
+--  CONSTRUTOR PRINCIPAL
+-- ══════════════════════════════════════════════════════
+function KronUI.new(title, pillImage)
+    local self = setmetatable({}, KronUI)
+
+    self._accent  = ACCENT
+    self._accent2 = ACCENT2
+
+    self._themeItems     = {}
+    self._themeGradients = {}
+    self._themeCallbacks = {}
+    self._connections    = {}
+    self._layoutOrder    = 0
+
+    -- tabs
+    self._tabs       = {}     -- {name, icon, btn, inkMark, container, layoutOrder}
+    self._activeTab  = nil
+    self._tabMode    = false  -- true quando AddTab() é chamado
+
+    function self:_registerThemeItem(obj, prop, role)
+        table.insert(self._themeItems, {Object=obj, Property=prop, Role=role})
+    end
+    function self:_registerThemeGradient(grad)
+        table.insert(self._themeGradients, grad)
+    end
+    function self:_registerThemeCallback(cb)
+        table.insert(self._themeCallbacks, cb)
+    end
+
+    function self:SetAccent(primary, secondary)
+        self._accent  = primary
+        self._accent2 = secondary
+        for _, item in ipairs(self._themeItems) do
+            item.Object[item.Property] = (item.Role=="accent" and primary or secondary)
+        end
+        for _, grad in ipairs(self._themeGradients) do
+            grad.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0,   secondary),
+                ColorSequenceKeypoint.new(0.5, primary),
+                ColorSequenceKeypoint.new(1,   secondary),
+            })
+        end
+        for _, cb in ipairs(self._themeCallbacks) do cb(primary, secondary) end
+    end
+
+    -- ── Setup PlayerGui ───────────────────────────────
+    local player = Players.LocalPlayer
+    local pg     = player:WaitForChild("PlayerGui", 10) or player.PlayerGui
+    local old    = pg:FindFirstChild("KronUI_Lib")
+    local oldBtn = CoreGui:FindFirstChild("KronUI_FloatBtn") or pg:FindFirstChild("KronUI_FloatBtn")
+    local oldNot = CoreGui:FindFirstChild("KronUI_Notify") or pg:FindFirstChild("KronUI_Notify")
+    if old    then old:Destroy()    end
+    if oldBtn then oldBtn:Destroy() end
+    if oldNot then oldNot:Destroy() end
+
+    _G.KronUIScale = _G.KronUIScale or 10
+    local function getUIScale(s) return 0.45 + (s-1)*0.04 end
+
+    self.gui = o("ScreenGui", {
+        Name = "KronUI_Lib", ResetOnSpawn = false,
+        IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Global,
+        DisplayOrder = 10,
+    }, pg)
+
+    local clickSound = o("Sound", {
+        SoundId = "rbxassetid://6895079853", Volume = 0.6, RollOffMaxDistance = 0,
+    }, self.gui)
+    local function playClick() clickSound:Play() end
+    self._playClick = playClick
+
+    -- ── Notification ScreenGui (separado, alta prioridade) ─
+    self._notifGui = o("ScreenGui", {
+        Name = "KronUI_Notify", ResetOnSpawn = false,
+        IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Global,
+        DisplayOrder = 9998,
+    })
+    local okN = pcall(function() self._notifGui.Parent = CoreGui end)
+    if not okN then self._notifGui.Parent = pg end
+
+    local notifStack = o("Frame", {
+        AnchorPoint = Vector2.new(1, 1),
+        Position    = UDim2.new(1, -14, 1, -14),
+        Size        = UDim2.new(0, 280, 1, -28),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+    }, self._notifGui)
+    o("UIListLayout", {
+        Padding = UDim.new(0, 8),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        VerticalAlignment = Enum.VerticalAlignment.Bottom,
+        FillDirection = Enum.FillDirection.Vertical,
+    }, notifStack)
+    self._notifStack = notifStack
+    self._notifCount = 0
+    self._notifOrder = 0
+
+    -- ── Menu principal ────────────────────────────────
+    local MENU_W, MENU_H = 260, 360
+    local CORNER_R = 14
+    local topH     = 32
+
+    self.menuFrame = o("Frame", {
+        Name = "MenuFrame",
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Size = UDim2.new(0, 0, 0, 0),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        BackgroundColor3 = BG,
+        BorderSizePixel = 0, Active = true, ClipsDescendants = true,
+    }, self.gui)
+    corner(self.menuFrame, CORNER_R)
+    stroke(self.menuFrame, 1, LINE)
+    local menuAccentStroke = stroke(self.menuFrame, 1.5, self._accent, 0.6)
+    self:_registerThemeItem(menuAccentStroke, "Color", "accent")
+
+    -- sombra de profundidade
+    local shadow = o("Frame", {
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 6),
+        Size = UDim2.new(1, 20, 1, 20),
+        BackgroundColor3 = Color3.new(0,0,0),
+        BackgroundTransparency = 0.7,
+        BorderSizePixel = 0, ZIndex = -1,
+    }, self.menuFrame)
+    corner(shadow, CORNER_R+4)
+    o("UIGradient", {
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.3),
+            NumberSequenceKeypoint.new(1, 1),
+        }),
+        Rotation = 90,
+    }, shadow)
+
+    local uiScaleObj = o("UIScale", { Scale = getUIScale(_G.KronUIScale) }, self.menuFrame)
+
+    task.defer(function()
+        tween(self.menuFrame, EASE_BACK(0.5), { Size = UDim2.new(0, MENU_W, 0, MENU_H) })
+    end)
+
+    -- ── TopBar ────────────────────────────────────────
+    local topBar = o("Frame", {
+        Name = "TopBar",
+        Size = UDim2.new(1, 0, 0, topH),
+        BackgroundColor3 = BG,
+        BorderSizePixel = 0, Active = true, ZIndex = 10,
+    }, self.menuFrame)
+    corner(topBar, CORNER_R)
+    -- tapar canto inferior esquerdo/direito
+    o("Frame", { Size=UDim2.new(0,CORNER_R,0,CORNER_R), Position=UDim2.new(0,0,1,-CORNER_R),
+        BackgroundColor3=BG, BorderSizePixel=0, ZIndex=11 }, topBar)
+
+    o("TextLabel", {
+        Size=UDim2.new(1,-150,1,0), Position=UDim2.new(0,14,0,0),
+        BackgroundTransparency=1, Text=title or "Interface",
+        TextColor3=W, TextSize=13, Font=FONTB,
+        TextXAlignment=Enum.TextXAlignment.Left, ZIndex=10,
+    }, topBar)
+
+    -- shimmer line
+    local shimmer = o("Frame", {
+        Size=UDim2.new(1,0,0,2), Position=UDim2.new(0,0,1,-2),
+        BackgroundColor3=self._accent, BorderSizePixel=0, ZIndex=20,
+    }, topBar)
+    self:_registerThemeItem(shimmer, "BackgroundColor3", "accent")
+    local shimmerGrad = o("UIGradient", {
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0,   self._accent2),
+            ColorSequenceKeypoint.new(0.5, self._accent),
+            ColorSequenceKeypoint.new(1,   self._accent2),
+        }), Offset = Vector2.new(-1,0),
+    }, shimmer)
+    self:_registerThemeGradient(shimmerGrad)
+    self._shimmerTween = TweenService:Create(shimmerGrad,
+        TweenInfo.new(2.4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false),
+        { Offset = Vector2.new(1,0) })
+    self._shimmerTween:Play()
+
+    -- UI scale stepper
+    local STEP_W, STEP_H = 62, 18
+    local stepHolder = o("Frame", {
+        Size=UDim2.new(0,STEP_W,0,STEP_H),
+        Position=UDim2.new(1,-(33+8+STEP_W),0.5,-STEP_H/2),
+        BackgroundTransparency=1, BorderSizePixel=0, ZIndex=10, ClipsDescendants=true,
+    }, topBar)
+    stroke(stepHolder, 1, LINE).ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+    corner(stepHolder, 6)
+
+    local bsz = STEP_H; local dv = 1; local nw = STEP_W - 2*bsz - 2*dv
+    local stepPlus = o("TextButton", {
+        Size=UDim2.new(0,bsz,1,0), BackgroundTransparency=1, BorderSizePixel=0,
+        Text="+", TextColor3=MID, TextSize=14, Font=FONTB, AutoButtonColor=false, ZIndex=11,
+    }, stepHolder)
+    o("Frame", { Size=UDim2.new(0,dv,1,0), Position=UDim2.new(0,bsz,0,0),
+        BackgroundColor3=LINE, BorderSizePixel=0, ZIndex=11 }, stepHolder)
+    local stepBox = o("TextBox", {
+        Size=UDim2.new(0,nw,1,0), Position=UDim2.new(0,bsz+dv,0,0),
+        BackgroundTransparency=1, Text=tostring(_G.KronUIScale),
+        TextColor3=W, TextSize=10, Font=FONT,
+        TextXAlignment=Enum.TextXAlignment.Center,
+        ClearTextOnFocus=false, ZIndex=11,
+    }, stepHolder)
+    o("Frame", { Size=UDim2.new(0,dv,1,0), Position=UDim2.new(0,bsz+dv+nw,0,0),
+        BackgroundColor3=LINE, BorderSizePixel=0, ZIndex=11 }, stepHolder)
+    local stepMinus = o("TextButton", {
+        Size=UDim2.new(0,bsz,1,0), Position=UDim2.new(0,bsz+dv+nw+dv,0,0),
+        BackgroundTransparency=1, BorderSizePixel=0,
+        Text="−", TextColor3=MID, TextSize=14, Font=FONTB, AutoButtonColor=false, ZIndex=11,
+    }, stepHolder)
+
+    local stepCv = _G.KronUIScale
+    local function stepApply(v)
+        v = math.clamp(math.floor(v), 1, 35)
+        stepCv=v; _G.KronUIScale=v; stepBox.Text=tostring(v)
+        tween(uiScaleObj, EASE_OUT(0.12), { Scale=getUIScale(v) })
+    end
+    stepPlus.MouseButton1Click:Connect(function()  stepApply(stepCv+1) end)
+    stepMinus.MouseButton1Click:Connect(function() stepApply(stepCv-1) end)
+    stepBox.FocusLost:Connect(function()
+        local n = tonumber(stepBox.Text)
+        if n then stepApply(n) else stepBox.Text=tostring(stepCv) end
+    end)
+    for _, btn in ipairs({stepPlus, stepMinus}) do
+        btn.MouseEnter:Connect(function() btn.TextColor3=self._accent end)
+        btn.MouseLeave:Connect(function() btn.TextColor3=MID end)
+    end
+    self:_registerThemeCallback(function(p)
+        if stepPlus.TextColor3 ~= MID then stepPlus.TextColor3=p end
+        if stepMinus.TextColor3 ~= MID then stepMinus.TextColor3=p end
+    end)
+
+    -- separador + X button
+    o("Frame", { Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-33,0,0),
+        BackgroundColor3=LINE, BorderSizePixel=0, ZIndex=12 }, topBar)
+    local xBtn = o("TextButton", {
+        Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-32,0,0),
+        BackgroundColor3=BG, BorderSizePixel=0,
+        Text="×", TextColor3=DIM, TextSize=17, Font=FONTB,
+        AutoButtonColor=false, ZIndex=11,
+    }, topBar)
+    corner(xBtn, CORNER_R)
+    for _, pos in ipairs({ UDim2.new(0,0,0,0), UDim2.new(0,0,1,-CORNER_R), UDim2.new(1,-CORNER_R,1,-CORNER_R) }) do
+        o("Frame", { Size=UDim2.new(0,CORNER_R,0,CORNER_R), Position=pos,
+            BackgroundColor3=BG, BorderSizePixel=0, ZIndex=12 }, xBtn)
+    end
+    xBtn.MouseEnter:Connect(function() tween(xBtn, EASE_OUT(0.1), {TextColor3=ERROR}) end)
+    xBtn.MouseLeave:Connect(function() tween(xBtn, EASE_OUT(0.1), {TextColor3=DIM})   end)
+
+    -- dragging do menu
+    do
+        local dragging, dragStart, startPos, _tid = false, nil, nil, nil
+        table.insert(self._connections, topBar.InputBegan:Connect(function(inp)
+            if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+                if dragging then return end
+                dragging=true; dragStart=inp.Position; startPos=self.menuFrame.Position
+            elseif inp.UserInputType == Enum.UserInputType.Touch then
+                if _tid then return end
+                _tid=inp; dragging=true; dragStart=inp.Position; startPos=self.menuFrame.Position
+            end
+        end))
+        table.insert(self._connections, UserInputService.InputChanged:Connect(function(inp)
+            if not dragging then return end
+            local isM = inp.UserInputType==Enum.UserInputType.MouseMovement
+            local isT = inp.UserInputType==Enum.UserInputType.Touch
+            if isT and inp~=_tid then return end
+            if isM or isT then
+                local d = inp.Position - dragStart
+                self.menuFrame.Position = UDim2.new(
+                    startPos.X.Scale, startPos.X.Offset+d.X,
+                    startPos.Y.Scale, startPos.Y.Offset+d.Y)
+            end
+        end))
+        table.insert(self._connections, UserInputService.InputEnded:Connect(function(inp)
+            if inp.UserInputType==Enum.UserInputType.MouseButton1 then
+                dragging=false; dragStart=nil; startPos=nil
+            elseif inp.UserInputType==Enum.UserInputType.Touch then
+                if inp~=_tid then return end
+                dragging=false; _tid=nil; dragStart=nil; startPos=nil
+            end
+        end))
+    end
+
+    -- ── ContentFrame ──────────────────────────────────
+    self.contentFrame = o("Frame", {
+        Size=UDim2.new(1,0,1,-topH), Position=UDim2.new(0,0,0,topH),
+        BackgroundColor3=PANEL, BorderSizePixel=0,
+    }, self.menuFrame)
+    corner(self.contentFrame, CORNER_R)
+    o("Frame", { Size=UDim2.new(0,CORNER_R,0,CORNER_R), Position=UDim2.new(0,0,0,0),
+        BackgroundColor3=PANEL, BorderSizePixel=0 }, self.contentFrame)
+    o("Frame", { Size=UDim2.new(0,CORNER_R,0,CORNER_R), Position=UDim2.new(1,-CORNER_R,0,0),
+        BackgroundColor3=PANEL, BorderSizePixel=0 }, self.contentFrame)
+
+    -- Área de tabs header (inicialmente oculta)
+    self._tabBar = o("Frame", {
+        Name="TabBar",
+        Size=UDim2.new(1,0,0,30),
+        Position=UDim2.new(0,0,0,0),
+        BackgroundColor3=BG,
+        BorderSizePixel=0, Visible=false,
+    }, self.contentFrame)
+    strokeIn(self._tabBar, 1, LINE, 0.5)
+    o("UIListLayout", {
+        FillDirection=Enum.FillDirection.Horizontal,
+        SortOrder=Enum.SortOrder.LayoutOrder,
+        Padding=UDim.new(0,0),
+    }, self._tabBar)
+
+    -- ink-bar debaixo da tab ativa
+    self._inkBar = o("Frame", {
+        Size=UDim2.new(0,60,0,2),
+        Position=UDim2.new(0,0,1,-2),
+        BackgroundColor3=self._accent,
+        BorderSizePixel=0, ZIndex=5,
+    }, self._tabBar)
+    self:_registerThemeItem(self._inkBar, "BackgroundColor3", "accent")
+
+    -- Container padrão (sem tabs)
+    self.container = o("ScrollingFrame", {
+        Size=UDim2.new(1,-4,1,-6), Position=UDim2.new(0,2,0,4),
+        BackgroundTransparency=1, BorderSizePixel=0,
+        ScrollBarThickness=3, ScrollBarImageColor3=self._accent,
+        ScrollingDirection=Enum.ScrollingDirection.Y,
+        ElasticBehavior=Enum.ElasticBehavior.WhenScrollable,
+        AutomaticCanvasSize=Enum.AutomaticSize.Y,
+        CanvasSize=UDim2.new(1,0,0,0), Visible=true,
+    }, self.contentFrame)
+    self:_registerThemeItem(self.container, "ScrollBarImageColor3", "accent")
+    o("UIListLayout", { Padding=UDim.new(0,6), SortOrder=Enum.SortOrder.LayoutOrder }, self.container)
+    o("UIPadding", {
+        PaddingLeft=UDim.new(0,6), PaddingRight=UDim.new(0,6),
+        PaddingTop=UDim.new(0,4),  PaddingBottom=UDim.new(0,4),
+    }, self.container)
+
+    -- ── Float Pill ────────────────────────────────────
+    self.btnGui = o("ScreenGui", {
+        Name="KronUI_FloatBtn", ResetOnSpawn=false,
+        IgnoreGuiInset=true, ZIndexBehavior=Enum.ZIndexBehavior.Global,
+        DisplayOrder=9999,
+    })
+    local okPill = pcall(function() self.btnGui.Parent=CoreGui end)
+    if not okPill then self.btnGui.Parent=pg end
+
+    local PILL_SIZE = 46
+    local pill = o("Frame", {
+        Name="PillUI",
+        AnchorPoint=Vector2.new(0.5,0.5),
+        Size=UDim2.new(0,0,0,0),
+        Position=UDim2.new(1,-46,1,-242),
+        BackgroundColor3=BG, BorderSizePixel=0,
+        ClipsDescendants=true, Visible=false, ZIndex=200,
+    }, self.btnGui)
+    corner(pill, "pill")
+    stroke(pill, 1, LINE)
+    local pillGlow = stroke(pill, 1.5, self._accent, 0.55)
+    self:_registerThemeItem(pillGlow, "Color", "accent")
+    self._pill = pill
+
+    self._breatheTween = TweenService:Create(pillGlow,
+        TweenInfo.new(1.3,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut,-1,true),
+        { Transparency=0.9 })
+    self._breatheTween:Play()
+
+    local resolvedImage = tostring(pillImage or "rbxassetid://78186286433275")
+    if not resolvedImage:find("rbxassetid://") then
+        resolvedImage = "rbxassetid://" .. resolvedImage
+    end
+    local pillIcon = o("ImageLabel", {
+        AnchorPoint=Vector2.new(0.5,0.5), Position=UDim2.new(0.5,0,0.5,0),
+        Size=UDim2.new(0,32,0,32), BackgroundTransparency=1,
+        Image=resolvedImage, ImageColor3=W, ScaleType=Enum.ScaleType.Fit, ZIndex=201,
+    }, pill)
+
+    local pillBtn = o("TextButton", {
+        Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
+        Text="", AutoButtonColor=false, BorderSizePixel=0, ZIndex=202,
+    }, pill)
+    pillBtn.MouseEnter:Connect(function() tween(pillIcon,EASE_OUT(0.12),{ImageColor3=self._accent}) end)
+    pillBtn.MouseLeave:Connect(function() tween(pillIcon,EASE_OUT(0.12),{ImageColor3=W}) end)
+
+    local pillScale = o("UIScale",{Scale=1}, pill)
+    pillBtn.MouseButton1Down:Connect(function() tween(pillScale,EASE_OUT(0.08),{Scale=0.9}) end)
+    pillBtn.MouseButton1Up:Connect(function()   tween(pillScale,EASE_OUT(0.12),{Scale=1})   end)
+    pillBtn.MouseLeave:Connect(function()       tween(pillScale,EASE_OUT(0.12),{Scale=1})   end)
+
+    -- frost burst aprimorado: 3 anéis concêntricos
+    local function frostBurst()
+        for i = 1, 3 do
+            task.delay((i-1)*0.09, function()
+                local ring = o("Frame", {
+                    AnchorPoint=Vector2.new(0.5,0.5),
+                    Position=pill.Position,
+                    Size=UDim2.new(0,PILL_SIZE,0,PILL_SIZE),
+                    BackgroundTransparency=1, ZIndex=250,
+                }, self.btnGui)
+                corner(ring,"pill")
+                local rStroke = stroke(ring, 3-i, self._accent)
+                tween(ring, EASE_OUT(0.5), { Size=UDim2.new(0,PILL_SIZE+50+i*20,0,PILL_SIZE+50+i*20) })
+                tween(rStroke, EASE_OUT(0.5), { Transparency=1 })
+                task.delay(0.5, function() ring:Destroy() end)
+            end)
+        end
+    end
+
+    local function showPill()
+        pill.Visible=true; pill.Size=UDim2.new(0,0,0,0)
+        tween(pill, EASE_BACK(0.35), { Size=UDim2.new(0,PILL_SIZE,0,PILL_SIZE) })
+    end
+    local function hidePill()
+        local t=tween(pill,EASE_OUT(0.18),{Size=UDim2.new(0,0,0,0)})
+        t.Completed:Connect(function() if pill.Size.X.Offset<=1 then pill.Visible=false end end)
+    end
+    local function showMenu()
+        self.menuFrame.Visible=true; self.menuFrame.Size=UDim2.new(0,0,0,0)
+        tween(self.menuFrame, EASE_BACK(0.4), { Size=UDim2.new(0,MENU_W,0,MENU_H) })
+    end
+    local function hideMenu()
+        local t=tween(self.menuFrame,EASE_OUT(0.2),{Size=UDim2.new(0,0,0,0)})
+        t.Completed:Connect(function() if self.menuFrame.Size.X.Offset<=1 then self.menuFrame.Visible=false end end)
+    end
+
+    xBtn.MouseButton1Click:Connect(function()
+        playClick(); hideMenu(); showPill()
+    end)
+
+    do
+        local dragging, dragMoved, dragStart, startPos, _tid = false, false, nil, nil, nil
+        table.insert(self._connections, pillBtn.InputBegan:Connect(function(inp)
+            if inp.UserInputType==Enum.UserInputType.MouseButton1 then
+                if dragging then return end
+                dragging=true; dragMoved=false; dragStart=inp.Position; startPos=pill.Position
+            elseif inp.UserInputType==Enum.UserInputType.Touch then
+                if _tid then return end
+                _tid=inp; dragging=true; dragMoved=false; dragStart=inp.Position; startPos=pill.Position
+            end
+        end))
+        table.insert(self._connections, UserInputService.InputChanged:Connect(function(inp)
+            if not dragging then return end
+            local isM=inp.UserInputType==Enum.UserInputType.MouseMovement
+            local isT=inp.UserInputType==Enum.UserInputType.Touch
+            if isT and inp~=_tid then return end
+            if isM or isT then
+                local d=inp.Position-dragStart
+                if d.Magnitude>4 then dragMoved=true end
+                pill.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+d.X,
+                    startPos.Y.Scale,startPos.Y.Offset+d.Y)
+            end
+        end))
+        table.insert(self._connections, UserInputService.InputEnded:Connect(function(inp)
+            if inp.UserInputType==Enum.UserInputType.MouseButton1 then
+                if not dragging then return end; dragging=false
+                if not dragMoved then playClick(); frostBurst(); hidePill(); showMenu() end
+                dragStart=nil; startPos=nil
+            elseif inp.UserInputType==Enum.UserInputType.Touch then
+                if inp~=_tid then return end
+                local wm=dragMoved; dragging=false; dragMoved=false
+                _tid=nil; dragStart=nil; startPos=nil
+                if not wm then playClick(); frostBurst(); hidePill(); showMenu() end
+            end
+        end))
+    end
+
+    -- ── Seção de tema → swatches visuais ─────────────
+    self:AddSectionLabel("🎨 Theme")
+    self:_AddThemeSwatches()
+
+    return self
+end
+
+-- ══════════════════════════════════════════════════════
+--  SISTEMA DE ABAS
+-- ══════════════════════════════════════════════════════
+function KronUI:AddTab(name, icon)
+    if not self._tabMode then
+        -- primeira tab: esconder container padrão, mostrar tab bar
+        self._tabMode = true
+        self.container.Visible = false
+        self._tabBar.Visible = true
+    end
+
+    local tabIndex = #self._tabs + 1
+    local TAB_H   = 30
+
+    -- botão da tab
+    local tabBtn = o("TextButton", {
+        Size=UDim2.new(0,70,1,0),
+        BackgroundColor3=BG,
+        BorderSizePixel=0, AutoButtonColor=false, Text="",
+        ZIndex=4, LayoutOrder=tabIndex,
+    }, self._tabBar)
+
+    local iconStr = (icon and icon~="") and (icon.." ") or ""
+    o("TextLabel", {
+        Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
+        Text=iconStr..name, Font=FONT, TextSize=11, TextColor3=DIM,
+        TextXAlignment=Enum.TextXAlignment.Center, ZIndex=5,
+    }, tabBtn)
+
+    -- ink mark individual (escondido — usamos o inkBar global)
+    local inkMark = o("Frame", {
+        Size=UDim2.new(1,0,0,2),
+        Position=UDim2.new(0,0,1,-2),
+        BackgroundColor3=self._accent,
+        BackgroundTransparency=1,
+        BorderSizePixel=0, ZIndex=6,
+    }, tabBtn)
+    self:_registerThemeItem(inkMark, "BackgroundColor3", "accent")
+
+    -- container desta tab
+    local tabContainer = o("ScrollingFrame", {
+        Size=UDim2.new(1,-4,1,-TAB_H-4),
+        Position=UDim2.new(0,2,0,TAB_H+2),
+        BackgroundTransparency=1, BorderSizePixel=0,
+        ScrollBarThickness=3, ScrollBarImageColor3=self._accent,
+        ScrollingDirection=Enum.ScrollingDirection.Y,
+        ElasticBehavior=Enum.ElasticBehavior.WhenScrollable,
+        AutomaticCanvasSize=Enum.AutomaticSize.Y,
+        CanvasSize=UDim2.new(1,0,0,0), Visible=false,
+    }, self.contentFrame)
+    self:_registerThemeItem(tabContainer, "ScrollBarImageColor3", "accent")
+    o("UIListLayout", { Padding=UDim.new(0,6), SortOrder=Enum.SortOrder.LayoutOrder }, tabContainer)
+    o("UIPadding", {
+        PaddingLeft=UDim.new(0,6), PaddingRight=UDim.new(0,6),
+        PaddingTop=UDim.new(0,4),  PaddingBottom=UDim.new(0,4),
+    }, tabContainer)
+
+    local tabData = {
+        name=name, icon=icon, btn=tabBtn, inkMark=inkMark,
+        container=tabContainer, layoutOrder=0, index=tabIndex,
+    }
+    table.insert(self._tabs, tabData)
+
+    -- clicar na tab
+    tabBtn.MouseButton1Click:Connect(function()
+        self:_SelectTab(tabIndex)
+    end)
+
+    -- selecionar automaticamente a primeira
+    if tabIndex == 1 then
+        self:_SelectTab(1)
+    end
+
+    -- Tab object com todos os métodos de widget delegando ao container correto
+    local Tab = {}
+    for k, v in pairs(KronUI) do
+        if type(v)=="function" and k~="new" and k~="AddTab" then
+            Tab[k] = function(_, ...)
+                local oldContainer = self.container
+                local oldOrder     = self._layoutOrder
+                self.container    = tabContainer
+                self._layoutOrder = tabData.layoutOrder
+                local result = v(self, ...)
+                tabData.layoutOrder = self._layoutOrder
+                self.container    = oldContainer
+                self._layoutOrder = oldOrder
+                return result
+            end
+        end
+    end
+    Tab._tabData = tabData
+    Tab._ui      = self
+    setmetatable(Tab, { __index = self })
+
+    return Tab
+end
+
+function KronUI:_SelectTab(idx)
+    local tabs = self._tabs
+    if not tabs[idx] then return end
+
+    -- esconder anterior
+    if self._activeTab then
+        local prev = tabs[self._activeTab]
+        if prev then
+            prev.container.Visible = false
+            tween(prev.btn:FindFirstChildWhichIsA("TextLabel"),
+                EASE_OUT(0.15), {TextColor3=DIM})
+            tween(prev.inkMark, EASE_OUT(0.15), {BackgroundTransparency=1})
+        end
+    end
+
+    self._activeTab = idx
+    local cur = tabs[idx]
+    cur.container.Visible = true
+    tween(cur.btn:FindFirstChildWhichIsA("TextLabel"),
+        EASE_OUT(0.15), {TextColor3=W})
+    tween(cur.inkMark, EASE_OUT(0.15), {BackgroundTransparency=0})
+
+    -- mover ink bar global
+    local btnAbsX = cur.btn.AbsolutePosition.X - self._tabBar.AbsolutePosition.X
+    local btnAbsW = cur.btn.AbsoluteSize.X
+    tween(self._inkBar, EASE_OUT(0.22), {
+        Position=UDim2.new(0,btnAbsX,1,-2),
+        Size=UDim2.new(0,btnAbsW,0,2),
+    })
+end
+
+-- ══════════════════════════════════════════════════════
+--  TEMA VISUAL (SWATCHES)
+-- ══════════════════════════════════════════════════════
+function KronUI:_AddThemeSwatches()
+    local themes = {
+        { name="Roxo",    p=Color3.fromRGB(150,90,255),  s=Color3.fromRGB(95,60,200)  },
+        { name="Azul",    p=Color3.fromRGB(50,120,255),  s=Color3.fromRGB(30,80,200)  },
+        { name="Ciano",   p=Color3.fromRGB(40,210,210),  s=Color3.fromRGB(20,160,160) },
+        { name="Verde",   p=Color3.fromRGB(80,220,80),   s=Color3.fromRGB(40,170,40)  },
+        { name="Amarelo", p=Color3.fromRGB(255,210,50),  s=Color3.fromRGB(200,160,30) },
+        { name="Laranja", p=Color3.fromRGB(255,140,30),  s=Color3.fromRGB(200,100,20) },
+        { name="Vermelho",p=Color3.fromRGB(255,60,60),   s=Color3.fromRGB(200,30,30)  },
+        { name="Rosa",    p=Color3.fromRGB(255,100,180), s=Color3.fromRGB(200,60,140) },
+        { name="Branco",  p=Color3.fromRGB(242,240,250), s=Color3.fromRGB(195,190,215)},
+    }
+
+    local SWATCH = 22; local COLS = 9; local GAP = 4
+    local rowW = COLS*(SWATCH+GAP)-GAP
+
+    local holder = o("Frame", {
+        Size=UDim2.new(1,0,0,SWATCH+8),
+        BackgroundTransparency=1, LayoutOrder=self:_nextOrder(),
+    }, self.container)
+
+    local inner = o("Frame", {
+        AnchorPoint=Vector2.new(0.5,0.5), Position=UDim2.new(0.5,0,0.5,0),
+        Size=UDim2.new(0,rowW,0,SWATCH),
+        BackgroundTransparency=1,
+    }, holder)
+    o("UIListLayout", {
+        FillDirection=Enum.FillDirection.Horizontal,
+        Padding=UDim.new(0,GAP), SortOrder=Enum.SortOrder.LayoutOrder,
+    }, inner)
+
+    local swatchButtons = {}
+    local selectedIdx   = 1 -- Roxo por padrão
+
+    local function selectSwatch(idx)
+        selectedIdx = idx
+        for i, data in ipairs(swatchButtons) do
+            local isActive = (i==idx)
+            tween(data.ring, EASE_OUT(0.15), {
+                BackgroundTransparency = isActive and 0 or 1,
+            })
+            tween(data.scale, EASE_BACK(0.2), {
+                Scale = isActive and 1.12 or 1,
+            })
+        end
+        self:SetAccent(themes[idx].p, themes[idx].s)
+    end
+
+    for i, theme in ipairs(themes) do
+        local wrap = o("Frame", {
+            Size=UDim2.new(0,SWATCH,0,SWATCH),
+            BackgroundTransparency=1, LayoutOrder=i,
+        }, inner)
+
+        local dot = o("TextButton", {
+            Size=UDim2.new(1,-4,1,-4),
+            AnchorPoint=Vector2.new(0.5,0.5),
+            Position=UDim2.new(0.5,0,0.5,0),
+            BackgroundColor3=theme.p,
+            BorderSizePixel=0, Text="", AutoButtonColor=false,
+        }, wrap)
+        corner(dot,"pill")
+
+        local ring = o("Frame", {
+            AnchorPoint=Vector2.new(0.5,0.5),
+            Position=UDim2.new(0.5,0,0.5,0),
+            Size=UDim2.new(1,0,1,0),
+            BackgroundTransparency=1, BorderSizePixel=0,
+        }, wrap)
+        corner(ring,"pill")
+        local rStroke = stroke(ring, 2, theme.p, 1)
+
+        local sc = o("UIScale",{Scale=1}, wrap)
+
+        swatchButtons[i] = { ring=rStroke, scale=sc, dot=dot }
+
+        dot.MouseEnter:Connect(function()
+            if i~=selectedIdx then
+                tween(sc, EASE_OUT(0.12), {Scale=1.08})
+                tween(rStroke, EASE_OUT(0.12), {Transparency=0.4})
+            end
+        end)
+        dot.MouseLeave:Connect(function()
+            if i~=selectedIdx then
+                tween(sc, EASE_OUT(0.12), {Scale=1})
+                tween(rStroke, EASE_OUT(0.12), {Transparency=1})
+            end
+        end)
+        dot.MouseButton1Click:Connect(function()
+            playClick()
+            selectSwatch(i)
+        end)
+    end
+
+    selectSwatch(1)
+end
+
+-- ══════════════════════════════════════════════════════
+--  SISTEMA DE NOTIFICAÇÕES (TOAST)
+-- ══════════════════════════════════════════════════════
+function KronUI:Notify(opts)
+    opts = opts or {}
+    local title    = opts.title    or "Notificação"
+    local desc     = opts.desc     or ""
+    local ntype    = opts.type     or "info"
+    local duration = opts.duration or 3
+
+    local typeColors = {
+        info    = INFO,
+        success = SUCCESS,
+        warn    = WARN,
+        error   = ERROR,
+    }
+    local typeIcons = {
+        info = "ℹ", success = "✓", warn = "⚠", error = "✕",
+    }
+    local col  = typeColors[ntype] or INFO
+    local icon = typeIcons[ntype]  or "ℹ"
+
+    -- limitar a 4 simultaneas (remove a mais antiga)
+    if self._notifCount >= 4 then
+        local first = self._notifStack:FindFirstChildWhichIsA("Frame")
+        if first then first:Destroy() end
+        self._notifCount = math.max(0, self._notifCount-1)
+    end
+
+    self._notifOrder = self._notifOrder + 1
+    self._notifCount = self._notifCount + 1
+
+    local NOTIF_H = 58 + (desc~="" and 16 or 0)
+
+    local card = o("Frame", {
+        Size=UDim2.new(1,0,0,NOTIF_H),
+        BackgroundColor3=CARD, BorderSizePixel=0,
+        ClipsDescendants=true,
+        BackgroundTransparency=1,
+        LayoutOrder=self._notifOrder,
+    }, self._notifStack)
+    corner(card,10)
+    strokeIn(card,1,LINE)
+
+    -- barra lateral colorida
+    o("Frame", {
+        Size=UDim2.new(0,3,1,0),
+        BackgroundColor3=col, BorderSizePixel=0,
+    }, card)
+    corner(o("Frame",{
+        Size=UDim2.new(0,3,1,0), BackgroundColor3=col, BorderSizePixel=0,
+    }, card),"pill")
+
+    -- ícone
+    o("TextLabel", {
+        Position=UDim2.new(0,10,0,8), Size=UDim2.new(0,20,0,20),
+        BackgroundTransparency=1, Text=icon,
+        Font=FONTB, TextSize=14, TextColor3=col,
+        TextXAlignment=Enum.TextXAlignment.Center,
+    }, card)
+
+    -- título
+    o("TextLabel", {
+        Position=UDim2.new(0,34,0,8), Size=UDim2.new(1,-44,0,18),
+        BackgroundTransparency=1, Text=title,
+        Font=FONTB, TextSize=12, TextColor3=W,
+        TextXAlignment=Enum.TextXAlignment.Left,
+        TextTruncate=Enum.TextTruncate.AtEnd,
+    }, card)
+
+    -- descrição
+    if desc ~= "" then
+        o("TextLabel", {
+            Position=UDim2.new(0,34,0,26), Size=UDim2.new(1,-44,0,14),
+            BackgroundTransparency=1, Text=desc,
+            Font=FONT, TextSize=11, TextColor3=DIM,
+            TextXAlignment=Enum.TextXAlignment.Left,
+            TextTruncate=Enum.TextTruncate.AtEnd,
+        }, card)
+    end
+
+    -- barra de progresso de duração
+    local progTrack = o("Frame", {
+        Position=UDim2.new(0,10,1,-6), Size=UDim2.new(1,-20,0,2),
+        BackgroundColor3=LINE, BorderSizePixel=0,
+    }, card)
+    corner(progTrack,"pill")
+    local progFill = o("Frame", {
+        Size=UDim2.new(1,0,1,0), BackgroundColor3=col, BorderSizePixel=0,
+    }, progTrack)
+    corner(progFill,"pill")
+
+    -- entrada animada (slide + fade)
+    tween(card, EASE_OUT(0.3), { BackgroundTransparency=0 })
+    local cardScale = o("UIScale",{Scale=0.9}, card)
+    tween(cardScale, EASE_BACK(0.35), {Scale=1})
+
+    -- barra de progresso depletando
+    tween(progFill, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Size=UDim2.new(0,0,1,0)})
+
+    -- saída
+    task.delay(duration, function()
+        if not card or not card.Parent then return end
+        local t = tween(card, EASE_OUT(0.25), {BackgroundTransparency=1, Size=UDim2.new(1,0,0,0)})
+        tween(cardScale, EASE_OUT(0.25), {Scale=0.92})
+        t.Completed:Connect(function()
+            if card and card.Parent then card:Destroy() end
+            self._notifCount = math.max(0, self._notifCount-1)
+        end)
+    end)
+end
+
+-- ══════════════════════════════════════════════════════
+--  WIDGETS BASE
+-- ══════════════════════════════════════════════════════
+function KronUI:Destroy()
+    for _, conn in ipairs(self._connections) do conn:Disconnect() end
+    self._connections = {}
+    if self._breatheTween then self._breatheTween:Cancel() end
+    if self._shimmerTween then self._shimmerTween:Cancel() end
+    if self.gui     then self.gui:Destroy()     end
+    if self.btnGui  then self.btnGui:Destroy()  end
+    if self._notifGui then self._notifGui:Destroy() end
+end
+
+function KronUI:_nextOrder()
+    self._layoutOrder = self._layoutOrder + 1
+    return self._layoutOrder
+end
+
+function KronUI:AddSectionLabel(text)
+    local holder = o("Frame", {
+        Size=UDim2.new(1,0,0,24), BackgroundTransparency=1,
+        LayoutOrder=self:_nextOrder(),
+    }, self.container)
+    local bar = o("Frame", {
+        Size=UDim2.new(0,3,0,12), Position=UDim2.new(0,2,0.5,-6),
+        BackgroundColor3=self._accent, BorderSizePixel=0,
+    }, holder)
+    self:_registerThemeItem(bar, "BackgroundColor3","accent")
+    o("TextLabel", {
+        Size=UDim2.new(1,-16,1,0), Position=UDim2.new(0,12,0,0),
+        BackgroundTransparency=1, Text=string.upper(text or ""),
+        Font=FONTB, TextSize=10, TextColor3=MID,
+        TextXAlignment=Enum.TextXAlignment.Left,
+    }, holder)
+end
+
+function KronUI:AddDivider()
+    local holder = o("Frame", {
+        Size=UDim2.new(1,0,0,12), BackgroundTransparency=1,
+        BorderSizePixel=0, LayoutOrder=self:_nextOrder(),
+    }, self.container)
+    local line = o("Frame", {
+        Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,0.5,0),
+        BackgroundColor3=LINE, BorderSizePixel=0,
+    }, holder)
+    o("UIGradient", {
+        Transparency=NumberSequence.new({
+            NumberSequenceKeypoint.new(0,1),
+            NumberSequenceKeypoint.new(0.5,0.3),
+            NumberSequenceKeypoint.new(1,1),
+        }),
+    }, line)
+end
+
+-- ── Label ─────────────────────────────────────────────
+function KronUI:AddLabel(text, color)
+    local lbl = o("TextLabel", {
+        Size=UDim2.new(1,0,0,22), BackgroundTransparency=1,
+        Text=text or "", Font=FONT, TextSize=12,
+        TextColor3=color or MID,
+        TextXAlignment=Enum.TextXAlignment.Left,
+        TextWrapped=true,
+        LayoutOrder=self:_nextOrder(),
+    }, self.container)
+    o("UIPadding", { PaddingLeft=UDim.new(0,4) }, lbl)
+    return {
+        SetText  = function(t) lbl.Text=t end,
+        SetColor = function(c) lbl.TextColor3=c end,
+    }
+end
+
+-- ── StatusBadge ───────────────────────────────────────
+function KronUI:AddStatusBadge(text, status)
+    local statusColors = {
+        online  = SUCCESS, offline = DIM,
+        warning = WARN,    error   = ERROR,
+        info    = INFO,    neutral = MID,
+    }
+    local col = statusColors[status or "neutral"] or MID
+
+    local holder = o("Frame", {
+        Size=UDim2.new(1,0,0,30), BackgroundColor3=CARD,
+        BorderSizePixel=0, LayoutOrder=self:_nextOrder(),
+    }, self.container)
+    strokeIn(holder,1,LINE); corner(holder,8)
+
+    -- dot pulsante
+    local dot = o("Frame", {
+        Size=UDim2.new(0,8,0,8), AnchorPoint=Vector2.new(0,0.5),
+        Position=UDim2.new(0,12,0.5,0),
+        BackgroundColor3=col, BorderSizePixel=0,
+    }, holder)
+    corner(dot,"pill")
+
+    -- halo de pulso
+    local halo = o("Frame", {
+        Size=UDim2.new(0,8,0,8), AnchorPoint=Vector2.new(0,0.5),
+        Position=UDim2.new(0,12,0.5,0),
+        BackgroundColor3=col, BackgroundTransparency=0.5,
+        BorderSizePixel=0,
+    }, holder)
+    corner(halo,"pill")
+
+    -- animar halo
+    TweenService:Create(halo, TweenInfo.new(1.2,Enum.EasingStyle.Quad,Enum.EasingDirection.Out,-1,false),
+        {Size=UDim2.new(0,20,0,20), AnchorPoint=Vector2.new(0.5,0.5),
+         Position=UDim2.new(0,16,0.5,0), BackgroundTransparency=1}):Play()
+
+    o("TextLabel", {
+        Position=UDim2.new(0,26,0,0), Size=UDim2.new(1,-38,1,0),
+        BackgroundTransparency=1, Text=text or "",
+        Font=FONT, TextSize=12, TextColor3=MID,
+        TextXAlignment=Enum.TextXAlignment.Left,
+    }, holder)
+
+    local statusLbl = o("TextLabel", {
+        Position=UDim2.new(1,-60,0,0), Size=UDim2.new(0,54,1,0),
+        BackgroundTransparency=1,
+        Text=string.upper(status or "neutral"),
+        Font=FONTB, TextSize=9, TextColor3=col,
+        TextXAlignment=Enum.TextXAlignment.Right,
+    }, holder)
+
+    return {
+        SetStatus = function(newStatus)
+            local nc = statusColors[newStatus] or MID
+            dot.BackgroundColor3  = nc
+            halo.BackgroundColor3 = nc
+            statusLbl.TextColor3  = nc
+            statusLbl.Text = string.upper(newStatus)
+        end,
+        SetText = function(t) holder:FindFirstChildWhichIsA("TextLabel").Text=t end,
+    }
+end
+
+-- ── Toggle ────────────────────────────────────────────
+function KronUI:AddToggle(text, default, callback)
+    local state = default or false
+
+    local btn = o("TextButton", {
+        Size=UDim2.new(1,0,0,32), BackgroundColor3=CARD,
+        BorderSizePixel=0, AutoButtonColor=false, Text="",
+        LayoutOrder=self:_nextOrder(),
+    }, self.container)
+    local btnStroke = strokeIn(btn,1,LINE)
+    corner(btn,8)
+
+    local label = o("TextLabel", {
+        BackgroundTransparency=1, Position=UDim2.new(0,12,0,0),
+        Size=UDim2.new(1,-54,1,0), Font=FONT, TextSize=12,
+        TextXAlignment=Enum.TextXAlignment.Left, Text=text,
+    }, btn)
+
+    local trackW, trackH = 30, 14
+    local track = o("Frame", {
+        Size=UDim2.new(0,trackW,0,trackH),
+        Position=UDim2.new(1,-(trackW+10),0.5,-trackH/2),
+        BackgroundColor3=PANEL, BorderSizePixel=0,
+    }, btn)
+    corner(track,"pill")
+    local trackStroke = stroke(track,1,LINE)
+
+    local knob = o("Frame", {
+        Size=UDim2.new(0,10,0,10), Position=UDim2.new(0,2,0.5,-5),
+        BackgroundColor3=DIM, BorderSizePixel=0,
+    }, track)
+    corner(knob,"pill")
+
+    -- glow do knob quando ativo
+    local knobGlow = stroke(knob, 2, self._accent, 1)
+    self:_registerThemeItem(knobGlow, "Color", "accent")
+
+    local function refresh(animate)
+        local ti=EASE_OUT(animate and 0.16 or 0)
+        if state then
+            tween(knob,  ti, {Position=UDim2.new(1,-12,0.5,-5), BackgroundColor3=W})
+            tween(track, ti, {BackgroundColor3=self._accent2})
+            tween(trackStroke, ti, {Color=self._accent})
+            tween(btnStroke,   ti, {Color=self._accent2, Transparency=0.4})
+            tween(knobGlow,    ti, {Transparency=0.3})
+            label.TextColor3 = W
+        else
+            tween(knob,  ti, {Position=UDim2.new(0,2,0.5,-5), BackgroundColor3=DIM})
+            tween(track, ti, {BackgroundColor3=PANEL})
+            tween(trackStroke, ti, {Color=LINE})
+            tween(btnStroke,   ti, {Color=LINE, Transparency=0})
+            tween(knobGlow,    ti, {Transparency=1})
+            label.TextColor3 = DIM
+        end
+    end
+    refresh(false)
+    self:_registerThemeCallback(function() refresh(false) end)
+
+    btn.MouseEnter:Connect(function() if not state then btn.BackgroundColor3=HOVER end end)
+    btn.MouseLeave:Connect(function() btn.BackgroundColor3=CARD end)
+
+    table.insert(self._connections, btn.MouseButton1Click:Connect(function()
+        self._playClick(); state=not state; refresh(true)
+        if callback then task.spawn(callback,state) end
+    end))
+
+    return {
+        SetState = function(v) state=v refresh(true) end,
+        GetState = function()  return state end,
+    }
+end
+
+-- ── Button ────────────────────────────────────────────
+function KronUI:AddButton(text, callback)
+    local btn = o("TextButton", {
+        Size=UDim2.new(1,0,0,32), BackgroundColor3=CARD,
+        BorderSizePixel=0, AutoButtonColor=false, ClipsDescendants=true,
+        Font=FONT, TextSize=12, Text=text, TextColor3=MID,
+        LayoutOrder=self:_nextOrder(),
+    }, self.container)
+    local btnStroke = strokeIn(btn,1,LINE)
+    corner(btn,8)
+
+    -- shimmer sweep on hover
+    local sweep = o("Frame", {
+        Size=UDim2.new(0,60,1,0), Position=UDim2.new(0,-60,0,0),
+        BackgroundTransparency=1, BorderSizePixel=0, ZIndex=2,
+    }, btn)
+    o("UIGradient", {
+        Rotation=90,
+        Transparency=NumberSequence.new({
+            NumberSequenceKeypoint.new(0,1),
+            NumberSequenceKeypoint.new(0.5,0.7),
+            NumberSequenceKeypoint.new(1,1),
+        }),
+        Color=ColorSequence.new(Color3.new(1,1,1), Color3.new(1,1,1)),
+    }, sweep)
+    local sweepTween
+
+    local function ripple(x,y)
+        local r=o("Frame", {
+            AnchorPoint=Vector2.new(0.5,0.5),
+            Position=UDim2.new(0,x,0,y),
+            Size=UDim2.new(0,0,0,0),
+            BackgroundColor3=self._accent,
+            BackgroundTransparency=0.55, BorderSizePixel=0, ZIndex=5,
+        }, btn)
+        corner(r,"pill")
+        local maxD=math.max(btn.AbsoluteSize.X, btn.AbsoluteSize.Y)*1.6
+        local t=tween(r, TweenInfo.new(0.45,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),
+            {Size=UDim2.new(0,maxD,0,maxD), BackgroundTransparency=1})
+        t.Completed:Connect(function() r:Destroy() end)
+    end
+
+    btn.MouseEnter:Connect(function()
+        tween(btn,EASE_OUT(0.12),{BackgroundColor3=HOVER})
+        tween(btnStroke,EASE_OUT(0.12),{Color=self._accent})
+        btn.TextColor3 = W
+        if sweepTween then sweepTween:Cancel() end
+        sweep.Position = UDim2.new(0,-60,0,0)
+        sweepTween = tween(sweep, TweenInfo.new(0.5,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),
+            {Position=UDim2.new(1,60,0,0)})
+    end)
+    btn.MouseLeave:Connect(function()
+        tween(btn,EASE_OUT(0.12),{BackgroundColor3=CARD})
+        tween(btnStroke,EASE_OUT(0.12),{Color=LINE})
+        btn.TextColor3 = MID
+    end)
+
+    table.insert(self._connections, btn.InputBegan:Connect(function(inp)
+        if inp.UserInputType==Enum.UserInputType.MouseButton1
+        or inp.UserInputType==Enum.UserInputType.Touch then
+            local x=inp.Position.X-btn.AbsolutePosition.X
+            local y=inp.Position.Y-btn.AbsolutePosition.Y
+            ripple(x,y)
+        end
+    end))
+    table.insert(self._connections, btn.MouseButton1Click:Connect(function()
+        self._playClick()
+        if callback then task.spawn(callback) end
+    end))
+    return btn
+end
+
+-- ── Slider ────────────────────────────────────────────
+function KronUI:AddSlider(text, min, max, default, callback)
+    local value       = math.clamp(default or min, min, max)
+    local dragging    = false
+    local activeTouch = nil
+
+    local holder = o("Frame", {
+        Size=UDim2.new(1,0,0,50), BackgroundColor3=CARD,
+        BorderSizePixel=0, LayoutOrder=self:_nextOrder(),
+    }, self.container)
+    strokeIn(holder,1,LINE); corner(holder,8)
+
+    local label = o("TextLabel", {
+        BackgroundTransparency=1, Position=UDim2.new(0,12,0,2),
+        Size=UDim2.new(1,-16,0,26),
+        Font=FONT, TextSize=12, TextXAlignment=Enum.TextXAlignment.Left, TextColor3=MID,
+    }, holder)
+
+    local track = o("Frame", {
+        Size=UDim2.new(1,-24,0,4), Position=UDim2.new(0,12,0,36),
+        BackgroundColor3=LINE, BorderSizePixel=0,
+    }, holder)
+    corner(track,"pill")
+
+    local fill = o("Frame", {
+        Size=UDim2.new(0,0,1,0), BackgroundColor3=self._accent, BorderSizePixel=0,
+    }, track)
+    corner(fill,"pill")
+    local fillGrad = o("UIGradient", { Color=ColorSequence.new(self._accent2,self._accent) }, fill)
+    self:_registerThemeGradient(fillGrad)
+
+    local knob = o("Frame", {
+        Size=UDim2.new(0,11,0,11), AnchorPoint=Vector2.new(.5,.5),
+        Position=UDim2.new(0,0,.5,0), BackgroundColor3=W, BorderSizePixel=0,
+    }, track)
+    corner(knob,"pill")
+    local knobStroke = stroke(knob,1.5,self._accent)
+    self:_registerThemeItem(knobStroke,"Color","accent")
+
+    -- glow ring quando arrastando
+    local knobGlow = o("Frame", {
+        Size=UDim2.new(0,11,0,11), AnchorPoint=Vector2.new(.5,.5),
+        Position=UDim2.new(0,0,.5,0),
+        BackgroundColor3=self._accent, BackgroundTransparency=1,
+        BorderSizePixel=0, ZIndex=-1,
+    }, track)
+    corner(knobGlow,"pill")
+    self:_registerThemeItem(knobGlow,"BackgroundColor3","accent")
+
+    local bubble = o("TextLabel", {
+        AnchorPoint=Vector2.new(0.5,1), Size=UDim2.new(0,30,0,18),
+        BackgroundColor3=self._accent, Text="", TextColor3=W,
+        Font=FONTB, TextSize=10, Visible=false, ZIndex=6,
+    }, track)
+    self:_registerThemeItem(bubble,"BackgroundColor3","accent")
+    corner(bubble,5)
+
+    self:_registerThemeCallback(function(primary, secondary)
+        fill.BackgroundColor3      = primary
+        fillGrad.Color             = ColorSequence.new(secondary, primary)
+        knobStroke.Color           = primary
+        bubble.BackgroundColor3    = primary
+        knobGlow.BackgroundColor3  = primary
+    end)
+
+    local function setDragging(v)
+        dragging = v
+        if v then
+            tween(knob,      EASE_OUT(0.12), {Size=UDim2.new(0,14,0,14)})
+            tween(knobGlow,  EASE_OUT(0.12), {Size=UDim2.new(0,22,0,22), BackgroundTransparency=0.7})
+            bubble.Visible = true
+        else
+            tween(knob,      EASE_OUT(0.12), {Size=UDim2.new(0,11,0,11)})
+            tween(knobGlow,  EASE_OUT(0.2),  {Size=UDim2.new(0,11,0,11), BackgroundTransparency=1})
+            bubble.Visible = false
+        end
+    end
+
+    local function redraw()
+        local rel = (value-min)/(max-min)
+        fill.Size      = UDim2.new(rel,0,1,0)
+        knob.Position  = UDim2.new(rel,0,.5,0)
+        knobGlow.Position = UDim2.new(rel,0,.5,0)
+        label.Text     = text.."   "..tostring(math.floor(value))
+        bubble.Position = UDim2.new(rel,0,0,-8)
+        bubble.Text    = tostring(math.floor(value))
+    end
+
+    local function update(x)
+        local rel = math.clamp((x-track.AbsolutePosition.X)/track.AbsoluteSize.X, 0, 1)
+        value = math.floor(min+(max-min)*rel)
+        redraw()
+        if callback then task.spawn(callback,value) end
+    end
+
+    redraw()
+
+    table.insert(self._connections, track.InputBegan:Connect(function(inp)
+        if inp.UserInputType==Enum.UserInputType.MouseButton1 then
+            setDragging(true); update(inp.Position.X)
+        elseif inp.UserInputType==Enum.UserInputType.Touch then
+            if activeTouch then return end
+            activeTouch=inp; setDragging(true); update(inp.Position.X)
+        end
+    end))
+    table.insert(self._connections, knob.InputBegan:Connect(function(inp)
+        if inp.UserInputType==Enum.UserInputType.MouseButton1 then
+            setDragging(true)
+        elseif inp.UserInputType==Enum.UserInputType.Touch then
+            if activeTouch then return end
+            activeTouch=inp; setDragging(true)
+        end
+    end))
+    table.insert(self._connections, UserInputService.InputChanged:Connect(function(inp)
+        if not dragging then return end
+        if inp.UserInputType==Enum.UserInputType.MouseMovement then
+            update(inp.Position.X)
+        elseif inp.UserInputType==Enum.UserInputType.Touch then
+            if inp~=activeTouch then return end
+            update(inp.Position.X)
+        end
+    end))
+    table.insert(self._connections, UserInputService.InputEnded:Connect(function(inp)
+        if inp.UserInputType==Enum.UserInputType.MouseButton1 then
+            if activeTouch then return end; setDragging(false)
+        elseif inp.UserInputType==Enum.UserInputType.Touch then
+            if inp~=activeTouch then return end
+            activeTouch=nil; setDragging(false)
+        end
+    end))
+
+    return {
+        GetValue = function() return value end,
+        SetValue = function(v) value=math.clamp(v,min,max) redraw() end,
+    }
+end
+
+-- ── Dropdown ──────────────────────────────────────────
+function KronUI:AddDropdown(text, options, default, callback)
+    options = options or {}
+    local selected = nil
+    if default and table.find(options, default) then selected=default end
+    local open = false
+
+    local holder = o("Frame", {
+        Size=UDim2.new(1,0,0,32), AutomaticSize=Enum.AutomaticSize.Y,
+        BackgroundColor3=CARD, BorderSizePixel=0, ClipsDescendants=true,
+        LayoutOrder=self:_nextOrder(),
+    }, self.container)
+    strokeIn(holder,1,LINE); corner(holder,8)
+
+    local head = o("TextButton", {
+        Size=UDim2.new(1,0,0,32), BackgroundTransparency=1,
+        AutoButtonColor=false, Text="",
+    }, holder)
+    o("TextLabel", {
+        BackgroundTransparency=1, Position=UDim2.new(0,12,0,0),
+        Size=UDim2.new(1,-54,1,0), Font=FONT, TextSize=12, TextColor3=MID,
+        TextXAlignment=Enum.TextXAlignment.Left, TextTruncate=Enum.TextTruncate.AtEnd,
+        Text=text,
+    }, head)
+    local selectedLabel = o("TextLabel", {
+        BackgroundTransparency=1, Position=UDim2.new(1,-54,0,0),
+        Size=UDim2.new(0,30,1,0), Font=FONTB, TextSize=11, TextColor3=self._accent,
+        TextXAlignment=Enum.TextXAlignment.Right, Text=selected or "",
+    }, head)
+    self:_registerThemeItem(selectedLabel,"TextColor3","accent")
+    local arrow = o("TextLabel", {
+        BackgroundTransparency=1, Position=UDim2.new(1,-26,0,0),
+        Size=UDim2.new(0,20,1,0), Font=FONTB, TextSize=16, TextColor3=DIM,
+        TextXAlignment=Enum.TextXAlignment.Center, Text="▼", Rotation=0,
+    }, head)
+
+    local LIST_MAX_H = 132; local ROW_H = 26
+    local listWrap = o("Frame", {
+        Size=UDim2.new(1,0,0,0), Position=UDim2.new(0,0,0,32),
+        BackgroundTransparency=1, ClipsDescendants=true,
+    }, holder)
+    local list = o("ScrollingFrame", {
+        Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
+        BorderSizePixel=0, ScrollBarThickness=3,
+        ScrollBarImageColor3=self._accent,
+        ScrollingDirection=Enum.ScrollingDirection.Y,
+        ElasticBehavior=Enum.ElasticBehavior.WhenScrollable,
+        AutomaticCanvasSize=Enum.AutomaticSize.Y,
+        CanvasSize=UDim2.new(1,0,0,0),
+    }, listWrap)
+    self:_registerThemeItem(list,"ScrollBarImageColor3","accent")
+    o("UIListLayout",{Padding=UDim.new(0,4), SortOrder=Enum.SortOrder.LayoutOrder},list)
+    o("UIPadding",{
+        PaddingLeft=UDim.new(0,4),PaddingRight=UDim.new(0,4),
+        PaddingTop=UDim.new(0,2),PaddingBottom=UDim.new(0,2),
+    },list)
+
+    local rows = {}
+    local function updateRowColors(animate)
+        for opt, data in pairs(rows) do
+            local row=data.row; local check=row:FindFirstChild("Check")
+            local box=row:FindFirstChild("Box"); local boxStk=box and box:FindFirstChild("UIStroke")
+            local rowStk=row:FindFirstChild("UIStroke"); local lbl=row:FindFirstChild("Label")
+            local ti=EASE_OUT(animate and 0.14 or 0)
+            if opt==selected then
+                tween(box,ti,{BackgroundColor3=self._accent2})
+                if boxStk then tween(boxStk,ti,{Color=self._accent}) end
+                if check  then tween(check,ti,{TextTransparency=0}) end
+                if rowStk then tween(rowStk,ti,{Color=self._accent2,Transparency=0.4}) end
+                if lbl    then lbl.TextColor3=W end
+            else
+                tween(box,ti,{BackgroundColor3=PANEL})
+                if boxStk then tween(boxStk,ti,{Color=LINE}) end
+                if check  then tween(check,ti,{TextTransparency=1}) end
+                if rowStk then tween(rowStk,ti,{Color=LINE,Transparency=0}) end
+                if lbl    then lbl.TextColor3=MID end
+            end
+        end
+    end
+    self:_registerThemeCallback(function()
+        updateRowColors(false)
+        selectedLabel.TextColor3=self._accent
+        list.ScrollBarImageColor3=self._accent
+    end)
+
+    local setOpen
+    for i, opt in ipairs(options) do
+        local row=o("TextButton",{
+            Size=UDim2.new(1,0,0,ROW_H),BackgroundColor3=PANEL,
+            BorderSizePixel=0,AutoButtonColor=false,Text="",LayoutOrder=i,
+        },list)
+        corner(row,6); strokeIn(row,1,LINE)
+        local box=o("Frame",{Name="Box",Size=UDim2.new(0,13,0,13),
+            Position=UDim2.new(0,8,0.5,-6.5),BackgroundColor3=PANEL,BorderSizePixel=0},row)
+        corner(box,4); stroke(box,1,LINE)
+        o("TextLabel",{Name="Check",Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,
+            Text="✓",Font=FONTB,TextSize=10,TextColor3=W,TextTransparency=1},box)
+        o("TextLabel",{Name="Label",BackgroundTransparency=1,
+            Position=UDim2.new(0,28,0,0),Size=UDim2.new(1,-34,1,0),
+            Font=FONT,TextSize=11,TextColor3=MID,
+            TextXAlignment=Enum.TextXAlignment.Left,
+            TextTruncate=Enum.TextTruncate.AtEnd,Text=tostring(opt)},row)
+        rows[opt]={row=row}
+        row.MouseEnter:Connect(function() if selected~=opt then row.BackgroundColor3=HOVER end end)
+        row.MouseLeave:Connect(function() row.BackgroundColor3=PANEL end)
+        table.insert(self._connections, row.MouseButton1Click:Connect(function()
+            self._playClick()
+            selected=(selected==opt) and nil or opt
+            selectedLabel.Text=selected or ""
+            updateRowColors(true)
+            if callback then task.spawn(callback,selected) end
+            if setOpen then setOpen(false) end
+        end))
+    end
+    updateRowColors(false)
+    local listH=math.min(#options*(ROW_H+4)+4, LIST_MAX_H)
+    setOpen=function(v)
+        open=v
+        local ti=EASE_OUT(0.2)
+        tween(listWrap,ti,{Size=UDim2.new(1,0,0,open and listH or 0)})
+        tween(arrow,ti,{Rotation=open and 180 or 0})
+    end
+    head.MouseEnter:Connect(function() if not open then holder.BackgroundColor3=HOVER end end)
+    head.MouseLeave:Connect(function() if not open then holder.BackgroundColor3=CARD  end end)
+    table.insert(self._connections, head.MouseButton1Click:Connect(function()
+        self._playClick(); setOpen(not open)
+    end))
+    return {
+        Frame=holder, GetSelected=function() return selected end,
+        SetSelected=function(opt)
+            selected=(opt and table.find(options,opt)) and opt or nil
+            selectedLabel.Text=selected or ""; updateRowColors(true)
+        end,
+        Close=function() setOpen(false) end,
+    }
+end
+
+-- ── MultiDropdown ─────────────────────────────────────
+function KronUI:AddMultiDropdown(text, options, defaults, callback)
+    options=options or {}; defaults=defaults or {}
+    local selectedSet = {}
+    for _, def in ipairs(defaults) do
+        if table.find(options,def) then selectedSet[def]=true end
+    end
+    local open=false; local rows={}; local listH=0
+    local LIST_MAX_H=132; local ROW_H=26
+
+    local holder=o("Frame",{
+        Size=UDim2.new(1,0,0,32),AutomaticSize=Enum.AutomaticSize.Y,
+        BackgroundColor3=CARD,BorderSizePixel=0,ClipsDescendants=true,
+        LayoutOrder=self:_nextOrder(),
+    },self.container)
+    strokeIn(holder,1,LINE); corner(holder,8)
+
+    local head=o("TextButton",{
+        Size=UDim2.new(1,0,0,32),BackgroundTransparency=1,
+        AutoButtonColor=false,Text="",
+    },holder)
+    o("TextLabel",{BackgroundTransparency=1,Position=UDim2.new(0,12,0,0),
+        Size=UDim2.new(1,-54,1,0),Font=FONT,TextSize=12,TextColor3=MID,
+        TextXAlignment=Enum.TextXAlignment.Left,TextTruncate=Enum.TextTruncate.AtEnd,Text=text},head)
+    local selectedLabel=o("TextLabel",{BackgroundTransparency=1,
+        Position=UDim2.new(1,-54,0,0),Size=UDim2.new(0,30,1,0),
+        Font=FONTB,TextSize=11,TextColor3=self._accent,
+        TextXAlignment=Enum.TextXAlignment.Right,Text=""},head)
+    self:_registerThemeItem(selectedLabel,"TextColor3","accent")
+    local arrow=o("TextLabel",{BackgroundTransparency=1,Position=UDim2.new(1,-26,0,0),
+        Size=UDim2.new(0,20,1,0),Font=FONTB,TextSize=16,TextColor3=DIM,
+        TextXAlignment=Enum.TextXAlignment.Center,Text="▼",Rotation=0},head)
+
+    local listWrap=o("Frame",{Size=UDim2.new(1,0,0,0),Position=UDim2.new(0,0,0,32),
+        BackgroundTransparency=1,ClipsDescendants=true},holder)
+    local list=o("ScrollingFrame",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,
+        BorderSizePixel=0,ScrollBarThickness=3,ScrollBarImageColor3=self._accent,
+        ScrollingDirection=Enum.ScrollingDirection.Y,
+        ElasticBehavior=Enum.ElasticBehavior.WhenScrollable,
+        AutomaticCanvasSize=Enum.AutomaticSize.Y,CanvasSize=UDim2.new(1,0,0,0)},listWrap)
+    self:_registerThemeItem(list,"ScrollBarImageColor3","accent")
+    o("UIListLayout",{Padding=UDim.new(0,4),SortOrder=Enum.SortOrder.LayoutOrder},list)
+    o("UIPadding",{PaddingLeft=UDim.new(0,4),PaddingRight=UDim.new(0,4),
+        PaddingTop=UDim.new(0,2),PaddingBottom=UDim.new(0,2)},list)
+
+    local function updateRowState(opt, animate)
+        local data=rows[opt]; if not data then return end
+        local row=data.row
+        local box=row:FindFirstChild("Box"); local boxStk=box and box:FindFirstChild("UIStroke")
+        local check=row:FindFirstChild("Check"); local rowStk=row:FindFirstChild("UIStroke")
+        local lbl=row:FindFirstChild("Label")
+        local isSel=selectedSet[opt]~=nil; local ti=EASE_OUT(animate and 0.14 or 0)
+        if isSel then
+            tween(box,ti,{BackgroundColor3=self._accent2})
+            if boxStk then tween(boxStk,ti,{Color=self._accent}) end
+            if check  then tween(check,ti,{TextTransparency=0}) end
+            if rowStk then tween(rowStk,ti,{Color=self._accent2,Transparency=0.4}) end
+            if lbl    then lbl.TextColor3=W end
+        else
+            tween(box,ti,{BackgroundColor3=PANEL})
+            if boxStk then tween(boxStk,ti,{Color=LINE}) end
+            if check  then tween(check,ti,{TextTransparency=1}) end
+            if rowStk then tween(rowStk,ti,{Color=LINE,Transparency=0}) end
+            if lbl    then lbl.TextColor3=MID end
+        end
+    end
+    local function updateAllRows(animate)
+        for opt in pairs(rows) do updateRowState(opt,animate) end
+    end
+    local function rebuildText()
+        local sel={}
+        for opt,flag in pairs(selectedSet) do if flag then table.insert(sel,opt) end end
+        table.sort(sel)
+        selectedLabel.Text = (#sel==0 and "") or (#sel==1 and sel[1]) or (#sel.." sel.")
+    end
+    self:_registerThemeCallback(function()
+        updateAllRows(false)
+        selectedLabel.TextColor3=self._accent; list.ScrollBarImageColor3=self._accent
+    end)
+
+    local function buildRows(optList)
+        for _, child in ipairs(list:GetChildren()) do
+            if not child:IsA("UIListLayout") then child:Destroy() end
+        end
+        rows={}
+        for opt in pairs(selectedSet) do
+            if not table.find(optList,opt) then selectedSet[opt]=nil end
+        end
+        for i, opt in ipairs(optList) do
+            local row=o("TextButton",{Size=UDim2.new(1,0,0,ROW_H),BackgroundColor3=PANEL,
+                BorderSizePixel=0,AutoButtonColor=false,Text="",LayoutOrder=i},list)
+            corner(row,6); strokeIn(row,1,LINE)
+            local box=o("Frame",{Name="Box",Size=UDim2.new(0,13,0,13),
+                Position=UDim2.new(0,8,0.5,-6.5),BackgroundColor3=PANEL,BorderSizePixel=0},row)
+            corner(box,4); stroke(box,1,LINE)
+            o("TextLabel",{Name="Check",Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,
+                Text="✓",Font=FONTB,TextSize=10,TextColor3=W,TextTransparency=1},box)
+            o("TextLabel",{Name="Label",BackgroundTransparency=1,
+                Position=UDim2.new(0,28,0,0),Size=UDim2.new(1,-34,1,0),
+                Font=FONT,TextSize=11,TextColor3=MID,
+                TextXAlignment=Enum.TextXAlignment.Left,
+                TextTruncate=Enum.TextTruncate.AtEnd,Text=tostring(opt)},row)
+            rows[opt]={row=row}
+            row.MouseEnter:Connect(function() if not selectedSet[opt] then row.BackgroundColor3=HOVER end end)
+            row.MouseLeave:Connect(function() row.BackgroundColor3=PANEL end)
+            row.MouseButton1Click:Connect(function()
+                self._playClick()
+                if selectedSet[opt] then selectedSet[opt]=nil else selectedSet[opt]=true end
+                updateRowState(opt,true); rebuildText()
+                if callback then
+                    local selList={}
+                    for k,flag in pairs(selectedSet) do if flag then table.insert(selList,k) end end
+                    table.sort(selList); task.spawn(callback,selList)
+                end
+            end)
+        end
+        listH=math.min(#optList*(ROW_H+4)+4, LIST_MAX_H)
+        updateAllRows(false); rebuildText()
+    end
+    buildRows(options)
+
+    local function setOpen(v)
+        open=v; local ti=EASE_OUT(0.2)
+        tween(listWrap,ti,{Size=UDim2.new(1,0,0,open and listH or 0)})
+        tween(arrow,ti,{Rotation=open and 180 or 0})
+    end
+    head.MouseEnter:Connect(function() if not open then holder.BackgroundColor3=HOVER end end)
+    head.MouseLeave:Connect(function() if not open then holder.BackgroundColor3=CARD  end end)
+    table.insert(self._connections, head.MouseButton1Click:Connect(function()
+        self._playClick(); setOpen(not open)
+    end))
+    return {
+        Frame=holder,
+        GetSelected=function()
+            local sel={}
+            for opt,flag in pairs(selectedSet) do if flag then table.insert(sel,opt) end end
+            table.sort(sel); return sel
+        end,
+        SetSelected=function(newSel)
+            selectedSet={}
+            if newSel then
+                for _, opt in ipairs(newSel) do
+                    if rows[opt] then selectedSet[opt]=true end
+                end
+            end
+            updateAllRows(true); rebuildText()
+        end,
+        UpdateOptions=function(newOptions)
+            if open then setOpen(false) end; buildRows(newOptions or {})
+        end,
+        Close=function() setOpen(false) end,
+    }
+end
+
+-- ══════════════════════════════════════════════════════
+--  NOVOS WIDGETS
+-- ══════════════════════════════════════════════════════
+
+-- ── Input ─────────────────────────────────────────────
+function KronUI:AddInput(text, placeholder, callback)
+    local holder = o("Frame", {
+        Size=UDim2.new(1,0,0,52), BackgroundColor3=CARD,
+        BorderSizePixel=0, LayoutOrder=self:_nextOrder(),
+    }, self.container)
+    local hStroke = strokeIn(holder,1,LINE)
+    corner(holder,8)
+
+    o("TextLabel",{
+        BackgroundTransparency=1, Position=UDim2.new(0,12,0,4),
+        Size=UDim2.new(1,-16,0,16),
+        Font=FONTB, TextSize=10, TextColor3=MID,
+        TextXAlignment=Enum.TextXAlignment.Left,
+        Text=string.upper(text or ""),
+    }, holder)
+
+    local inputBg = o("Frame",{
+        Position=UDim2.new(0,8,0,22), Size=UDim2.new(1,-16,0,22),
+        BackgroundColor3=PANEL, BorderSizePixel=0,
+    }, holder)
+    corner(inputBg,6)
+    local inputStroke = strokeIn(inputBg,1,LINE)
+
+    local tb = o("TextBox",{
+        Position=UDim2.new(0,8,0,0), Size=UDim2.new(1,-16,1,0),
+        BackgroundTransparency=1, Font=FONT, TextSize=11,
+        TextColor3=W, PlaceholderText=placeholder or "",
+        PlaceholderColor3=DIM, ClearTextOnFocus=false,
+        TextXAlignment=Enum.TextXAlignment.Left,
+        BorderSizePixel=0,
+    }, inputBg)
+
+    tb.Focused:Connect(function()
+        tween(inputStroke, EASE_OUT(0.15), {Color=self._accent, Transparency=0})
+        tween(hStroke,     EASE_OUT(0.15), {Color=self._accent2, Transparency=0.5})
+    end)
+    tb.FocusLost:Connect(function(enterPressed)
+        tween(inputStroke, EASE_OUT(0.15), {Color=LINE, Transparency=0})
+        tween(hStroke,     EASE_OUT(0.15), {Color=LINE, Transparency=0})
+        if callback then task.spawn(callback, tb.Text, enterPressed) end
+    end)
+    self:_registerThemeCallback(function(p, s)
+        if tb:IsFocused() then
+            inputStroke.Color = p; hStroke.Color = s
+        end
+    end)
+
+    return {
+        GetText  = function()  return tb.Text end,
+        SetText  = function(t) tb.Text=t end,
+        Focus    = function()  tb:CaptureFocus() end,
+        Unfocus  = function()  tb:ReleaseFocus() end,
+    }
+end
+
+-- ── Textarea ──────────────────────────────────────────
+function KronUI:AddTextarea(text, placeholder, rows, callback)
+    rows = math.clamp(rows or 3, 2, 7)
+    local ROW_PX = 18
+    local totalH = 24 + rows*ROW_PX + 8
+
+    local holder = o("Frame", {
+        Size=UDim2.new(1,0,0,totalH), BackgroundColor3=CARD,
+        BorderSizePixel=0, LayoutOrder=self:_nextOrder(),
+    }, self.container)
+    local hStroke = strokeIn(holder,1,LINE)
+    corner(holder,8)
+
+    o("TextLabel",{
+        BackgroundTransparency=1, Position=UDim2.new(0,12,0,4),
+        Size=UDim2.new(1,-16,0,16),
+        Font=FONTB, TextSize=10, TextColor3=MID,
+        TextXAlignment=Enum.TextXAlignment.Left,
+        Text=string.upper(text or ""),
+    }, holder)
+
+    local inputBg = o("Frame",{
+        Position=UDim2.new(0,8,0,22),
+        Size=UDim2.new(1,-16,0,rows*ROW_PX+4),
+        BackgroundColor3=PANEL, BorderSizePixel=0,
+    }, holder)
+    corner(inputBg,6)
+    local inputStroke = strokeIn(inputBg,1,LINE)
+
+    local tb = o("TextBox",{
+        Position=UDim2.new(0,8,0,4), Size=UDim2.new(1,-16,1,-8),
+        BackgroundTransparency=1, Font=FONT, TextSize=11,
+        TextColor3=W, PlaceholderText=placeholder or "",
+        PlaceholderColor3=DIM, ClearTextOnFocus=false,
+        TextXAlignment=Enum.TextXAlignment.Left,
+        TextYAlignment=Enum.TextYAlignment.Top,
+        MultiLine=true, TextWrapped=true,
+        BorderSizePixel=0,
+    }, inputBg)
+
+    tb.Focused:Connect(function()
+        tween(inputStroke, EASE_OUT(0.15), {Color=self._accent, Transparency=0})
+        tween(hStroke,     EASE_OUT(0.15), {Color=self._accent2, Transparency=0.5})
+    end)
+    tb.FocusLost:Connect(function(enterPressed)
+        tween(inputStroke, EASE_OUT(0.15), {Color=LINE, Transparency=0})
+        tween(hStroke,     EASE_OUT(0.15), {Color=LINE, Transparency=0})
+        if callback then task.spawn(callback, tb.Text, enterPressed) end
+    end)
+
+    return {
+        GetText  = function()  return tb.Text end,
+        SetText  = function(t) tb.Text=t end,
+    }
+end
+
+-- ── Keybind ───────────────────────────────────────────
+function KronUI:AddKeybind(text, defaultKey, callback)
+    local currentKey = defaultKey or Enum.KeyCode.Unknown
+    local listening  = false
+
+    local holder = o("TextButton", {
+        Size=UDim2.new(1,0,0,32), BackgroundColor3=CARD,
+        BorderSizePixel=0, AutoButtonColor=false, Text="",
+        LayoutOrder=self:_nextOrder(),
+    }, self.container)
+    local hStroke = strokeIn(holder,1,LINE)
+    corner(holder,8)
+
+    o("TextLabel",{
+        BackgroundTransparency=1, Position=UDim2.new(0,12,0,0),
+        Size=UDim2.new(1,-80,1,0),
+        Font=FONT, TextSize=12, TextColor3=MID,
+        TextXAlignment=Enum.TextXAlignment.Left, Text=text,
+    }, holder)
+
+    local badge = o("Frame",{
+        AnchorPoint=Vector2.new(1,0.5), Position=UDim2.new(1,-10,0.5,0),
+        Size=UDim2.new(0,64,0,20),
+        BackgroundColor3=PANEL, BorderSizePixel=0,
+    }, holder)
+    corner(badge,6)
+    local badgeStroke = strokeIn(badge,1,LINE)
+
+    local badgeLbl = o("TextLabel",{
+        Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
+        Font=FONTB, TextSize=10, TextColor3=MID,
+        TextXAlignment=Enum.TextXAlignment.Center, Text="...",
+    }, badge)
+
+    local function updateBadge()
+        if listening then
+            badgeLbl.Text      = "[ Pressione ]"
+            badgeLbl.TextSize  = 8
+            badgeLbl.TextColor3 = self._accent
+            tween(badgeStroke, EASE_OUT(0.15), {Color=self._accent})
+            tween(badge, EASE_OUT(0.15), {BackgroundColor3=self._accent2})
+            -- pulso
+            TweenService:Create(badgeStroke,
+                TweenInfo.new(0.6,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut,-1,true),
+                {Transparency=0.5}):Play()
+        else
+            local keyName = (currentKey==Enum.KeyCode.Unknown) and "Nenhum"
+                or currentKey.Name:gsub("^Left","L"):gsub("^Right","R")
+            badgeLbl.Text       = keyName
+            badgeLbl.TextSize   = 10
+            badgeLbl.TextColor3 = W
+            badgeStroke.Transparency = 0
+            tween(badgeStroke, EASE_OUT(0.15), {Color=LINE})
+            tween(badge, EASE_OUT(0.15), {BackgroundColor3=PANEL})
+        end
+    end
+    self:_registerThemeCallback(function() updateBadge() end)
+    updateBadge()
+
+    holder.MouseEnter:Connect(function()
+        tween(hStroke,EASE_OUT(0.12),{Color=self._accent2,Transparency=0.4})
+    end)
+    holder.MouseLeave:Connect(function()
+        if not listening then tween(hStroke,EASE_OUT(0.12),{Color=LINE,Transparency=0}) end
+    end)
+
+    holder.MouseButton1Click:Connect(function()
+        self._playClick()
+        listening = not listening
+        updateBadge()
+    end)
+
+    table.insert(self._connections, UserInputService.InputBegan:Connect(function(inp, processed)
+        if not listening then return end
+        if inp.UserInputType ~= Enum.UserInputType.Keyboard then return end
+        if inp.KeyCode == Enum.KeyCode.Escape then
+            listening=false; updateBadge(); return
+        end
+        currentKey = inp.KeyCode
+        listening  = false
+        updateBadge()
+        if callback then task.spawn(callback, currentKey) end
+    end))
+
+    return {
+        GetKey   = function()  return currentKey end,
+        SetKey   = function(k) currentKey=k updateBadge() end,
+        GetName  = function()
+            return (currentKey==Enum.KeyCode.Unknown) and "Nenhum" or currentKey.Name
+        end,
+    }
+end
+
+-- ── ProgressBar ───────────────────────────────────────
+function KronUI:AddProgressBar(text, value, maxVal)
+    value  = value  or 0
+    maxVal = maxVal or 100
+
+    local holder = o("Frame",{
+        Size=UDim2.new(1,0,0,44), BackgroundColor3=CARD,
+        BorderSizePixel=0, LayoutOrder=self:_nextOrder(),
+    }, self.container)
+    strokeIn(holder,1,LINE); corner(holder,8)
+
+    local labelRow = o("Frame",{
+        Size=UDim2.new(1,0,0,22), BackgroundTransparency=1,
+    }, holder)
+    o("TextLabel",{BackgroundTransparency=1, Position=UDim2.new(0,12,0,0),
+        Size=UDim2.new(1,-60,1,0), Font=FONT, TextSize=12, TextColor3=MID,
+        TextXAlignment=Enum.TextXAlignment.Left, Text=text},labelRow)
+    local pctLbl = o("TextLabel",{BackgroundTransparency=1,
+        Position=UDim2.new(1,-50,0,0), Size=UDim2.new(0,44,1,0),
+        Font=FONTB, TextSize=11, TextColor3=self._accent,
+        TextXAlignment=Enum.TextXAlignment.Right},labelRow)
+    self:_registerThemeItem(pctLbl,"TextColor3","accent")
+
+    local track = o("Frame",{
+        Size=UDim2.new(1,-24,0,6), Position=UDim2.new(0,12,0,30),
+        BackgroundColor3=LINE, BorderSizePixel=0,
+    }, holder)
+    corner(track,"pill")
+
+    local fill = o("Frame",{
+        Size=UDim2.new(0,0,1,0), BackgroundColor3=self._accent,
+        BorderSizePixel=0, ClipsDescendants=true,
+    }, track)
+    corner(fill,"pill")
+    local fillGrad = o("UIGradient",{
+        Color=ColorSequence.new(self._accent2,self._accent),
+    }, fill)
+    self:_registerThemeGradient(fillGrad)
+
+    -- glint animado
+    local glint = o("Frame",{
+        Size=UDim2.new(0,40,1,0), Position=UDim2.new(-0.5,0,0,0),
+        BackgroundTransparency=1, BorderSizePixel=0,
+    }, fill)
+    o("UIGradient",{
+        Rotation=90,
+        Transparency=NumberSequence.new({
+            NumberSequenceKeypoint.new(0,1),
+            NumberSequenceKeypoint.new(0.5,0.5),
+            NumberSequenceKeypoint.new(1,1),
+        }),
+        Color=ColorSequence.new(Color3.new(1,1,1),Color3.new(1,1,1)),
+    }, glint)
+    local function loopGlint()
+        glint.Position=UDim2.new(-0.5,0,0,0)
+        local t=tween(glint, TweenInfo.new(1.4,Enum.EasingStyle.Sine),
+            {Position=UDim2.new(1.5,0,0,0)})
+        t.Completed:Connect(function()
+            task.delay(0.8, loopGlint)
+        end)
+    end
+    loopGlint()
+
+    self:_registerThemeCallback(function(primary, secondary)
+        fill.BackgroundColor3 = primary
+        pctLbl.TextColor3     = primary
+        fillGrad.Color = ColorSequence.new(secondary, primary)
+    end)
+
+    local function redraw()
+        local rel = math.clamp(value/maxVal, 0, 1)
+        tween(fill, EASE_OUT(0.25), {Size=UDim2.new(rel,0,1,0)})
+        pctLbl.Text = math.floor(rel*100).."%"
+    end
+    redraw()
+
+    return {
+        SetValue = function(v)
+            value = math.clamp(v, 0, maxVal); redraw()
+        end,
+        GetValue = function() return value end,
+        SetMax   = function(m)
+            maxVal=m; redraw()
+        end,
+    }
+end
+
+-- ── ColorPicker ───────────────────────────────────────
+function KronUI:AddColorPicker(text, defaultColor, callback)
+    local hue, sat, bri = rgbToHsv(defaultColor or self._accent)
+    local currentColor = defaultColor or self._accent
+    local open = false
+
+    local PICKER_H = 140
+
+    local holder = o("Frame",{
+        Size=UDim2.new(1,0,0,32), AutomaticSize=Enum.AutomaticSize.Y,
+        BackgroundColor3=CARD, BorderSizePixel=0, ClipsDescendants=true,
+        LayoutOrder=self:_nextOrder(),
+    }, self.container)
+    local hStroke = strokeIn(holder,1,LINE)
+    corner(holder,8)
+
+    -- cabeçalho
+    local head = o("TextButton",{
+        Size=UDim2.new(1,0,0,32), BackgroundTransparency=1,
+        AutoButtonColor=false, Text="",
+    }, holder)
+    o("TextLabel",{BackgroundTransparency=1, Position=UDim2.new(0,12,0,0),
+        Size=UDim2.new(1,-60,1,0), Font=FONT, TextSize=12, TextColor3=MID,
+        TextXAlignment=Enum.TextXAlignment.Left, Text=text}, head)
+
+    -- preview dot
+    local preview = o("Frame",{
+        AnchorPoint=Vector2.new(1,0.5), Position=UDim2.new(1,-36,0.5,0),
+        Size=UDim2.new(0,16,0,16), BackgroundColor3=currentColor, BorderSizePixel=0,
+    }, head)
+    corner(preview,"pill"); stroke(preview,1,LINE)
+
+    local arrow = o("TextLabel",{BackgroundTransparency=1, Position=UDim2.new(1,-26,0,0),
+        Size=UDim2.new(0,20,1,0), Font=FONTB, TextSize=16, TextColor3=DIM,
+        TextXAlignment=Enum.TextXAlignment.Center, Text="▼", Rotation=0}, head)
+
+    -- painel do picker (colapsável)
+    local pickerWrap = o("Frame",{
+        Size=UDim2.new(1,0,0,0), Position=UDim2.new(0,0,0,32),
+        BackgroundTransparency=1, ClipsDescendants=true,
+    }, holder)
+
+    local pickerInner = o("Frame",{
+        Size=UDim2.new(1,-16,0,PICKER_H),
+        AnchorPoint=Vector2.new(0.5,0), Position=UDim2.new(0.5,0,0,6),
+        BackgroundTransparency=1,
+    }, pickerWrap)
+
+    -- SV square (saturação × brilho)
+    local SV_W, SV_H = 120, 90
+    local svBox = o("ImageLabel",{
+        Size=UDim2.new(0,SV_W,0,SV_H), Position=UDim2.new(0,0,0,0),
+        BackgroundColor3=Color3.fromHSV(hue,1,1),
+        BorderSizePixel=0,
+        Image="rbxassetid://0", -- filled by gradients
+    }, pickerInner)
+    corner(svBox,4)
+
+    -- white left-to-right gradient
+    local svGradH = o("UIGradient",{
+        Color=ColorSequence.new({
+            ColorSequenceKeypoint.new(0,Color3.new(1,1,1)),
+            ColorSequenceKeypoint.new(1,Color3.new(1,1,1)),
+        }),
+        Transparency=NumberSequence.new({
+            NumberSequenceKeypoint.new(0,0),
+            NumberSequenceKeypoint.new(1,1),
+        }),
+    }, svBox)
+
+    -- black bottom gradient overlay
+    local svOverlay = o("Frame",{
+        Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
+        BorderSizePixel=0,
+    }, svBox)
+    o("UIGradient",{
+        Rotation=90,
+        Color=ColorSequence.new(Color3.new(0,0,0),Color3.new(0,0,0)),
+        Transparency=NumberSequence.new({
+            NumberSequenceKeypoint.new(0,1),
+            NumberSequenceKeypoint.new(1,0),
+        }),
+    }, svOverlay)
+
+    -- knob SV
+    local svKnob = o("Frame",{
+        Size=UDim2.new(0,10,0,10), AnchorPoint=Vector2.new(0.5,0.5),
+        BackgroundColor3=Color3.new(1,1,1), BorderSizePixel=0, ZIndex=5,
+    }, svBox)
+    corner(svKnob,"pill"); stroke(svKnob,1.5,Color3.new(1,1,1))
+
+    -- hue bar
+    local HUE_W = 14
+    local hueBar = o("Frame",{
+        Size=UDim2.new(0,HUE_W,0,SV_H),
+        Position=UDim2.new(0,SV_W+6,0,0),
+        BackgroundColor3=Color3.new(1,1,1), BorderSizePixel=0,
+    }, pickerInner)
+    corner(hueBar,4)
+    o("UIGradient",{
+        Rotation=90,
+        Color=ColorSequence.new({
+            ColorSequenceKeypoint.new(0,    Color3.fromHSV(0,1,1)),
+            ColorSequenceKeypoint.new(0.17, Color3.fromHSV(0.17,1,1)),
+            ColorSequenceKeypoint.new(0.33, Color3.fromHSV(0.33,1,1)),
+            ColorSequenceKeypoint.new(0.5,  Color3.fromHSV(0.5,1,1)),
+            ColorSequenceKeypoint.new(0.67, Color3.fromHSV(0.67,1,1)),
+            ColorSequenceKeypoint.new(0.83, Color3.fromHSV(0.83,1,1)),
+            ColorSequenceKeypoint.new(1,    Color3.fromHSV(1,1,1)),
+        }),
+    }, hueBar)
+
+    local hueKnob = o("Frame",{
+        Size=UDim2.new(1,4,0,6), AnchorPoint=Vector2.new(0.5,0.5),
+        Position=UDim2.new(0.5,0,0,0),
+        BackgroundColor3=Color3.new(1,1,1), BorderSizePixel=0, ZIndex=5,
+    }, hueBar)
+    corner(hueKnob,"pill"); stroke(hueKnob,1,Color3.new(0,0,0),0.3)
+
+    -- hex input
+    local hexBg = o("Frame",{
+        Size=UDim2.new(0,SV_W,0,22),
+        Position=UDim2.new(0,0,0,SV_H+6),
+        BackgroundColor3=PANEL, BorderSizePixel=0,
+    }, pickerInner)
+    corner(hexBg,5); strokeIn(hexBg,1,LINE)
+    o("TextLabel",{BackgroundTransparency=1, Position=UDim2.new(0,6,0,0),
+        Size=UDim2.new(0,14,1,0), Font=FONTB, TextSize=11, TextColor3=DIM,
+        TextXAlignment=Enum.TextXAlignment.Left, Text="#"}, hexBg)
+    local hexBox = o("TextBox",{
+        Position=UDim2.new(0,16,0,0), Size=UDim2.new(1,-20,1,0),
+        BackgroundTransparency=1, Font=FONT, TextSize=11,
+        TextColor3=W, ClearTextOnFocus=false,
+        TextXAlignment=Enum.TextXAlignment.Left,
+        MaxVisibleGraphemes=6,
+    }, hexBg)
+
+    -- preview grande (color patch ao lado do hex)
+    local bigPreview = o("Frame",{
+        Size=UDim2.new(0,HUE_W,0,22),
+        Position=UDim2.new(0,SV_W+6,0,SV_H+6),
+        BackgroundColor3=currentColor, BorderSizePixel=0,
+    }, pickerInner)
+    corner(bigPreview,5); stroke(bigPreview,1,LINE)
+
+    local draggingSV  = false
+    local draggingHue = false
+
+    local function refreshAll()
+        currentColor = hsvToRgb(hue,sat,bri)
+        svBox.BackgroundColor3 = Color3.fromHSV(hue,1,1)
+        svKnob.Position = UDim2.new(sat,0,1-bri,0)
+        hueKnob.Position = UDim2.new(0.5,0,hue,0)
+        preview.BackgroundColor3    = currentColor
+        bigPreview.BackgroundColor3 = currentColor
+        hexBox.Text = colorToHex(currentColor)
+        if callback then task.spawn(callback, currentColor) end
+    end
+    refreshAll()
+
+    local function svFromPos(ax, ay)
+        local rel_s = math.clamp((ax - svBox.AbsolutePosition.X) / svBox.AbsoluteSize.X, 0, 1)
+        local rel_v = 1 - math.clamp((ay - svBox.AbsolutePosition.Y) / svBox.AbsoluteSize.Y, 0, 1)
+        sat=rel_s; bri=rel_v; refreshAll()
+    end
+    local function hueFromPos(ay)
+        hue = math.clamp((ay - hueBar.AbsolutePosition.Y) / hueBar.AbsoluteSize.Y, 0, 1)
+        refreshAll()
+    end
+
+    table.insert(self._connections, svBox.InputBegan:Connect(function(inp)
+        if inp.UserInputType==Enum.UserInputType.MouseButton1
+        or inp.UserInputType==Enum.UserInputType.Touch then
+            draggingSV=true; svFromPos(inp.Position.X, inp.Position.Y)
+        end
+    end))
+    table.insert(self._connections, hueBar.InputBegan:Connect(function(inp)
+        if inp.UserInputType==Enum.UserInputType.MouseButton1
+        or inp.UserInputType==Enum.UserInputType.Touch then
+            draggingHue=true; hueFromPos(inp.Position.Y)
+        end
+    end))
+    table.insert(self._connections, UserInputService.InputChanged:Connect(function(inp)
+        if inp.UserInputType==Enum.UserInputType.MouseMovement
+        or inp.UserInputType==Enum.UserInputType.Touch then
+            if draggingSV  then svFromPos(inp.Position.X, inp.Position.Y)  end
+            if draggingHue then hueFromPos(inp.Position.Y) end
+        end
+    end))
+    table.insert(self._connections, UserInputService.InputEnded:Connect(function(inp)
+        if inp.UserInputType==Enum.UserInputType.MouseButton1
+        or inp.UserInputType==Enum.UserInputType.Touch then
+            draggingSV=false; draggingHue=false
+        end
+    end))
+
+    hexBox.FocusLost:Connect(function()
+        local c = hexToColor(hexBox.Text)
+        if c then
+            hue,sat,bri = rgbToHsv(c)
+            refreshAll()
+        else
+            hexBox.Text = colorToHex(currentColor)
+        end
+    end)
+
+    local function setOpen(v)
+        open=v
+        local ti=EASE_OUT(0.2)
+        tween(pickerWrap,ti,{Size=UDim2.new(1,0,0,open and (PICKER_H+12) or 0)})
+        tween(arrow,ti,{Rotation=open and 180 or 0})
+        if open then
+            tween(hStroke,ti,{Color=self._accent2,Transparency=0.4})
+        else
+            tween(hStroke,ti,{Color=LINE,Transparency=0})
+        end
+    end
+    head.MouseEnter:Connect(function() if not open then holder.BackgroundColor3=HOVER end end)
+    head.MouseLeave:Connect(function() if not open then holder.BackgroundColor3=CARD  end end)
+    table.insert(self._connections, head.MouseButton1Click:Connect(function()
+        self._playClick(); setOpen(not open)
+    end))
+
+    self:_registerThemeCallback(function()
+        if open then hStroke.Color=self._accent2 end
+    end)
+
+    return {
+        GetColor = function() return currentColor end,
+        SetColor = function(c)
+            hue,sat,bri=rgbToHsv(c); refreshAll()
+        end,
+        Close = function() setOpen(false) end,
+    }
+end
+
+-- ══════════════════════════════════════════════════════
+return KronUI
