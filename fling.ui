@@ -7,12 +7,9 @@ local RunService         = game:GetService("RunService")
 local ReplicatedStorage  = game:GetService("ReplicatedStorage")
 local Player             = Players.LocalPlayer
 
--- ── 1. URL da lib no GitHub (raw) ────────────────────
-local LIB_URL = "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/3"
--- ── 2. Imagem do pill ────────────────────────────────
+local LIB_URL    = "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/KronUI"
 local PILL_IMAGE = "rbxassetid://100932674765762"
 
--- ── Carregamento ─────────────────────────────────────
 local ok, result = pcall(function()
     return loadstring(game:HttpGet(LIB_URL))()
 end)
@@ -219,6 +216,10 @@ end
 -- ══════════════════════════════════════════════
 --  UI (KronUI)
 -- ══════════════════════════════════════════════
+local TargetsDropdown = nil
+local allTargetFrames = {}
+local uiReady         = false
+
 local function GetPlayerNames()
     local names = {}
     for _, p in ipairs(Players:GetPlayers()) do
@@ -228,25 +229,90 @@ local function GetPlayerNames()
     return names
 end
 
-ui:AddSectionLabel("Multi Fling")
-
-local TargetsDropdown = ui:AddDropdown("Targets", GetPlayerNames(), {}, function(sel)
+local function onTargetSelection(sel)
     SelectedTargets = {}
     for _, name in ipairs(sel) do
         local plr = Players:FindFirstChild(name)
         if plr then SelectedTargets[name] = plr end
     end
-end)
+end
 
-local function RefreshTargets()
-    if TargetsDropdown and TargetsDropdown.SetOptions then
-        TargetsDropdown:SetOptions(GetPlayerNames())
+local function rebuildTargetsDropdown()
+    if not ui then return end
+
+    local savedOrder = nil
+    if TargetsDropdown and TargetsDropdown.Frame and TargetsDropdown.Frame.Parent then
+        savedOrder = TargetsDropdown.Frame.LayoutOrder
+    end
+
+    for _, frame in ipairs(allTargetFrames) do
+        if frame and frame.Parent then frame:Destroy() end
+    end
+    table.clear(allTargetFrames)
+    TargetsDropdown = nil
+
+    local playerNames = GetPlayerNames()
+    local nameSet = {}
+    for _, n in ipairs(playerNames) do nameSet[n] = true end
+    for name in pairs(SelectedTargets) do
+        if not nameSet[name] then SelectedTargets[name] = nil end
+    end
+
+    local validSelected = {}
+    for name in pairs(SelectedTargets) do
+        table.insert(validSelected, name)
+    end
+
+    TargetsDropdown = ui:AddMultiDropdown(
+        "Select Players", playerNames, validSelected, onTargetSelection
+    )
+
+    if TargetsDropdown and TargetsDropdown.Frame then
+        table.insert(allTargetFrames, TargetsDropdown.Frame)
+        if savedOrder then
+            TargetsDropdown.Frame.LayoutOrder = savedOrder
+        end
     end
 end
 
-ui:AddButton("Atualizar Lista", RefreshTargets)
+local rebuildPending = false
+local function scheduleRebuild()
+    if not uiReady or rebuildPending then return end
+    rebuildPending = true
+    task.delay(0.3, function()
+        rebuildPending = false
+        rebuildTargetsDropdown()
+    end)
+end
+
+-- ── Construção da UI ─────────────────────────
+ui:AddSectionLabel("Multi Fling")
+
+TargetsDropdown = ui:AddMultiDropdown("Select Players", GetPlayerNames(), {}, onTargetSelection)
+if TargetsDropdown and TargetsDropdown.Frame then
+    table.insert(allTargetFrames, TargetsDropdown.Frame)
+end
+
+ui:AddButton("Refresh List", function()
+    task.defer(rebuildTargetsDropdown)
+end)
+
+ui:AddButton("Select All", function()
+    SelectedTargets = {}
+    for _, name in ipairs(GetPlayerNames()) do
+        local plr = Players:FindFirstChild(name)
+        if plr then SelectedTargets[name] = plr end
+    end
+    task.defer(rebuildTargetsDropdown)
+end)
+
+ui:AddButton("Select None", function()
+    SelectedTargets = {}
+    task.defer(rebuildTargetsDropdown)
+end)
+
 ui:AddButton("Start Fling", function() StartFling() end)
-ui:AddButton("Stop Fling", function() StopFling() end)
+ui:AddButton("Stop Fling",  function() StopFling()  end)
 
 ui:AddDivider()
 ui:AddSectionLabel("Extras")
@@ -267,9 +333,11 @@ ui:AddToggle("Touch Fling", false, function(state)
     end
 end)
 
--- ── Mantém a lista de targets atualizada automaticamente ──
-Players.PlayerAdded:Connect(RefreshTargets)
+uiReady = true
+
+-- ── Auto-refresh quando jogadores entram/saem ──
+Players.PlayerAdded:Connect(scheduleRebuild)
 Players.PlayerRemoving:Connect(function(player)
     SelectedTargets[player.Name] = nil
-    RefreshTargets()
+    task.delay(0.1, scheduleRebuild)
 end)
