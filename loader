@@ -1,7 +1,7 @@
 local Hub = loadstring(game:HttpGet("https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/hub"))()
 
 Hub:Tab("Others")
-    :Button("Aimbot","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/Aimbot")
+    :Button("Aimbot","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/B")
     :Button("ShiftLock","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/shiftlock")
     :Button("Fling","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/fling.ui")
     :Button("Fly","https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/fly.ui")
