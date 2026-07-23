@@ -60,10 +60,9 @@ local EASE_OUT  = function(d) return TweenInfo.new(d or 0.18, Enum.EasingStyle.Q
 local EASE_BACK = function(d) return TweenInfo.new(d or 0.4,  Enum.EasingStyle.Back, Enum.EasingDirection.Out) end
 
 -- ══════════════════════════════════════════════════════
---  12 Temas prontos (RGB + 11 estáticos)
+--  11 Temas estáticos prontos
 -- ══════════════════════════════════════════════════════
 local THEMES = {
-    { name = "RGB",        rgb = true,                                                                             },
     { name = "Prata",      primary = Color3.fromRGB(210, 210, 230), secondary = Color3.fromRGB(160, 160, 185) },
     { name = "Aurora",     primary = Color3.fromRGB(150, 90, 255),  secondary = Color3.fromRGB(95, 60, 200)   },
     { name = "Chama",      primary = Color3.fromRGB(255, 90, 40),   secondary = Color3.fromRGB(200, 50, 20)   },
@@ -114,29 +113,6 @@ function KronUI.new(title, pillImage)
         for _, cb in ipairs(self._themeCallbacks) do
             cb(primary, secondary)
         end
-    end
-
-    -- ══ Modo RGB: cicla o matiz continuamente até outro tema ser escolhido ══
-    self._rgbActive = false
-    self._rgbToken  = 0
-    function self:_StopRGB()
-        self._rgbActive = false
-        self._rgbToken  = self._rgbToken + 1
-    end
-    function self:_StartRGB()
-        self:_StopRGB()
-        self._rgbActive  = true
-        local myToken     = self._rgbToken
-        task.spawn(function()
-            local hue = 0
-            while self._rgbActive and self._rgbToken == myToken do
-                hue = (hue + 0.006) % 1
-                local primary   = Color3.fromHSV(hue, 0.65, 1)
-                local secondary = Color3.fromHSV(hue, 0.75, 0.72)
-                self:SetAccent(primary, secondary)
-                task.wait(0.03)
-            end
-        end)
     end
 
     local player = Players.LocalPlayer
@@ -514,13 +490,13 @@ function KronUI.new(title, pillImage)
 
     -- Aplica o tema inicial (Prata) agora que todos os itens/gradientes/callbacks
     -- da seção Tema já foram registrados.
-    self:SetAccent(THEMES[2].primary, THEMES[2].secondary)
+    self:SetAccent(THEMES[1].primary, THEMES[1].secondary)
 
     return self
 end
 
 -- ══════════════════════════════════════════════════════
---  Dropdown de tema (RGB + 11 estáticos), inicia em "Prata"
+--  Dropdown de tema (11 estáticos), inicia em "Prata"
 -- ══════════════════════════════════════════════════════
 function KronUI:AddThemeDropdown()
     local options = {}
@@ -529,12 +505,7 @@ function KronUI:AddThemeDropdown()
     self._themeDropdown = self:AddDropdown("Cor do tema", options, "Prata", function(selected)
         for _, t in ipairs(THEMES) do
             if t.name == selected then
-                if t.rgb then
-                    self:_StartRGB()
-                else
-                    self:_StopRGB()
-                    self:SetAccent(t.primary, t.secondary)
-                end
+                self:SetAccent(t.primary, t.secondary)
                 return
             end
         end
@@ -557,7 +528,6 @@ end
 --  Destroy
 -- ══════════════════════════════════════════════════════
 function KronUI:Destroy()
-    self:_StopRGB()
     for _, conn in ipairs(self._connections) do conn:Disconnect() end
     self._connections = {}
     if self._breatheTween then self._breatheTween:Cancel() end
