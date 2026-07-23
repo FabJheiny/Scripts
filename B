@@ -87,6 +87,10 @@ local AimbotSettings = {
 }
 local InstaSettings  = { Enabled = false }
 
+-- ══════════════════════ NOVA VARIÁVEL: aliados manuais ══════════════════════
+local manualAllies = {}   -- conjunto de nomes dos jogadores marcados como aliados
+-- ═══════════════════════════════════════════════════════════════════════════
+
 local ui
 local espData   = {}
 local visCache  = {}
@@ -96,6 +100,9 @@ local function getTeamColor()    return CONFIG.Colors.Team end
 local function getEnemyColor()   return CONFIG.Colors.Enemy end
 
 local function isAlly(player, myTeam)
+    -- Aliados manuais têm prioridade máxima
+    if manualAllies[player.Name] then return true end
+
     if not Settings.TeamCheck then return false end
     if not myTeam then return false end
     return player.Team == myTeam
@@ -240,6 +247,8 @@ local function setupPlayer(player)
 end
 
 -- UI
+local allyDropdown  -- referência para a dropdown multi‑seleção
+
 local function buildUI()
     if ui then return end
     ui = KronUI.new("ESP/AIMBOT", "rbxassetid://78186286433275")
@@ -270,13 +279,73 @@ local function buildUI()
     ui:AddSlider("Smoothness", 10, 100, math.floor(AimbotSettings.Smoothness * 100), function(v)
         AimbotSettings.Smoothness = v / 100
     end)
+
+    -- ══════════════════════ NOVA SEÇÃO: aliados manuais ══════════════════════
+    ui:AddDivider()
+    ui:AddSectionLabel("🛡️ ALIADOS")
+    -- Dropdown multi‑seleção (inicialmente sem opções, serão preenchidas depois)
+    allyDropdown = ui:AddMultiDropdown(
+        "Selecionar aliados",
+        {},   -- opções iniciais (vazio, será atualizado)
+        {},   -- defaults (vazio)
+        function(selectedList)
+            -- callback chamada sempre que o jogador altera a seleção manualmente
+            manualAllies = {}
+            for _, name in ipairs(selectedList) do
+                manualAllies[name] = true
+            end
+        end
+    )
+    -- ═══════════════════════════════════════════════════════════════════════════
 end
 
 buildUI()
 
-for _, p in ipairs(Players:GetPlayers()) do setupPlayer(p) end
-Players.PlayerAdded:Connect(setupPlayer)
-Players.PlayerRemoving:Connect(function(p) destroyESP(p) end)
+-- Função auxiliar para sincronizar manualAllies com o estado atual da dropdown
+local function syncAlliesFromDropdown()
+    if not allyDropdown then return end
+    local sel = allyDropdown.GetSelected()
+    manualAllies = {}
+    for _, name in ipairs(sel) do
+        manualAllies[name] = true
+    end
+end
+
+-- Atualiza a lista de opções da dropdown com todos os jogadores (exceto LocalPlayer)
+local function refreshAllyOptions()
+    if not allyDropdown then return end
+    local names = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            table.insert(names, p.Name)
+        end
+    end
+    -- Isso remove automaticamente qualquer seleção de jogador que saiu do jogo
+    allyDropdown.UpdateOptions(names)
+    -- Sincroniza o conjunto manualAllies com o novo estado da dropdown
+    syncAlliesFromDropdown()
+end
+
+-- ══════════════════════ CORREÇÃO: inicializar ESP para jogadores já presentes ══════════════════════
+for _, p in ipairs(Players:GetPlayers()) do
+    setupPlayer(p)
+end
+
+-- Conexões para manter a dropdown sempre atualizada
+Players.PlayerAdded:Connect(function(p)
+    if p ~= LocalPlayer then
+        refreshAllyOptions()
+    end
+    setupPlayer(p)   -- ESP normal
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+    refreshAllyOptions()
+    destroyESP(p)
+end)
+
+-- Popula a dropdown com os jogadores que já estão no servidor
+refreshAllyOptions()
 
 -- Loop ESP
 local espTimer = 0
@@ -399,6 +468,7 @@ local function getClosestTarget()
     for _, player in ipairs(Players:GetPlayers()) do
         if player == LocalPlayer then continue end
         local char = player.Character; if not char then continue end
+        -- isAlly agora também considera os aliados manuais
         if isAlly(player, myTeam) then continue end
 
         local targetPart = char:FindFirstChild(targetPartName)
