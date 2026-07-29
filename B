@@ -67,7 +67,7 @@ local RunService  = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera      = workspace.CurrentCamera
 
-local KronUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/A"))()
+local KronUI = loadstring(game:HttpGet("https://pastebin.com/raw/c61RAXAf"))()
 
 -- Estado
 local Settings = {
