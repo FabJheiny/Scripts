@@ -1,0 +1,310 @@
+local Hub = {}
+local LP = game:GetService("Players").LocalPlayer
+local UIS = game:GetService("UserInputService")
+local PG = LP:WaitForChild("PlayerGui")
+
+-- ══ TEMA: FROST UI (Branco padrão) ══
+local B  = Color3.fromRGB(6,10,18)
+local W  = Color3.fromRGB(255,255,255)   -- branco fixo
+local G  = Color3.fromRGB(85,125,150)
+
+local BASE_W, BASE_H = 680, 310
+_G.HubScale = _G.HubScale or 20
+local FONT_MAIN = Enum.Font.Code
+
+local function o(cls,props,par)
+    local x=Instance.new(cls)
+    for k,v in pairs(props) do x[k]=v end
+    if par then x.Parent=par end
+    return x
+end
+local function stroke(par,t,c)
+    return o("UIStroke",{Color=c or W,Thickness=t or 1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},par)
+end
+
+local openHub, closeHub
+
+local sg = o("ScreenGui",{Name="UniversalHub",ResetOnSpawn=false,IgnoreGuiInset=true,DisplayOrder=100},PG)
+
+-- toast
+local toastHolder = o("Frame",{
+    AnchorPoint=Vector2.new(1,0), Position=UDim2.new(1,-10,0,10),
+    Size=UDim2.new(0,200,1,-20), BackgroundTransparency=1,Active=false,ZIndex=300,
+},sg)
+o("UIListLayout",{
+    SortOrder=Enum.SortOrder.LayoutOrder, HorizontalAlignment=Enum.HorizontalAlignment.Right,
+    Padding=UDim.new(0,6),
+},toastHolder)
+
+local function toast(msg)
+    local t=o("TextLabel",{
+        Size=UDim2.new(0,0,0,24),AutomaticSize=Enum.AutomaticSize.X,
+        BackgroundColor3=B,BorderSizePixel=0,
+        Text="  "..msg.."  ",TextColor3=W,
+        TextSize=11,Font=FONT_MAIN,ZIndex=300,
+    },toastHolder)
+    stroke(t,1)
+    task.delay(1.4,function() t:Destroy() end)
+end
+
+local win = o("Frame",{
+    AnchorPoint=Vector2.new(0.5,0.5), Size=UDim2.new(0,BASE_W,0,BASE_H),
+    Position=UDim2.new(0.5,0,0.5,0), BackgroundColor3=B,BorderSizePixel=0,
+    Active=false,ClipsDescendants=true,Visible=false,
+},sg)
+local winStroke = stroke(win,1)
+
+local uiScaleObj = Instance.new("UIScale")
+local function getUIScale(s) return 0.45+(s-1)*0.04 end
+uiScaleObj.Scale = getUIScale(_G.HubScale)
+uiScaleObj.Parent = win
+
+local topH = 26
+local top = o("Frame",{
+    Size=UDim2.new(1,0,0,topH), BackgroundColor3=B,BorderSizePixel=0,
+    Active=true,ZIndex=10,
+},win)
+
+o("TextLabel",{
+    Size=UDim2.new(1,-36,1,0), Position=UDim2.new(0,10,0,0),
+    BackgroundTransparency=1,Text="> UNIVERSAL HUB <",TextColor3=W,
+    TextSize=20,Font=FONT_MAIN,TextXAlignment=Enum.TextXAlignment.Left,ZIndex=10,
+},top)
+
+o("Frame",{
+    Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-33,0,0),
+    BackgroundColor3=W,BorderSizePixel=0,ZIndex=12,
+},top)
+
+local xBtn = o("TextButton",{
+    Size=UDim2.new(0,32,1,0), Position=UDim2.new(1,-32,0,0),
+    BackgroundColor3=B,BorderSizePixel=0,Text="x",TextColor3=W,
+    TextSize=20,Font=FONT_MAIN,AutoButtonColor=false,ZIndex=11,
+},top)
+xBtn.MouseEnter:Connect(function() xBtn.BackgroundColor3=Color3.fromRGB(255,90,110) end)
+xBtn.MouseLeave:Connect(function() xBtn.BackgroundColor3=B end)
+
+o("Frame",{
+    Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,0,topH),
+    BackgroundColor3=W,BorderSizePixel=0,ZIndex=20,
+},win)
+
+-- drag da top
+do
+    local dragging, dragMoved, dragStart, startPos, _activeTouchId = false, false, nil, nil, nil
+    top.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if dragging then return end
+            dragging=true; dragMoved=false; dragStart=inp.Position; startPos=win.Position
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if _activeTouchId then return end
+            _activeTouchId=inp; dragging=true; dragMoved=false; dragStart=inp.Position; startPos=win.Position
+        end
+    end)
+    UIS.InputChanged:Connect(function(inp)
+        if not dragging then return end
+        local isMouse = inp.UserInputType == Enum.UserInputType.MouseMovement
+        local isTouch = inp.UserInputType == Enum.UserInputType.Touch
+        if isTouch and inp ~= _activeTouchId then return end
+        if isMouse or isTouch then
+            local d = inp.Position - dragStart
+            if math.abs(d.X)+math.abs(d.Y) > 2 then
+                dragMoved=true
+                win.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset+d.X, startPos.Y.Scale, startPos.Y.Offset+d.Y)
+            end
+        end
+    end)
+    UIS.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if dragging then dragging=false; dragStart=nil; startPos=nil end
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if inp ~= _activeTouchId then return end
+            dragging=false; dragMoved=false; _activeTouchId=nil; dragStart=nil; startPos=nil
+        end
+    end)
+end
+
+xBtn.MouseButton1Click:Connect(function() if closeHub then closeHub() end end)
+
+local body = o("Frame",{
+    Size=UDim2.new(1,0,1,-topH-1), Position=UDim2.new(0,0,0,topH+1),
+    BackgroundColor3=B,BorderSizePixel=0,ClipsDescendants=true,Active=false,
+},win)
+
+-- ══ MODAL (JANELA DE EXECUÇÃO) ══
+local modal=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BackgroundTransparency=1,BorderSizePixel=0,Visible=false,ZIndex=50},sg)
+local modalBg=o("TextButton",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text="",ZIndex=51},modal)
+local mbox=o("Frame",{
+    Size=UDim2.new(0,220,0,90), Position=UDim2.new(.5,-110,.5,-45),
+    BackgroundColor3=B,
+    BorderSizePixel=0, ZIndex=52,
+},modal)
+stroke(mbox,1,W)
+local mTitle=o("TextLabel",{
+    Size=UDim2.new(1,0,0,28),Position=UDim2.new(0,0,0,0),
+    BackgroundColor3=B,
+    BorderSizePixel=0,
+    Text="", TextColor3=W,
+    TextSize=11,Font=FONT_MAIN,
+    TextXAlignment=Enum.TextXAlignment.Center,TextWrapped=true,ZIndex=53,
+},mbox)
+o("Frame",{
+    Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,1,-1),
+    BackgroundColor3=W,
+    BorderSizePixel=0, ZIndex=53,
+},mTitle)
+local mBtnBar=o("Frame",{Size=UDim2.new(1,0,0,34),Position=UDim2.new(0,0,1,-34),BackgroundTransparency=1,BorderSizePixel=0,ZIndex=53},mbox)
+o("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,HorizontalAlignment=Enum.HorizontalAlignment.Center,VerticalAlignment=Enum.VerticalAlignment.Center,Padding=UDim.new(0,6),SortOrder=Enum.SortOrder.LayoutOrder},mBtnBar)
+local function mBtn(txt,lo)
+    local b=o("TextButton",{Size=UDim2.new(0,62,0,22),BackgroundColor3=W,BackgroundTransparency=1,BorderSizePixel=0,Text=txt,TextColor3=W,TextSize=10,Font=FONT_MAIN,AutoButtonColor=false,LayoutOrder=lo,ZIndex=54},mBtnBar)
+    stroke(b,1)
+    b.MouseEnter:Connect(function() b.BackgroundTransparency=0.88 end)
+    b.MouseLeave:Connect(function() b.BackgroundTransparency=1 end)
+    return b
+end
+local mCopy=mBtn("Copiar",1) local mCancel=mBtn("Cancelar",2) local mExec=mBtn("Executar",3)
+local _mCb,_mTxt=nil,nil
+local function closeModal()
+    modal.Visible=false
+    _mCb=nil _mTxt=nil
+end
+local function openModal(dT,cT,cb)
+    _mCb=cb _mTxt=cT mTitle.Text=dT
+    mbox.Size=UDim2.new(0,220,0,90) mbox.Position=UDim2.new(.5,-110,.5,-45)
+    modal.BackgroundTransparency=0.45
+    modal.Visible=true
+end
+modalBg.MouseButton1Click:Connect(closeModal)
+mCancel.MouseButton1Click:Connect(closeModal)
+mExec.MouseButton1Click:Connect(function() local cb=_mCb closeModal() if cb then pcall(cb) end toast("Executed") end)
+mCopy.MouseButton1Click:Connect(function() if _mTxt and setclipboard then pcall(setclipboard,_mTxt) end closeModal() toast("Copied") end)
+
+-- ══ PILL (abre no canto superior direito) ══
+local PILL_SIZE = 33
+local pill=o("Frame",{
+    Name="Pill", Size=UDim2.new(0,PILL_SIZE,0,PILL_SIZE), AnchorPoint=Vector2.new(1,0),
+    Position=UDim2.new(1,-20,0,55), BackgroundColor3=B,BorderSizePixel=0,Visible=true,ZIndex=200,
+    ClipsDescendants=false,
+},sg)
+o("UICorner",{CornerRadius=UDim.new(0.5,0)},pill)
+local pillStroke = stroke(pill,1)
+_G.UniversalHubPill=pill
+
+local pillImg=o("ImageLabel",{
+    Size=UDim2.new(1,-8,1,-8), Position=UDim2.new(0,4,0,4),
+    BackgroundTransparency=1, Image="rbxassetid://81708230935867", ImageColor3=W,
+    ScaleType=Enum.ScaleType.Fit, ZIndex=201,
+},pill)
+
+local pillBtn=o("TextButton",{
+    Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text="",BorderSizePixel=0,ZIndex=202,
+},pill)
+
+openHub = function()
+    pill.Visible=false
+    win.Visible=true
+end
+closeHub = function()
+    win.Visible=false
+    pill.Visible=true
+end
+
+-- ══ ABA ÚNICA DE MODS ══
+function Hub:Tab(name)
+    -- "name" mantido apenas por compatibilidade com chamadas existentes (Hub:Tab("Nome"));
+    -- não é mais exibido, já que existe só esta aba.
+    local pg=o("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=B,BorderSizePixel=0,Visible=true,Active=false},body)
+    local hotbar=o("Frame",{Size=UDim2.new(1,0,0,20),BackgroundColor3=B,BorderSizePixel=0,Active=false},pg)
+    local searchW=120
+    local search=o("TextBox",{Size=UDim2.new(0,searchW,1,0),BackgroundTransparency=1,BorderSizePixel=0,PlaceholderText="Search...",PlaceholderColor3=W,Text="",TextColor3=W,TextSize=11,Font=FONT_MAIN,ClearTextOnFocus=false,TextXAlignment=Enum.TextXAlignment.Left},hotbar)
+    local searchStroke=stroke(search,1,W); searchStroke.Transparency=1
+    search.Focused:Connect(function() searchStroke.Transparency=0 searchStroke.Thickness=1.4 end)
+    search.FocusLost:Connect(function() searchStroke.Transparency=1 searchStroke.Thickness=1 end)
+    o("UIPadding",{PaddingLeft=UDim.new(0,6)},search)
+    local countLbl=o("TextLabel",{Size=UDim2.new(1,-searchW-8,1,0),Position=UDim2.new(0,searchW+6,0,0),BackgroundTransparency=1,Text="Scripts: 0",TextColor3=W,TextSize=10,Font=FONT_MAIN,TextXAlignment=Enum.TextXAlignment.Right,Active=false},hotbar)
+    o("UIPadding",{PaddingRight=UDim.new(0,6)},countLbl)
+
+    local GAP=6 local COLS=6 local ROWH=28
+    local areaAbsW = BASE_W
+    local cellW = math.floor((areaAbsW - GAP*(COLS+1)) / COLS)
+
+    local scroll=o("ScrollingFrame",{Size=UDim2.new(1,0,1,-20),Position=UDim2.new(0,0,0,20),BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=2,ScrollBarImageColor3=G,CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y},pg)
+    o("UIPadding",{PaddingTop=UDim.new(0,GAP),PaddingLeft=UDim.new(0,GAP),PaddingRight=UDim.new(0,GAP),PaddingBottom=UDim.new(0,GAP)},scroll)
+    o("UIGridLayout",{CellSize=UDim2.new(0,cellW,0,ROWH),CellPadding=UDim2.new(0,GAP,0,GAP),SortOrder=Enum.SortOrder.LayoutOrder,HorizontalAlignment=Enum.HorizontalAlignment.Left},scroll)
+    local allBtns={}
+    local function updateCount()
+        local v=0 for _,b in ipairs(allBtns) do if b.Visible then v+=1 end end
+        countLbl.Text="Scripts: "..v
+    end
+    search:GetPropertyChangedSignal("Text"):Connect(function()
+        local q=search.Text:lower():gsub("%s+","")
+        for _,b in ipairs(allBtns) do
+            if q=="" then b.Visible=true
+            else local bname=b.Name:lower():gsub("%s+","") b.Visible = string.sub(bname,1,#q)==q end
+        end
+        updateCount()
+    end)
+    local T={}
+    function T:Button(txt,url)
+        local b=o("TextButton",{Name=txt,BackgroundColor3=B,BorderSizePixel=0,Text=txt,TextColor3=W,TextSize=10,Font=FONT_MAIN,AutoButtonColor=false,TextWrapped=true,LineHeight=1.1},scroll)
+        stroke(b,1)
+        b.MouseEnter:Connect(function() b.BackgroundColor3=W b.BackgroundTransparency=0.88 end)
+        b.MouseLeave:Connect(function() b.BackgroundColor3=B b.BackgroundTransparency=0 end)
+        local copyTxt='loadstring(game:HttpGet("'..url..'"))()'
+        b.MouseButton1Click:Connect(function()
+            openModal(txt,copyTxt,function() loadstring(game:HttpGet(url))() end)
+        end)
+        table.insert(allBtns,b) countLbl.Text="Scripts: "..#allBtns
+        return self
+    end
+    return T
+end
+
+-- Pill drag
+do
+    local dragging=false; local dragMoved=false; local dragStart=nil; local startPos=nil; local _activeTouchId=nil
+    pillBtn.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if dragging then return end
+            dragging=true; dragMoved=false; dragStart=inp.Position; startPos=pill.Position
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if _activeTouchId then return end
+            _activeTouchId=inp; dragging=true; dragMoved=false; dragStart=inp.Position; startPos=pill.Position
+        end
+    end)
+    UIS.InputChanged:Connect(function(inp)
+        if not dragging then return end
+        local isMouse = inp.UserInputType == Enum.UserInputType.MouseMovement
+        local isTouch = inp.UserInputType == Enum.UserInputType.Touch
+        if isTouch and inp ~= _activeTouchId then return end
+        if isMouse or isTouch then
+            local d=inp.Position - dragStart
+            if math.abs(d.X)+math.abs(d.Y) > 2 then
+                dragMoved=true
+                pill.Position=UDim2.new(startPos.X.Scale, startPos.X.Offset+d.X, startPos.Y.Scale, startPos.Y.Offset+d.Y)
+            end
+        end
+    end)
+    UIS.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if not dragging then return end
+            dragging=false
+            if not dragMoved then openHub() end
+            dragStart=nil; startPos=nil
+        elseif inp.UserInputType == Enum.UserInputType.Touch then
+            if inp ~= _activeTouchId then return end
+            local wasMoved=dragMoved
+            dragging=false; dragMoved=false; _activeTouchId=nil; dragStart=nil; startPos=nil
+            if not wasMoved then openHub() end
+        end
+    end)
+end
+
+UIS.InputBegan:Connect(function(inp,gp)
+    if not gp and inp.KeyCode==Enum.KeyCode.RightShift then
+        if win.Visible then closeHub() else openHub() end
+    end
+end)
+
+return Hub
+
