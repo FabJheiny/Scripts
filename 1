@@ -180,7 +180,7 @@ mExec.MouseButton1Click:Connect(function() local cb=_mCb closeModal() if cb then
 mCopy.MouseButton1Click:Connect(function() if _mTxt and setclipboard then pcall(setclipboard,_mTxt) end closeModal() toast("Copied") end)
 
 -- ══ PILL (abre no canto superior direito) ══
-local PILL_SIZE = 33
+local PILL_SIZE = 40
 local pill=o("Frame",{
     Name="Pill", Size=UDim2.new(0,PILL_SIZE,0,PILL_SIZE), AnchorPoint=Vector2.new(1,0),
     Position=UDim2.new(1,-20,0,55), BackgroundColor3=B,BorderSizePixel=0,Visible=true,ZIndex=200,
@@ -190,10 +190,11 @@ o("UICorner",{CornerRadius=UDim.new(0.5,0)},pill)
 local pillStroke = stroke(pill,1)
 _G.UniversalHubPill=pill
 
-local pillImg=o("ImageLabel",{
-    Size=UDim2.new(1,-8,1,-8), Position=UDim2.new(0,4,0,4),
-    BackgroundTransparency=1, Image="rbxassetid://81708230935867", ImageColor3=W,
-    ScaleType=Enum.ScaleType.Fit, ZIndex=201,
+local pillImg=o("TextLabel",{
+    Size=UDim2.new(1,0,1,0), Position=UDim2.new(0,0,0,0),
+    BackgroundTransparency=1, Text="≡", TextColor3=W,
+    TextSize=20, Font=FONT_MAIN, TextXAlignment=Enum.TextXAlignment.Center,
+    TextYAlignment=Enum.TextYAlignment.Center, ZIndex=201,
 },pill)
 
 local pillBtn=o("TextButton",{
@@ -307,4 +308,3 @@ UIS.InputBegan:Connect(function(inp,gp)
 end)
 
 return Hub
-
