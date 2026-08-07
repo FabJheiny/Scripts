@@ -1,19 +1,22 @@
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
-local UIS    = game:GetService("UserInputService")
-local Player = Players.LocalPlayer
+local UIS     = game:GetService("UserInputService")
+local Player  = Players.LocalPlayer
 
--- ── PALETA (idêntica ao Emotes) ──────────────────────────────────────────────
-local BG   = Color3.fromRGB(28,  28,  32)
-local CARD = Color3.fromRGB(40,  40,  48)
-local HOVER= Color3.fromRGB(48,  48,  58)
-local LINE = Color3.fromRGB(58,  58,  70)
-local DIM  = Color3.fromRGB(140, 140, 160)
-local MID  = Color3.fromRGB(185, 185, 205)
-local W    = Color3.fromRGB(235, 235, 245)
-local FONT = Enum.Font.GothamMedium
+local BG    = Color3.fromRGB(18,  32,  20)
+local CARD  = Color3.fromRGB(26,  44,  28)
+local HOVER = Color3.fromRGB(34,  56,  36)
+local LINE  = Color3.fromRGB(50,  75,  52)
+local DIM   = Color3.fromRGB(180, 195, 180)
+local MID   = Color3.fromRGB(220, 230, 220)
+local W     = Color3.fromRGB(255, 255, 255)
+local BLUE  = Color3.fromRGB(90,  200, 255)
+local BLUEDK= Color3.fromRGB(60,  150, 200)
+local FONT  = Enum.Font.GothamMedium
 
--- ── HELPERS ──────────────────────────────────────────────────────────────────
+local BAR_TRANSPARENCY  = 0.22
+local CARD_TRANSPARENCY = 0.15
+
 local function o(cls, props, par)
 	local x = Instance.new(cls)
 	for k, v in pairs(props) do x[k] = v end
@@ -28,7 +31,6 @@ local function stroke(par, t, c)
 	}, par)
 end
 
--- ── SCREENGUI ────────────────────────────────────────────────────────────────
 local sg = o("ScreenGui", {
 	Name = "SpectateGui", ResetOnSpawn = false,
 	IgnoreGuiInset = true, DisplayOrder = 2147483647,
@@ -36,57 +38,60 @@ local sg = o("ScreenGui", {
 local ok = pcall(function() sg.Parent = CoreGui end)
 if not ok then sg.Parent = Player:WaitForChild("PlayerGui") end
 
--- ── BAR ──────────────────────────────────────────────────────────────────────
--- começa fora da tela (igual ao original), sem Visible=false
 local bar = o("Frame", {
 	Name = "Bar",
 	Parent = sg,
 	Position = UDim2.new(-1, -100, 0.88, -25),
-	Size = UDim2.new(0, 200, 0, 50),
-	BackgroundColor3 = BG, BorderSizePixel = 0,
+	Size = UDim2.new(0, 220, 0, 50),
+	BackgroundColor3 = BG, BackgroundTransparency = BAR_TRANSPARENCY,
+	BorderSizePixel = 0,
 })
 o("UICorner", { CornerRadius = UDim.new(0, 6) }, bar)
 stroke(bar, 1, LINE)
 
 local prev = o("TextButton", {
 	Name = "Previous", Parent = bar,
-	Size = UDim2.new(0.25, 0, 1, 0),
+	Size = UDim2.new(0.2, 0, 1, 0),
 	Position = UDim2.new(0, 0, 0, 0),
 	Text = "<",
-	BackgroundColor3 = CARD, BorderSizePixel = 0,
+	BackgroundColor3 = CARD, BackgroundTransparency = CARD_TRANSPARENCY,
+	BorderSizePixel = 0,
 	Font = FONT, TextColor3 = MID, TextSize = 14,
 	AutoButtonColor = false,
 })
 o("UICorner", { CornerRadius = UDim.new(0, 5) }, prev)
 stroke(prev, 1, LINE)
-prev.MouseEnter:Connect(function() prev.BackgroundColor3 = HOVER; prev.TextColor3 = W end)
+prev.MouseEnter:Connect(function() prev.BackgroundColor3 = HOVER; prev.TextColor3 = BLUE end)
 prev.MouseLeave:Connect(function() prev.BackgroundColor3 = CARD;  prev.TextColor3 = MID end)
 
 local nex = o("TextButton", {
 	Name = "Next", Parent = bar,
-	Size = UDim2.new(0.25, 0, 1, 0),
-	Position = UDim2.new(0.75, 0, 0, 0),
+	Size = UDim2.new(0.2, 0, 1, 0),
+	Position = UDim2.new(0.8, 0, 0, 0),
 	Text = ">",
-	BackgroundColor3 = CARD, BorderSizePixel = 0,
+	BackgroundColor3 = CARD, BackgroundTransparency = CARD_TRANSPARENCY,
+	BorderSizePixel = 0,
 	Font = FONT, TextColor3 = MID, TextSize = 14,
 	AutoButtonColor = false,
 })
 o("UICorner", { CornerRadius = UDim.new(0, 5) }, nex)
 stroke(nex, 1, LINE)
-nex.MouseEnter:Connect(function() nex.BackgroundColor3 = HOVER; nex.TextColor3 = W end)
+nex.MouseEnter:Connect(function() nex.BackgroundColor3 = HOVER; nex.TextColor3 = BLUE end)
 nex.MouseLeave:Connect(function() nex.BackgroundColor3 = CARD;  nex.TextColor3 = MID end)
 
-local title = o("TextLabel", {
+local title = o("TextButton", {
 	Name = "Title", Parent = bar,
-	Position = UDim2.new(0.275, 0, 0, 0),
-	Size = UDim2.new(0.45, 0, 1, 0),
+	Position = UDim2.new(0.21, 0, 0, 0),
+	Size = UDim2.new(0.58, 0, 1, 0),
 	Text = "",
 	BackgroundTransparency = 1, BorderSizePixel = 0,
 	Font = FONT, TextColor3 = W,
 	TextSize = 14, TextScaled = true,
+	AutoButtonColor = false,
 })
+title.MouseEnter:Connect(function() title.TextColor3 = BLUE end)
+title.MouseLeave:Connect(function() title.TextColor3 = W end)
 
--- ── PILL ─────────────────────────────────────────────────────────────────────
 local PillGui = o("ScreenGui", {
 	Name = "SpectatePillGui", ResetOnSpawn = false,
 	IgnoreGuiInset = true, DisplayOrder = 9999,
@@ -97,25 +102,25 @@ if not ok2 then PillGui.Parent = Player:WaitForChild("PlayerGui") end
 
 local pill = o("Frame", {
 	Name = "PillSpectate",
-	Size = UDim2.new(0, 80, 0, 20),
-	Position = UDim2.new(1, -86, 1, -278),
-	BackgroundColor3 = BG, BorderSizePixel = 0,
+	Size = UDim2.new(0, 40, 0, 40),
+	Position = UDim2.new(1, -46, 1, -278),
+	BackgroundColor3 = BG, BackgroundTransparency = BAR_TRANSPARENCY,
+	BorderSizePixel = 0,
 	ZIndex = 200,
 }, PillGui)
-o("UICorner", { CornerRadius = UDim.new(0, 5) }, pill)
-stroke(pill, 1, LINE)
+o("UICorner", { CornerRadius = UDim.new(1, 0) }, pill)
+stroke(pill, 1, BLUEDK)
 
 local pillBtn = o("TextButton", {
 	Size = UDim2.new(1, 0, 1, 0),
 	BackgroundTransparency = 1,
-	Text = "> spectate", TextSize = 9, Font = FONT,
+	Text = "👁", TextSize = 18, Font = FONT,
 	TextColor3 = DIM, BorderSizePixel = 0,
 	ZIndex = 201,
 }, pill)
-pillBtn.MouseEnter:Connect(function() pillBtn.TextColor3 = W end)
+pillBtn.MouseEnter:Connect(function() pillBtn.TextColor3 = BLUE end)
 pillBtn.MouseLeave:Connect(function() pillBtn.TextColor3 = DIM end)
 
--- Drag da pill
 do
 	local dragging, dragMoved, dragStart, startPos, _tid = false, false, nil, nil, nil
 	pillBtn.InputBegan:Connect(function(inp)
@@ -143,10 +148,6 @@ do
 	end)
 	UIS.InputEnded:Connect(function(inp)
 		if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-			if not dragMoved then
-				-- toggle igual ao original: usa Position para entrar/sair
-				-- a lógica real está no pillBtn.MouseButton1Click abaixo
-			end
 			dragging = false; dragMoved = false; dragStart = nil; startPos = nil
 		elseif inp.UserInputType == Enum.UserInputType.Touch then
 			if inp ~= _tid then return end
@@ -155,7 +156,6 @@ do
 	end)
 end
 
--- ── LÓGICA (idêntica ao original) ────────────────────────────────────────────
 local cam = workspace.CurrentCamera
 local players = Players:GetPlayers()
 local currentIndex = 1
@@ -170,6 +170,14 @@ task.spawn(function()
 	end
 end)
 
+local function getCurrentTarget()
+	local p = players[currentIndex]
+	if p and p ~= Player then
+		return p
+	end
+	return nil
+end
+
 local function updateCameraAndTitle(index)
 	if #players == 0 then return end
 	local p = players[index]
@@ -181,12 +189,11 @@ end
 
 updateCameraAndTitle(currentIndex)
 
--- Toggle original: Position entra/sai da tela + câmera
 local debounce = false
 pillBtn.MouseButton1Click:Connect(function()
 	if debounce == false then
 		debounce = true
-		bar.Position = UDim2.new(0.5, -100, 0.88, -25)
+		bar.Position = UDim2.new(0.5, -110, 0.88, -25)
 		pcall(function()
 			local p = Players:GetPlayerFromCharacter(cam.CameraSubject.Parent)
 			title.Text = string.format("%s (@%s)", p.DisplayName, p.Name)
@@ -208,4 +215,20 @@ nex.MouseButton1Click:Connect(function()
 	currentIndex = currentIndex + 1
 	if currentIndex > #players then currentIndex = 1 end
 	updateCameraAndTitle(currentIndex)
+end)
+
+title.MouseButton1Click:Connect(function()
+	local target = getCurrentTarget()
+	if not target then return end
+
+	local myChar = Player.Character
+	local targetChar = target.Character
+	if not myChar or not targetChar then return end
+
+	local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+	local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+	if not myRoot or not targetRoot then return end
+
+	local offset = targetRoot.CFrame * CFrame.new(0, 0, -3)
+	myRoot.CFrame = offset
 end)
