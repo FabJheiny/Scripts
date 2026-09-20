@@ -29,7 +29,7 @@ local CONFIG = {
     ESP = {
         Font      = Enum.Font.GothamBold,
         TextSize  = 12,
-        WallSymbol = "🧿",
+        WallSymbol = "🟣",
     },
 
     -- FOV Circle
@@ -67,7 +67,7 @@ local RunService  = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera      = workspace.CurrentCamera
 
-local KronUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/B"))()
+local KronUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/C"))()
 
 -- Estado
 local Settings = {
