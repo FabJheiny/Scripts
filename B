@@ -1339,5 +1339,80 @@ function KronUI:AddMultiDropdown(text, options, defaults, callback)
         Close = function() setOpen(false) end,
     }
 end
+--══════════════════════════════════════════════════════
+--  Categoria Player (aparece automaticamente no menu)
+--══════════════════════════════════════════════════════
+local _origNew = KronUI.new
+function KronUI.new(...)
+    local self = _origNew(...)
+
+    self:AddSectionLabel("Player")
+
+    local player   = Players.LocalPlayer
+    local char     = player.Character or player.CharacterAdded:Wait()
+    local humanoid = char:WaitForChild("Humanoid")
+
+    local noclip  = false
+    local infJump = false
+    local speed   = 16
+
+    -- Reaplica speed/noclip ao respawnar
+    player.CharacterAdded:Connect(function(c)
+        char     = c
+        humanoid = c:WaitForChild("Humanoid")
+        humanoid.WalkSpeed = speed
+        if noclip then
+            task.spawn(function()
+                while noclip and char and char.Parent do
+                    for _, p in ipairs(char:GetDescendants()) do
+                        if p:IsA("BasePart") and p.CanCollide then p.CanCollide = false end
+                    end
+                    task.wait(0.15)
+                end
+            end)
+        end
+    end)
+
+    -- Noclip
+    self:AddToggle("Noclip", false, function(on)
+        noclip = on
+        if on then
+            task.spawn(function()
+                while noclip and char and char.Parent do
+                    for _, p in ipairs(char:GetDescendants()) do
+                        if p:IsA("BasePart") and p.CanCollide then p.CanCollide = false end
+                    end
+                    task.wait(0.15)
+                end
+            end)
+        else
+            if char then
+                for _, p in ipairs(char:GetDescendants()) do
+                    if p:IsA("BasePart") then p.CanCollide = true end
+                end
+            end
+        end
+    end)
+
+    -- Infinite Jump
+    self:AddToggle("Infinite Jump", false, function(on)
+        infJump = on
+    end)
+
+    UserInputService.JumpRequest:Connect(function()
+        if not infJump then return end
+        local h = char and char:FindFirstChildOfClass("Humanoid")
+        if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end
+    end)
+
+    -- Speed
+    self:AddSlider("Speed", 16, 250, 16, function(v)
+        speed = v
+        local h = char and char:FindFirstChildOfClass("Humanoid")
+        if h then h.WalkSpeed = v end
+    end)
+
+    return self
+end
 
 return KronUI
