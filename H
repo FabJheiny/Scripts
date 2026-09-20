@@ -147,7 +147,7 @@ function KronUI.new(title, pillImage)
     self._connections = {}
     self._layoutOrder = 0
 
-    _G.KronUIScale = _G.KronUIScale or 20
+    _G.KronUIScale = _G.KronUIScale or 10
     local function getUIScale(s) return 0.45 + (s - 1) * 0.04 end
 
     self.gui = o("ScreenGui", {
