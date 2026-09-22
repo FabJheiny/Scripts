@@ -1,67 +1,40 @@
---[[
-    ╔══════════════════════════════════════════════════╗
-    ║  ESP / AIMBOT  —  Configuração Centralizada     ║
-    ╚══════════════════════════════════════════════════╝
-    Altere os valores abaixo para personalizar o script.
---]]
-
--- ══════════════════════ CONFIGURAÇÕES GERAIS ══════════════════════
 local CONFIG = {
-
-    -- Cores do ESP (modo normal, sem RGB)
     Colors = {
-        Team     = Color3.fromRGB(130, 220, 150),  -- aliados (verde)
-        Enemy    = Color3.fromRGB(255, 100, 100),  -- inimigos / neutros (vermelho)
-        WallIcon = Color3.fromRGB(255, 165, 0),    -- ícone de parede (laranja)
+        Team     = Color3.fromRGB(130, 220, 150),
+        Enemy    = Color3.fromRGB(255, 255, 0),
+        WallIcon = Color3.fromRGB(255, 165, 0),
     },
-
-    -- Transparência do Highlight (Body ESP)
     Highlight = {
-        Fill    = 0.6,   -- transparência do preenchimento (0 = opaco, 1 = invisível)
-        Outline = 0.0,   -- transparência da borda
+        Fill    = 0.6,
+        Outline = 0.0,
     },
-
-    -- Distâncias
-    MaxESP_Distance    = 3000,  -- distância máxima para exibir ESP (em studs)
-    MaxHighlight_Dist  = 700,   -- distância máxima para ativar o destaque corporal
-
-    -- Aparência do texto do ESP
+    MaxESP_Distance    = 3000,
+    MaxHighlight_Dist  = 700,
     ESP = {
         Font      = Enum.Font.GothamBold,
         TextSize  = 12,
-        WallSymbol = "♦️",
+        WallSymbol = "👁",
     },
-
-    -- FOV Circle
     FOVCircle = {
         DefaultColor = Color3.fromRGB(200, 200, 200),
         Transparency = 0.45,
         Thickness    = 1,
     },
-
-    -- Aimbot
     Aimbot = {
-        Smoothness      = 0.9,   -- suavidade base (0 = instantâneo, 1 = muito lento)
-        MaxDistance     = 2000,  -- alcance máximo do aimbot (studs)
-        DeltaBreakHigh  = 0.25,  -- se o jogador mover a mira rápido, cancela
+        Smoothness      = 0.9,
+        MaxDistance     = 2000,
+        DeltaBreakHigh  = 0.25,
         DeltaBreakLow   = 0.15,
-        RecoverySpeed   = 0.05,  -- velocidade de recuperação da suavidade
-        PenaltySpeed    = 3.5,   -- penalidade ao mover rápido
+        RecoverySpeed   = 0.05,
+        PenaltySpeed    = 3.5,
     },
-
-    -- Visibilidade (Raycast)
     BodyParts = { "Head", "HumanoidRootPart", "UpperTorso" },
-    VisCacheTime_Default = 0.5,  -- tempo de cache em modo normal
-    VisCacheTime_Instant = 0.1,  -- tempo de cache com Instant Aimbot
-
-    -- Frequência de atualização do ESP (segundos)
+    VisCacheTime_Default = 0.5,
+    VisCacheTime_Instant = 0.1,
     ESP_Interval_Default = 0.1,
     ESP_Interval_Instant = 0.05,
 }
 
--- ══════════════════════ FIM DA CONFIGURAÇÃO ══════════════════════
-
--- Bibliotecas e serviços
 local Players     = game:GetService("Players")
 local RunService  = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
@@ -69,7 +42,6 @@ local Camera      = workspace.CurrentCamera
 
 local KronUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/Lib"))()
 
--- Estado
 local Settings = {
     Highlight = true,
     Name      = false,
@@ -82,27 +54,22 @@ local AimbotSettings = {
     FOV        = 90,
     IgnoreWall = false,
     ShowFOV    = true,
-    Smoothness = CONFIG.Aimbot.Smoothness,   -- controlado por slider
-    TargetPart = "Head",                     -- controlado por dropdown
+    Smoothness = CONFIG.Aimbot.Smoothness,
+    TargetPart = "Head",
 }
 local InstaSettings  = { Enabled = false }
 
--- ══════════════════════ NOVA VARIÁVEL: aliados manuais ══════════════════════
-local manualAllies = {}   -- conjunto de nomes dos jogadores marcados como aliados
--- ═══════════════════════════════════════════════════════════════════════════
+local manualAllies = {}
 
 local ui
 local espData   = {}
 local visCache  = {}
 
--- Auxiliares
 local function getTeamColor()    return CONFIG.Colors.Team end
 local function getEnemyColor()   return CONFIG.Colors.Enemy end
 
 local function isAlly(player, myTeam)
-    -- Aliados manuais têm prioridade máxima
     if manualAllies[player.Name] then return true end
-
     if not Settings.TeamCheck then return false end
     if not myTeam then return false end
     return player.Team == myTeam
@@ -154,7 +121,6 @@ local function isVisible(char, player)
     return visible
 end
 
--- ESP
 local function makeSlot(parent, order, col)
     local lbl = Instance.new("TextLabel", parent)
     lbl.BackgroundTransparency = 1
@@ -246,15 +212,13 @@ local function setupPlayer(player)
     end
 end
 
--- UI
-local allyDropdown  -- referência para a dropdown multi‑seleção
+local allyDropdown
 
 local function buildUI()
     if ui then return end
     ui = KronUI.new("ESP/AIMBOT", "rbxassetid://78186286433275")
 
-    -- ESP
-    ui:AddSectionLabel("👁️ ESP")
+    ui:AddSectionLabel("Esp")
     ui:AddToggle("Body ESP",      Settings.Highlight, function(s) Settings.Highlight = s end)
     ui:AddToggle("Name ESP",      Settings.Name,      function(s) Settings.Name      = s end)
     ui:AddToggle("Distance ESP",  Settings.Distance,  function(s) Settings.Distance  = s end)
@@ -262,46 +226,38 @@ local function buildUI()
     ui:AddToggle("Team Check",    Settings.TeamCheck, function(s) Settings.TeamCheck = s end)
     ui:AddDivider()
 
-    -- AIMBOT
-    ui:AddSectionLabel("🎯 AIMBOT")
+    ui:AddSectionLabel("Aimbot")
     ui:AddSlider("FOV", 20, 500, AimbotSettings.FOV, function(v) AimbotSettings.FOV = v end)
     ui:AddToggle("Aimbot",         AimbotSettings.Enabled,    function(s) AimbotSettings.Enabled    = s end)
     ui:AddToggle("FOV Circle",     AimbotSettings.ShowFOV,    function(s) AimbotSettings.ShowFOV    = s end)
     ui:AddToggle("Ignore Walls",   AimbotSettings.IgnoreWall, function(s) AimbotSettings.IgnoreWall = s end)
     ui:AddToggle("Instant Aimbot", InstaSettings.Enabled,     function(s) InstaSettings.Enabled     = s end)
 
-    -- Dropdown para parte do corpo
     ui:AddDropdown("Target Part", {"Head", "Torso"}, AimbotSettings.TargetPart, function(part)
         AimbotSettings.TargetPart = part
     end)
 
-    -- Slider de suavidade (0.10 a 1.00)
     ui:AddSlider("Smoothness", 10, 100, math.floor(AimbotSettings.Smoothness * 100), function(v)
         AimbotSettings.Smoothness = v / 100
     end)
 
-    -- ══════════════════════ NOVA SEÇÃO: aliados manuais ══════════════════════
     ui:AddDivider()
-    ui:AddSectionLabel("🛡️ ALIADOS")
-    -- Dropdown multi‑seleção (inicialmente sem opções, serão preenchidas depois)
+    ui:AddSectionLabel("Aliados")
     allyDropdown = ui:AddMultiDropdown(
         "Selecionar aliados",
-        {},   -- opções iniciais (vazio, será atualizado)
-        {},   -- defaults (vazio)
+        {},
+        {},
         function(selectedList)
-            -- callback chamada sempre que o jogador altera a seleção manualmente
             manualAllies = {}
             for _, name in ipairs(selectedList) do
                 manualAllies[name] = true
             end
         end
     )
-    -- ═══════════════════════════════════════════════════════════════════════════
 end
 
 buildUI()
 
--- Função auxiliar para sincronizar manualAllies com o estado atual da dropdown
 local function syncAlliesFromDropdown()
     if not allyDropdown then return end
     local sel = allyDropdown.GetSelected()
@@ -311,7 +267,6 @@ local function syncAlliesFromDropdown()
     end
 end
 
--- Atualiza a lista de opções da dropdown com todos os jogadores (exceto LocalPlayer)
 local function refreshAllyOptions()
     if not allyDropdown then return end
     local names = {}
@@ -320,23 +275,19 @@ local function refreshAllyOptions()
             table.insert(names, p.Name)
         end
     end
-    -- Isso remove automaticamente qualquer seleção de jogador que saiu do jogo
     allyDropdown.UpdateOptions(names)
-    -- Sincroniza o conjunto manualAllies com o novo estado da dropdown
     syncAlliesFromDropdown()
 end
 
--- ══════════════════════ CORREÇÃO: inicializar ESP para jogadores já presentes ══════════════════════
 for _, p in ipairs(Players:GetPlayers()) do
     setupPlayer(p)
 end
 
--- Conexões para manter a dropdown sempre atualizada
 Players.PlayerAdded:Connect(function(p)
     if p ~= LocalPlayer then
         refreshAllyOptions()
     end
-    setupPlayer(p)   -- ESP normal
+    setupPlayer(p)
 end)
 
 Players.PlayerRemoving:Connect(function(p)
@@ -344,10 +295,8 @@ Players.PlayerRemoving:Connect(function(p)
     destroyESP(p)
 end)
 
--- Popula a dropdown com os jogadores que já estão no servidor
 refreshAllyOptions()
 
--- Loop ESP
 local espTimer = 0
 RunService.Heartbeat:Connect(function(dt)
     espTimer = espTimer + dt
@@ -430,7 +379,7 @@ RunService.Heartbeat:Connect(function(dt)
             d.Highlight.Enabled = false
         end
 
-        d.WallIcon.Visible = Settings.WallIcon and (not visible)
+        d.WallIcon.Visible = Settings.WallIcon and visible
 
         if Settings.Name then
             d.NameLabel.Visible    = true
@@ -450,7 +399,6 @@ RunService.Heartbeat:Connect(function(dt)
     end
 end)
 
--- Aimbot
 local function getClosestTarget()
     local myChar = LocalPlayer.Character
     local myHRP  = myChar and myChar:FindFirstChild("HumanoidRootPart")
@@ -462,13 +410,11 @@ local function getClosestTarget()
     local halfY  = Camera.ViewportSize.Y * 0.5
     local best, bestD = nil, math.huge
 
-    -- Decide qual parte usar com base no dropdown
     local targetPartName = (AimbotSettings.TargetPart == "Torso") and "HumanoidRootPart" or "Head"
 
     for _, player in ipairs(Players:GetPlayers()) do
         if player == LocalPlayer then continue end
         local char = player.Character; if not char then continue end
-        -- isAlly agora também considera os aliados manuais
         if isAlly(player, myTeam) then continue end
 
         local targetPart = char:FindFirstChild(targetPartName)
@@ -503,7 +449,6 @@ RunService.Heartbeat:Connect(function()
     cachedTarget = getClosestTarget()
 end)
 
--- Suavidade usando o valor do slider
 local curSmooth   = AimbotSettings.Smoothness
 local lastCamCF   = Camera.CFrame
 
@@ -534,7 +479,6 @@ RunService.RenderStepped:Connect(function()
     lastCamCF = Camera.CFrame
 end)
 
--- FOV Circle
 local fovSGui = Instance.new("ScreenGui")
 fovSGui.Name           = "RobloxUI_FOVCircle"
 fovSGui.ResetOnSpawn   = false
