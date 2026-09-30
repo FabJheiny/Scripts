@@ -149,11 +149,18 @@ local function destroyESP(player)
 end
 
 local function createESP(player, char)
+local function createESP(player, char)
     if player == LocalPlayer then return end
     destroyESP(player)
 
     local head = char:WaitForChild("Head", 5)
     if not head then return end
+
+    for _, obj in ipairs(head:GetChildren()) do
+        if obj:IsA("BillboardGui") then
+            obj:Destroy()
+        end
+    end
 
     local bb = Instance.new("BillboardGui", head)
     bb.Size                  = UDim2.new(0, 300, 0, 18)
@@ -164,7 +171,6 @@ local function createESP(player, char)
     local frame = Instance.new("Frame", bb)
     frame.BackgroundTransparency = 1
     frame.Size                   = UDim2.new(1, 0, 1, 0)
-    frame.AutomaticSize          = Enum.AutomaticSize.X
 
     local layout = Instance.new("UIListLayout", frame)
     layout.FillDirection       = Enum.FillDirection.Horizontal
