@@ -2,37 +2,37 @@ local CONFIG = {
     Colors = {
         Team     = Color3.fromRGB(130, 220, 150),
         Enemy    = Color3.fromRGB(255, 255, 0),
-        WallIcon = Color3.fromRGB(255, 165, 0),
+        WallIcon = Color3.fromRGB(80, 160, 255),
     },
-    Highlight = {
-        Fill    = 0.6,
-        Outline = 0.0,
-    },
-    MaxESP_Distance    = 3000,
-    MaxHighlight_Dist  = 700,
+    Highlight = { Fill = 0.6, Outline = 0.0 },
+    MaxESP_Distance   = 3000,
+    MaxHighlight_Dist = 700,
     ESP = {
-        Font      = Enum.Font.GothamBold,
-        TextSize  = 12,
-        WallSymbol = "👁",
+        Font       = Enum.Font.GothamBold,
+        TextSize   = 12,
+        WallSymbol = "●",
+        NameWidth  = 400,
     },
     FOVCircle = {
         DefaultColor = Color3.fromRGB(200, 200, 200),
+        LockedColor  = Color3.fromRGB(255, 80, 80),
         Transparency = 0.45,
         Thickness    = 1,
     },
     Aimbot = {
-        Smoothness      = 0.9,
-        MaxDistance     = 2000,
-        DeltaBreakHigh  = 0.25,
-        DeltaBreakLow   = 0.15,
-        RecoverySpeed   = 0.05,
-        PenaltySpeed    = 3.5,
+        Smoothness     = 0.9,
+        MaxDistance    = 2000,
+        DeltaBreakHigh = 0.25,
+        DeltaBreakLow  = 0.15,
+        RecoverySpeed  = 0.05,
+        PenaltySpeed   = 3.5,
     },
     BodyParts = { "Head", "HumanoidRootPart", "UpperTorso" },
     VisCacheTime_Default = 0.5,
     VisCacheTime_Instant = 0.1,
     ESP_Interval_Default = 0.1,
     ESP_Interval_Instant = 0.05,
+    CleanupInterval      = 30,
 }
 
 local Players     = game:GetService("Players")
@@ -40,14 +40,12 @@ local RunService  = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera      = workspace.CurrentCamera
 
-local KronUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/Lib"))()
+local KronUI = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/Lib"))()
 
 local Settings = {
-    Highlight = true,
-    Name      = false,
-    Distance  = true,
-    WallIcon  = true,
-    TeamCheck = true,
+    Highlight = true, Name = false, Distance = true,
+    WallIcon  = true, TeamCheck = true,
 }
 local AimbotSettings = {
     Enabled    = true,
@@ -57,66 +55,72 @@ local AimbotSettings = {
     Smoothness = CONFIG.Aimbot.Smoothness,
     TargetPart = "Head",
 }
-local InstaSettings  = { Enabled = false }
+local InstaSettings = { Enabled = false }
 
 local manualAllies = {}
+local ui, espData, visCache = nil, {}, {}
 
-local ui
-local espData   = {}
-local visCache  = {}
+for _, p in ipairs(Players:GetPlayers()) do
+    local c = p.Character
+    if c then
+        local hl = c:FindFirstChild("ESP_Highlight")
+        if hl then hl:Destroy() end
+        local h = c:FindFirstChild("Head")
+        if h then
+            for _, obj in ipairs(h:GetChildren()) do
+                if obj:IsA("BillboardGui") then obj:Destroy() end
+            end
+        end
+    end
+end
+local oldFov = LocalPlayer.PlayerGui:FindFirstChild("RobloxUI_FOVCircle")
+if oldFov then oldFov:Destroy() end
 
-local function getTeamColor()    return CONFIG.Colors.Team end
-local function getEnemyColor()   return CONFIG.Colors.Enemy end
+local rayFilter = RaycastParams.new()
+rayFilter.FilterType  = Enum.RaycastFilterType.Exclude
+rayFilter.IgnoreWater = true
 
 local function isAlly(player, myTeam)
     if manualAllies[player.Name] then return true end
-    if not Settings.TeamCheck then return false end
-    if not myTeam then return false end
+    if not Settings.TeamCheck or not myTeam then return false end
     return player.Team == myTeam
 end
 
 local myTeamCache, teamCacheTime = nil, 0
 local function getMyTeam()
     if tick() - teamCacheTime > 2 then
-        myTeamCache = LocalPlayer.Team
-        teamCacheTime = tick()
+        myTeamCache, teamCacheTime = LocalPlayer.Team, tick()
     end
     return myTeamCache
 end
 
 local function vividColor(c)
     local h, s, v = Color3.toHSV(c)
-    s = math.min(1, s * 1.25)
-    v = math.min(1, v * 1.15)
-    return Color3.fromHSV(h, s, v)
+    return Color3.fromHSV(h, math.min(1, s * 1.25), math.min(1, v * 1.15))
 end
 
 local function isVisible(char, player)
+    if not char or not char.Parent then return false end
+
     local cache = visCache[player]
-    local cacheTime = InstaSettings.Enabled and CONFIG.VisCacheTime_Instant or CONFIG.VisCacheTime_Default
-    if cache and tick() - cache.t < cacheTime then
-        return cache.v
-    end
+    local cacheTime = InstaSettings.Enabled
+        and CONFIG.VisCacheTime_Instant
+        or  CONFIG.VisCacheTime_Default
+    if cache and tick() - cache.t < cacheTime then return cache.v end
 
-    local filter = RaycastParams.new()
-    filter.FilterType = Enum.RaycastFilterType.Blacklist
-    local filterList = { LocalPlayer.Character, Camera }
-    if char then table.insert(filterList, char) end
-    filter.FilterDescendantsInstances = filterList
-    filter.IgnoreWater = true
+    rayFilter.FilterDescendantsInstances = { LocalPlayer.Character, Camera, char }
 
-    local origin = Camera.CFrame.Position
-    local visible = false
+    local origin, visible = Camera.CFrame.Position, false
     for _, partName in ipairs(CONFIG.BodyParts) do
         local part = char:FindFirstChild(partName)
-        if not part then continue end
-        local ray = workspace:Raycast(origin, part.Position - origin, filter)
-        if not ray or char:IsAncestorOf(ray.Instance) then
-            visible = true
-            break
+        if part then
+            local ray = workspace:Raycast(origin, part.Position - origin, rayFilter)
+            if not ray or char:IsAncestorOf(ray.Instance) then
+                visible = true
+                break
+            end
         end
     end
-
     visCache[player] = { v = visible, t = tick() }
     return visible
 end
@@ -126,12 +130,11 @@ local function makeSlot(parent, order, col)
     lbl.BackgroundTransparency = 1
     lbl.AutomaticSize          = Enum.AutomaticSize.X
     lbl.Size                   = UDim2.new(0, 0, 1, 0)
-    lbl.Text                   = ""
     lbl.Visible                = false
     lbl.Font                   = CONFIG.ESP.Font
     lbl.TextSize               = CONFIG.ESP.TextSize
-    lbl.TextColor3             = col or Color3.new(1,1,1)
-    lbl.TextStrokeColor3       = Color3.new(0,0,0)
+    lbl.TextColor3             = col or Color3.new(1, 1, 1)
+    lbl.TextStrokeColor3       = Color3.new(0, 0, 0)
     lbl.TextStrokeTransparency = 0
     lbl.TextXAlignment         = Enum.TextXAlignment.Left
     lbl.TextYAlignment         = Enum.TextYAlignment.Center
@@ -142,37 +145,40 @@ end
 local function destroyESP(player)
     local d = espData[player]
     if not d then return end
-    if d.BB then d.BB:Destroy() end
+    if d.BB        then d.BB:Destroy()        end
     if d.Highlight then d.Highlight:Destroy() end
-    espData[player]  = nil
-    visCache[player] = nil
+    espData[player], visCache[player] = nil, nil
+end
+
+local function hideESP(d)
+    if d.BB then d.BB.Enabled = false end
+    d.WallIcon.Visible  = false
+    d.NameLabel.Visible = false
+    d.DistLabel.Visible = false
+    if d.Highlight then d.Highlight.Enabled = false end
 end
 
 local function createESP(player, char)
     if player == LocalPlayer then return end
     destroyESP(player)
+    if not char or not char.Parent then return end
 
-    local head = char:WaitForChild("Head", 5)
+    local head = char:FindFirstChild("Head") or char:WaitForChild("Head", 5)
     if not head then return end
-
-    -- Remove BillboardGuis órfãos (de execuções anteriores do script)
     for _, obj in ipairs(head:GetChildren()) do
-        if obj:IsA("BillboardGui") then
-            obj:Destroy()
-        end
+        if obj:IsA("BillboardGui") then obj:Destroy() end
     end
 
     local bb = Instance.new("BillboardGui", head)
-    bb.Size                  = UDim2.new(0, 300, 0, 18)
+    bb.Size                  = UDim2.new(0, CONFIG.ESP.NameWidth, 0, 18)
     bb.StudsOffsetWorldSpace = Vector3.new(0, 4.4, 0)
     bb.AlwaysOnTop           = true
     bb.LightInfluence        = 0
+    bb.Enabled               = false
 
     local frame = Instance.new("Frame", bb)
     frame.BackgroundTransparency = 1
     frame.Size                   = UDim2.new(1, 0, 1, 0)
-    -- Sem AutomaticSize no frame: ele ocupa os 300px do BillboardGui
-    -- e o UIListLayout centraliza o conteúdo dentro dele.
 
     local layout = Instance.new("UIListLayout", frame)
     layout.FillDirection       = Enum.FillDirection.Horizontal
@@ -182,12 +188,9 @@ local function createESP(player, char)
     layout.SortOrder           = Enum.SortOrder.LayoutOrder
 
     local wallLbl = makeSlot(frame, 1, CONFIG.Colors.WallIcon)
-    local nameLbl = makeSlot(frame, 2, Color3.new(1,1,1))
-    local distLbl = makeSlot(frame, 3, Color3.new(1,1,1))
+    local nameLbl = makeSlot(frame, 2, Color3.new(1, 1, 1))
+    local distLbl = makeSlot(frame, 3, Color3.new(1, 1, 1))
     wallLbl.Text = CONFIG.ESP.WallSymbol
-
-    local existingHL = char:FindFirstChild("ESP_Highlight")
-    if existingHL then existingHL:Destroy() end
 
     local hl = Instance.new("Highlight")
     hl.Name                = "ESP_Highlight"
@@ -198,25 +201,47 @@ local function createESP(player, char)
     hl.Parent              = char
 
     espData[player] = {
-        BB        = bb,
-        WallIcon  = wallLbl,
-        NameLabel = nameLbl,
-        DistLabel = distLbl,
-        Highlight = hl,
-        Character = char,
+        BB = bb, WallIcon = wallLbl, NameLabel = nameLbl, DistLabel = distLbl,
+        Highlight = hl, Character = char,
     }
 end
 
-local function setupPlayer(player)
-    player.CharacterAdded:Connect(function(char)
-        task.wait(0.4)
-        createESP(player, char)
+local deathConns = {}
+
+local function bindHumanoidDeath(player, char)
+    if deathConns[player] then
+        deathConns[player]:Disconnect()
+        deathConns[player] = nil
+    end
+    if not char then return end
+
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+
+    deathConns[player] = hum.Died:Connect(function()
+        destroyESP(player)
     end)
+end
+
+local function setupPlayer(player)
+    if player == LocalPlayer then return end
+
+    player.CharacterAdded:Connect(function(char)
+        if not char:FindFirstChild("Head") then
+            char:WaitForChild("Head", 5)
+        end
+        if player.Character ~= char then return end
+        createESP(player, char)
+        bindHumanoidDeath(player, char)
+    end)
+
     player.CharacterRemoving:Connect(function()
         destroyESP(player)
     end)
+
     if player.Character then
         createESP(player, player.Character)
+        bindHumanoidDeath(player, player.Character)
     end
 end
 
@@ -227,19 +252,19 @@ local function buildUI()
     ui = KronUI.new("ESP/AIMBOT", "rbxassetid://78186286433275")
 
     ui:AddSectionLabel("Esp")
-    ui:AddToggle("Body ESP",      Settings.Highlight, function(s) Settings.Highlight = s end)
-    ui:AddToggle("Name ESP",      Settings.Name,      function(s) Settings.Name      = s end)
-    ui:AddToggle("Distance ESP",  Settings.Distance,  function(s) Settings.Distance  = s end)
-    ui:AddToggle("Wall Icon",     Settings.WallIcon,  function(s) Settings.WallIcon  = s end)
-    ui:AddToggle("Team Check",    Settings.TeamCheck, function(s) Settings.TeamCheck = s end)
-    ui:AddDivider()
+    ui:AddToggle("Body ESP",     Settings.Highlight, function(s) Settings.Highlight = s end)
+    ui:AddToggle("Name ESP",     Settings.Name,      function(s) Settings.Name      = s end)
+    ui:AddToggle("Distance ESP", Settings.Distance,  function(s) Settings.Distance  = s end)
+    ui:AddToggle("Wall Icon",    Settings.WallIcon,  function(s) Settings.WallIcon  = s end)
+    ui:AddToggle("Team Check",   Settings.TeamCheck, function(s) Settings.TeamCheck = s end)
 
     ui:AddSectionLabel("Aimbot")
-    ui:AddSlider("FOV", 20, 500, AimbotSettings.FOV, function(v) AimbotSettings.FOV = v end)
     ui:AddToggle("Aimbot",         AimbotSettings.Enabled,    function(s) AimbotSettings.Enabled    = s end)
     ui:AddToggle("FOV Circle",     AimbotSettings.ShowFOV,    function(s) AimbotSettings.ShowFOV    = s end)
     ui:AddToggle("Ignore Walls",   AimbotSettings.IgnoreWall, function(s) AimbotSettings.IgnoreWall = s end)
     ui:AddToggle("Instant Aimbot", InstaSettings.Enabled,     function(s) InstaSettings.Enabled     = s end)
+
+    ui:AddSlider("FOV", 20, 500, AimbotSettings.FOV, function(v) AimbotSettings.FOV = v end)
 
     ui:AddDropdown("Target Part", {"Head", "Torso"}, AimbotSettings.TargetPart, function(part)
         AimbotSettings.TargetPart = part
@@ -249,228 +274,208 @@ local function buildUI()
         AimbotSettings.Smoothness = v / 100
     end)
 
-    ui:AddDivider()
     ui:AddSectionLabel("Aliados")
-    allyDropdown = ui:AddMultiDropdown(
-        "Selecionar aliados",
-        {},
-        {},
-        function(selectedList)
-            manualAllies = {}
-            for _, name in ipairs(selectedList) do
-                manualAllies[name] = true
-            end
-        end
-    )
+    allyDropdown = ui:AddMultiDropdown("Selecionar aliados", {}, {}, function(selectedList)
+        manualAllies = {}
+        for _, name in ipairs(selectedList) do manualAllies[name] = true end
+    end)
 end
 
 buildUI()
 
 local function syncAlliesFromDropdown()
     if not allyDropdown then return end
-    local sel = allyDropdown.GetSelected()
     manualAllies = {}
-    for _, name in ipairs(sel) do
-        manualAllies[name] = true
-    end
+    for _, name in ipairs(allyDropdown.GetSelected()) do manualAllies[name] = true end
 end
 
 local function refreshAllyOptions()
     if not allyDropdown then return end
     local names = {}
     for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer then
-            table.insert(names, p.Name)
-        end
+        if p ~= LocalPlayer then table.insert(names, p.Name) end
     end
     allyDropdown.UpdateOptions(names)
     syncAlliesFromDropdown()
 end
 
-for _, p in ipairs(Players:GetPlayers()) do
-    setupPlayer(p)
-end
+for _, p in ipairs(Players:GetPlayers()) do setupPlayer(p) end
 
 Players.PlayerAdded:Connect(function(p)
-    if p ~= LocalPlayer then
-        refreshAllyOptions()
-    end
+    if p ~= LocalPlayer then refreshAllyOptions() end
     setupPlayer(p)
 end)
 
 Players.PlayerRemoving:Connect(function(p)
+    manualAllies[p.Name] = nil
+    if deathConns[p] then
+        deathConns[p]:Disconnect()
+        deathConns[p] = nil
+    end
     refreshAllyOptions()
     destroyESP(p)
 end)
 
 refreshAllyOptions()
 
+task.spawn(function()
+    while task.wait(CONFIG.CleanupInterval) do
+        for player in pairs(espData) do
+            if not player.Parent then destroyESP(player) end
+        end
+    end
+end)
+
 local espTimer = 0
 RunService.Heartbeat:Connect(function(dt)
     espTimer = espTimer + dt
-    local interval = InstaSettings.Enabled and CONFIG.ESP_Interval_Instant or CONFIG.ESP_Interval_Default
+    local interval = InstaSettings.Enabled
+        and CONFIG.ESP_Interval_Instant
+        or  CONFIG.ESP_Interval_Default
     if espTimer < interval then return end
     espTimer = 0
 
     local myChar = LocalPlayer.Character
     local myHRP  = myChar and myChar:FindFirstChild("HumanoidRootPart")
-
     if not myHRP then
-        for _, d in pairs(espData) do
-            d.WallIcon.Visible  = false
-            d.NameLabel.Visible = false
-            d.DistLabel.Visible = false
-            if d.Highlight then d.Highlight.Enabled = false end
-        end
+        for _, d in pairs(espData) do hideESP(d) end
         return
-    end
-
-    local useRGB = ui and ui._rgbActive
-    local rgbColor
-    if useRGB then
-        local hue = (tick() * 0.3) % 1
-        rgbColor = Color3.fromHSV(hue, 1, 1)
     end
 
     local myTeam = getMyTeam()
     local myPos  = myHRP.Position
+    local toDestroy = nil
 
     for player, d in pairs(espData) do
         local char = d.Character
         if not char or not char.Parent then
-            d.WallIcon.Visible = false; d.NameLabel.Visible = false; d.DistLabel.Visible = false
-            if d.Highlight then d.Highlight.Enabled = false end
-            continue
+            char = player.Character
+            d.Character = char
         end
 
-        local hum  = char:FindFirstChildOfClass("Humanoid")
-        local hrp  = char:FindFirstChild("HumanoidRootPart")
-        local head = char:FindFirstChild("Head")
-        if not hum or not hrp or not head or hum.Health <= 0 then
-            d.WallIcon.Visible = false; d.NameLabel.Visible = false; d.DistLabel.Visible = false
-            if d.Highlight then d.Highlight.Enabled = false end
-            continue
+        local hum, hrp
+        if char and char.Parent then
+            hum = char:FindFirstChildOfClass("Humanoid")
+            hrp = char:FindFirstChild("HumanoidRootPart")
         end
 
-        local dist = (myPos - hrp.Position).Magnitude
-        if dist > CONFIG.MaxESP_Distance then
-            d.WallIcon.Visible = false; d.NameLabel.Visible = false; d.DistLabel.Visible = false
-            if d.Highlight then d.Highlight.Enabled = false end
-            continue
-        end
-
-        local _, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-        if not onScreen then
-            d.WallIcon.Visible = false; d.NameLabel.Visible = false; d.DistLabel.Visible = false
-            if d.Highlight then d.Highlight.Enabled = false end
-            continue
-        end
-
-        local col
-        if useRGB then
-            col = rgbColor
+        if not (hum and hrp and hum.Health > 0) then
+            toDestroy = toDestroy or {}
+            toDestroy[#toDestroy + 1] = player
         else
-            if isAlly(player, myTeam) then
-                col = getTeamColor()
+            local dist = (myPos - hrp.Position).Magnitude
+            local _, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+
+            if dist > CONFIG.MaxESP_Distance or not onScreen then
+                hideESP(d)
             else
-                col = getEnemyColor()
+                local col = isAlly(player, myTeam)
+                    and CONFIG.Colors.Team
+                    or  CONFIG.Colors.Enemy
+
+                local visible = isVisible(char, player)
+
+                if d.BB.Enabled == false then d.BB.Enabled = true end
+
+                if Settings.Highlight and dist <= CONFIG.MaxHighlight_Dist then
+                    d.Highlight.Enabled      = true
+                    d.Highlight.FillColor    = col
+                    d.Highlight.OutlineColor = col
+                else
+                    d.Highlight.Enabled = false
+                end
+
+                d.WallIcon.Visible = Settings.WallIcon and visible
+
+                d.NameLabel.Visible = Settings.Name
+                if Settings.Name then
+                    d.NameLabel.Text       = player.Name
+                    d.NameLabel.TextColor3 = col
+                end
+
+                d.DistLabel.Visible = Settings.Distance
+                if Settings.Distance then
+                    d.DistLabel.Text = dist < 100
+                        and string.format("%.1fm", dist)
+                        or  math.floor(dist) .. "m"
+                    d.DistLabel.TextColor3 = vividColor(col)
+                end
             end
         end
+    end
 
-        local visible = isVisible(char, player)
-
-        if Settings.Highlight and dist <= CONFIG.MaxHighlight_Dist then
-            d.Highlight.Enabled      = true
-            d.Highlight.FillColor    = col
-            d.Highlight.OutlineColor = col
-        else
-            d.Highlight.Enabled = false
-        end
-
-        d.WallIcon.Visible = Settings.WallIcon and visible
-
-        if Settings.Name then
-            d.NameLabel.Visible    = true
-            d.NameLabel.Text       = player.Name
-            d.NameLabel.TextColor3 = col
-        else
-            d.NameLabel.Visible = false
-        end
-
-        if Settings.Distance then
-            d.DistLabel.Visible    = true
-            d.DistLabel.Text       = math.floor(dist) .. "m"
-            d.DistLabel.TextColor3 = useRGB and col or vividColor(col)
-        else
-            d.DistLabel.Visible = false
-        end
+    if toDestroy then
+        for _, p in ipairs(toDestroy) do destroyESP(p) end
     end
 end)
 
-local function getClosestTarget()
+local cachedTarget = nil
+RunService.Heartbeat:Connect(function()
+    if not AimbotSettings.Enabled then
+        cachedTarget = nil
+        return
+    end
+
     local myChar = LocalPlayer.Character
     local myHRP  = myChar and myChar:FindFirstChild("HumanoidRootPart")
-    if not myHRP then return nil end
+    if not myHRP then cachedTarget = nil return end
 
     local myTeam = getMyTeam()
     local fov    = AimbotSettings.FOV
     local halfX  = Camera.ViewportSize.X * 0.5
     local halfY  = Camera.ViewportSize.Y * 0.5
     local best, bestD = nil, math.huge
-
-    local targetPartName = (AimbotSettings.TargetPart == "Torso") and "HumanoidRootPart" or "Head"
+    local targetPartName = (AimbotSettings.TargetPart == "Torso")
+        and "HumanoidRootPart" or "Head"
 
     for _, player in ipairs(Players:GetPlayers()) do
-        if player == LocalPlayer then continue end
-        local char = player.Character; if not char then continue end
-        if isAlly(player, myTeam) then continue end
-
-        local targetPart = char:FindFirstChild(targetPartName)
-        if not targetPart then continue end
-
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if not hum or hum.Health <= 0 then continue end
-
-        local pos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
-        if not onScreen then continue end
-
-        local sx = pos.X - halfX
-        local sy = pos.Y - halfY
-        if math.sqrt(sx*sx + sy*sy) > fov then continue end
-
-        local wd = (myHRP.Position - targetPart.Position).Magnitude
-        if wd > CONFIG.Aimbot.MaxDistance then continue end
-
-        if not AimbotSettings.IgnoreWall and not isVisible(char, player) then continue end
-
-        if wd < bestD then
-            bestD = wd
-            best = targetPart
+        if player ~= LocalPlayer and not isAlly(player, myTeam) then
+            local char = player.Character
+            local targetPart = char and char:FindFirstChild(targetPartName)
+            local hum  = char and char:FindFirstChildOfClass("Humanoid")
+            if targetPart and hum and hum.Health > 0 then
+                local pos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+                if onScreen then
+                    local sx, sy = pos.X - halfX, pos.Y - halfY
+                    if math.sqrt(sx * sx + sy * sy) <= fov then
+                        local wd = (myHRP.Position - targetPart.Position).Magnitude
+                        if wd <= CONFIG.Aimbot.MaxDistance
+                           and (AimbotSettings.IgnoreWall or isVisible(char, player))
+                           and wd < bestD then
+                            bestD, best = wd, targetPart
+                        end
+                    end
+                end
+            end
         end
     end
-    return best
-end
-
-local cachedTarget = nil
-RunService.Heartbeat:Connect(function()
-    if not AimbotSettings.Enabled then cachedTarget = nil return end
-    cachedTarget = getClosestTarget()
+    cachedTarget = best
 end)
 
-local curSmooth   = AimbotSettings.Smoothness
-local lastCamCF   = Camera.CFrame
+local curSmooth = AimbotSettings.Smoothness
+local lastCamCF = Camera.CFrame
 
-RunService.RenderStepped:Connect(function()
+RunService:BindToRenderStep("KronAimbotCam", Enum.RenderPriority.Camera.Value + 1, function()
     if not cachedTarget then
         lastCamCF = Camera.CFrame
         curSmooth = AimbotSettings.Smoothness
         return
     end
 
+    if not cachedTarget.Parent then cachedTarget = nil return end
+    local hum = cachedTarget.Parent:FindFirstChildOfClass("Humanoid")
+    if hum and hum.Health <= 0 then cachedTarget = nil return end
+
     local delta = (Camera.CFrame.LookVector - lastCamCF.LookVector).Magnitude
     if delta > CONFIG.Aimbot.DeltaBreakHigh then
         cachedTarget = nil
-        curSmooth = 0
+        curSmooth = AimbotSettings.Smoothness
+        lastCamCF = Camera.CFrame
+        return
+    end
+
+    if InstaSettings.Enabled then
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, cachedTarget.Position)
         lastCamCF = Camera.CFrame
         return
     end
@@ -478,12 +483,12 @@ RunService.RenderStepped:Connect(function()
     if delta > CONFIG.Aimbot.DeltaBreakLow then
         curSmooth = math.max(0, curSmooth - delta * CONFIG.Aimbot.PenaltySpeed)
     else
-        curSmooth = curSmooth + (AimbotSettings.Smoothness - curSmooth) * CONFIG.Aimbot.RecoverySpeed
+        curSmooth = curSmooth
+            + (AimbotSettings.Smoothness - curSmooth) * CONFIG.Aimbot.RecoverySpeed
     end
 
     Camera.CFrame = Camera.CFrame:Lerp(
-        CFrame.new(Camera.CFrame.Position, cachedTarget.Position), curSmooth
-    )
+        CFrame.new(Camera.CFrame.Position, cachedTarget.Position), curSmooth)
     lastCamCF = Camera.CFrame
 end)
 
@@ -510,7 +515,7 @@ fovStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 local lastFOV = -1
 RunService.RenderStepped:Connect(function()
     local show = AimbotSettings.Enabled and AimbotSettings.ShowFOV
-    fovCircle.Visible = show
+    if fovCircle.Visible ~= show then fovCircle.Visible = show end
     if not show then return end
 
     local f = AimbotSettings.FOV
@@ -519,10 +524,7 @@ RunService.RenderStepped:Connect(function()
         lastFOV = f
     end
 
-    if ui and ui._rgbActive then
-        local hue = (tick() * 0.4) % 1
-        fovStroke.Color = Color3.fromHSV(hue, 1, 1)
-    else
-        fovStroke.Color = CONFIG.FOVCircle.DefaultColor
-    end
+    fovStroke.Color = cachedTarget
+        and CONFIG.FOVCircle.LockedColor
+        or  CONFIG.FOVCircle.DefaultColor
 end)
