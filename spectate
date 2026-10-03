@@ -31,6 +31,9 @@ local function stroke(par, t, c)
 	}, par)
 end
 
+-- =========================================================
+-- ScreenGui principal (barra)
+-- =========================================================
 local sg = o("ScreenGui", {
 	Name = "SpectateGui", ResetOnSpawn = false,
 	IgnoreGuiInset = true, DisplayOrder = 2147483647,
@@ -92,6 +95,9 @@ local title = o("TextButton", {
 title.MouseEnter:Connect(function() title.TextColor3 = BLUE end)
 title.MouseLeave:Connect(function() title.TextColor3 = W end)
 
+-- =========================================================
+-- ScreenGui secundária (pill/bolinha)
+-- =========================================================
 local PillGui = o("ScreenGui", {
 	Name = "SpectatePillGui", ResetOnSpawn = false,
 	IgnoreGuiInset = true, DisplayOrder = 9999,
@@ -121,6 +127,9 @@ local pillBtn = o("TextButton", {
 pillBtn.MouseEnter:Connect(function() pillBtn.TextColor3 = BLUE end)
 pillBtn.MouseLeave:Connect(function() pillBtn.TextColor3 = DIM end)
 
+-- =========================================================
+-- Drag da bolinha
+-- =========================================================
 do
 	local dragging, dragMoved, dragStart, startPos, _tid = false, false, nil, nil, nil
 	pillBtn.InputBegan:Connect(function(inp)
@@ -156,19 +165,44 @@ do
 	end)
 end
 
+-- =========================================================
+-- Estado do spectate
+-- =========================================================
 local cam = workspace.CurrentCamera
 local players = Players:GetPlayers()
 local currentIndex = 1
+local menuOpen = false
 
-task.spawn(function()
-	while true do
-		task.wait(10)
-		players = Players:GetPlayers()
-		if currentIndex > #players then
-			currentIndex = #players
-		end
+-- Atualiza a lista preservando um índice válido
+local function refreshPlayers()
+	players = Players:GetPlayers()
+	if #players == 0 then
+		currentIndex = 1
+		return
 	end
-end)
+	if currentIndex > #players then
+		currentIndex = #players
+	elseif currentIndex < 1 then
+		currentIndex = 1
+	end
+end
+
+-- Encontra o próximo índice válido (pulando o próprio jogador)
+-- dir = 1 (próximo) ou -1 (anterior)
+local function findNextValid(startIdx, dir)
+	if #players == 0 then return 1 end
+	local i = startIdx
+	-- Percorre no máximo #players vezes para evitar loop infinito
+	for _ = 1, #players do
+		if i < 1 or i > #players then return startIdx end
+		local p = players[i]
+		if p and p ~= Player then
+			return i
+		end
+		i = i + dir
+	end
+	return startIdx
+end
 
 local function getCurrentTarget()
 	local p = players[currentIndex]
@@ -179,44 +213,88 @@ local function getCurrentTarget()
 end
 
 local function updateCameraAndTitle(index)
-	if #players == 0 then return end
+	-- Se for o próprio jogador (índice 1 normalmente), restaura a câmera
 	local p = players[index]
-	if p and p.Character then
+	if not p or p == Player then
+		if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+			cam.CameraSubject = Player.Character.Humanoid
+		end
+		title.Text = string.format("%s (@%s)", Player.DisplayName, Player.Name)
+		return
+	end
+	if p.Character and p.Character:FindFirstChild("Humanoid") then
 		cam.CameraSubject = p.Character.Humanoid
 		title.Text = string.format("%s (@%s)", p.DisplayName, p.Name)
 	end
 end
 
-updateCameraAndTitle(currentIndex)
-
-local debounce = false
-pillBtn.MouseButton1Click:Connect(function()
-	if debounce == false then
-		debounce = true
-		bar.Position = UDim2.new(0.5, -110, 0.88, -25)
-		pcall(function()
-			local p = Players:GetPlayerFromCharacter(cam.CameraSubject.Parent)
-			title.Text = string.format("%s (@%s)", p.DisplayName, p.Name)
-		end)
-	else
-		debounce = false
-		pcall(function() cam.CameraSubject = Player.Character.Humanoid end)
-		bar.Position = UDim2.new(-1, -100, 0.88, -25)
+-- Loop de atualização periódica da lista
+task.spawn(function()
+	while true do
+		task.wait(10)
+		refreshPlayers()
 	end
 end)
 
+updateCameraAndTitle(currentIndex)
+
+-- =========================================================
+-- Toggle da bolinha
+-- =========================================================
+pillBtn.MouseButton1Click:Connect(function()
+	if not menuOpen then
+		-- ABRINDO
+		menuOpen = true
+		refreshPlayers()
+		currentIndex = 1                       -- sempre começa do zero
+		bar.Position = UDim2.new(0.5, -110, 0.88, -25)
+		updateCameraAndTitle(currentIndex)
+	else
+		-- FECHANDO
+		menuOpen = false
+		bar.Position = UDim2.new(-1, -100, 0.88, -25)
+
+		-- Restaura a câmera para o próprio jogador (se possível)
+		if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+			cam.CameraSubject = Player.Character.Humanoid
+		end
+
+		currentIndex = 1                       -- reseta para quando reabrir
+	end
+end)
+
+-- =========================================================
+-- Navegação (sem wrap-around, pulando o próprio jogador)
+-- =========================================================
 prev.MouseButton1Click:Connect(function()
-	currentIndex = currentIndex - 1
-	if currentIndex < 1 then currentIndex = #players end
-	updateCameraAndTitle(currentIndex)
+	if #players == 0 then return end
+	if currentIndex <= 1 then
+		-- já está no início, não faz nada
+		return
+	end
+	local newIdx = findNextValid(currentIndex - 1, -1)
+	if newIdx ~= currentIndex then
+		currentIndex = newIdx
+		updateCameraAndTitle(currentIndex)
+	end
 end)
 
 nex.MouseButton1Click:Connect(function()
-	currentIndex = currentIndex + 1
-	if currentIndex > #players then currentIndex = 1 end
-	updateCameraAndTitle(currentIndex)
+	if #players == 0 then return end
+	if currentIndex >= #players then
+		-- já está no fim, não faz nada
+		return
+	end
+	local newIdx = findNextValid(currentIndex + 1, 1)
+	if newIdx ~= currentIndex then
+		currentIndex = newIdx
+		updateCameraAndTitle(currentIndex)
+	end
 end)
 
+-- =========================================================
+-- Teleporte ao clicar no título
+-- =========================================================
 title.MouseButton1Click:Connect(function()
 	local target = getCurrentTarget()
 	if not target then return end
