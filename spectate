@@ -1,35 +1,34 @@
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
-local UIS     = game:GetService("UserInputService")
-local Player  = Players.LocalPlayer
 
-local BG    = Color3.fromRGB(18,  32,  20)
-local CARD  = Color3.fromRGB(26,  44,  28)
-local HOVER = Color3.fromRGB(34,  56,  36)
-local LINE  = Color3.fromRGB(50,  75,  52)
-local DIM   = Color3.fromRGB(180, 195, 180)
-local MID   = Color3.fromRGB(220, 230, 220)
-local W     = Color3.fromRGB(255, 255, 255)
-local BLUE  = Color3.fromRGB(90,  200, 255)
-local BLUEDK= Color3.fromRGB(60,  150, 200)
-local YELLOW= Color3.fromRGB(255, 210, 60)
-local FONT  = Enum.Font.GothamMedium
+local Player = Players.LocalPlayer
+local Cam    = workspace.CurrentCamera
 
-local BAR_TRANSPARENCY  = 0.22
-local CARD_TRANSPARENCY = 0.15
+local PILL_BG    = Color3.fromRGB(18, 18, 21)
+local PILL_LINE  = Color3.fromRGB(55, 55, 62)
+local MID        = Color3.fromRGB(220, 225, 230)
+local W          = Color3.fromRGB(255, 255, 255)
+local BLUE       = Color3.fromRGB(90, 200, 255)
+local FONT       = Enum.Font.GothamMedium
+local BAR_TRANS  = 0.08
 
-local function o(cls, props, par)
-	local x = Instance.new(cls)
-	for k, v in pairs(props) do x[k] = v end
-	if par then x.Parent = par end
-	return x
+local players      = {}
+local currentIndex = 1
+local menuOpen     = false
+
+local function new(cls, props, parent)
+	local inst = Instance.new(cls)
+	for k, v in pairs(props) do inst[k] = v end
+	if parent then inst.Parent = parent end
+	return inst
 end
 
-local function stroke(par, t, c)
-	o("UIStroke", {
-		Color = c or LINE, Thickness = t or 1,
+local function addStroke(parent, thickness, color)
+	new("UIStroke", {
+		Color = color or PILL_LINE,
+		Thickness = thickness or 1,
 		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-	}, par)
+	}, parent)
 end
 
 local function getHui()
@@ -38,91 +37,98 @@ local function getHui()
 		local ok, res = pcall(fn)
 		if ok and res then return res end
 	end
-	return nil
 end
 
-local sg = o("ScreenGui", {
-	Name = "SpectateGui", ResetOnSpawn = false,
+local parentTarget = getHui() or CoreGui
+
+local sg = new("ScreenGui", {
+	Name = "SpectateGui",
+	ResetOnSpawn = false,
 	IgnoreGuiInset = true,
 	DisplayOrder = 0,
 })
-local parentTarget = getHui() or CoreGui
-local ok = pcall(function() sg.Parent = parentTarget end)
-if not ok then sg.Parent = Player:WaitForChild("PlayerGui") end
+if not pcall(function() sg.Parent = parentTarget end) then
+	sg.Parent = Player:WaitForChild("PlayerGui")
+end
 
-local bar = o("Frame", {
+local bar = new("Frame", {
 	Name = "Bar",
-	Parent = sg,
 	Position = UDim2.new(-1, -100, 0.88, -25),
 	Size = UDim2.new(0, 220, 0, 50),
-	BackgroundColor3 = BG, BackgroundTransparency = BAR_TRANSPARENCY,
+	BackgroundColor3 = PILL_BG,
+	BackgroundTransparency = BAR_TRANS,
 	BorderSizePixel = 0,
-})
-o("UICorner", { CornerRadius = UDim.new(0, 6) }, bar)
-stroke(bar, 1, LINE)
+}, sg)
+new("UICorner", { CornerRadius = UDim.new(1, 0) }, bar)
+addStroke(bar)
 
-local prev = o("TextButton", {
-	Name = "Previous", Parent = bar,
-	Size = UDim2.new(0.2, 0, 1, 0),
-	Position = UDim2.new(0, 0, 0, 0),
+local prev = new("TextButton", {
+	Name = "Previous",
+	Position = UDim2.new(0.02, 0, 0.075, 0),
+	Size = UDim2.new(0.2, 0, 0.85, 0),
 	Text = "<",
-	BackgroundColor3 = CARD, BackgroundTransparency = CARD_TRANSPARENCY,
+	BackgroundTransparency = 1,
 	BorderSizePixel = 0,
-	Font = FONT, TextColor3 = MID, TextSize = 14,
+	Font = FONT,
+	TextColor3 = MID,
+	TextSize = 16,
 	AutoButtonColor = false,
-})
-o("UICorner", { CornerRadius = UDim.new(0, 5) }, prev)
-stroke(prev, 1, LINE)
-prev.MouseEnter:Connect(function() prev.BackgroundColor3 = HOVER; prev.TextColor3 = BLUE end)
-prev.MouseLeave:Connect(function() prev.BackgroundColor3 = CARD;  prev.TextColor3 = MID end)
+}, bar)
+prev.MouseEnter:Connect(function() prev.TextColor3 = BLUE end)
+prev.MouseLeave:Connect(function() prev.TextColor3 = MID end)
 
-local nex = o("TextButton", {
-	Name = "Next", Parent = bar,
-	Size = UDim2.new(0.2, 0, 1, 0),
-	Position = UDim2.new(0.8, 0, 0, 0),
+local nex = new("TextButton", {
+	Name = "Next",
+	Position = UDim2.new(0.78, 0, 0.075, 0),
+	Size = UDim2.new(0.2, 0, 0.85, 0),
 	Text = ">",
-	BackgroundColor3 = CARD, BackgroundTransparency = CARD_TRANSPARENCY,
+	BackgroundTransparency = 1,
 	BorderSizePixel = 0,
-	Font = FONT, TextColor3 = MID, TextSize = 14,
+	Font = FONT,
+	TextColor3 = MID,
+	TextSize = 16,
 	AutoButtonColor = false,
-})
-o("UICorner", { CornerRadius = UDim.new(0, 5) }, nex)
-stroke(nex, 1, LINE)
-nex.MouseEnter:Connect(function() nex.BackgroundColor3 = HOVER; nex.TextColor3 = BLUE end)
-nex.MouseLeave:Connect(function() nex.BackgroundColor3 = CARD;  nex.TextColor3 = MID end)
+}, bar)
+nex.MouseEnter:Connect(function() nex.TextColor3 = BLUE end)
+nex.MouseLeave:Connect(function() nex.TextColor3 = MID end)
 
-local title = o("TextButton", {
-	Name = "Title", Parent = bar,
-	Position = UDim2.new(0.21, 0, 0, 0),
-	Size = UDim2.new(0.58, 0, 1, 0),
+local title = new("TextButton", {
+	Name = "Title",
+	Position = UDim2.new(0.22, 0, 0, 0),
+	Size = UDim2.new(0.56, 0, 1, 0),
 	Text = "",
-	BackgroundTransparency = 1, BorderSizePixel = 0,
-	Font = FONT, TextColor3 = W,
-	TextSize = 14, TextScaled = true,
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	Font = FONT,
+	TextColor3 = W,
+	TextSize = 14,
+	TextScaled = true,
 	AutoButtonColor = false,
-})
+}, bar)
 title.MouseEnter:Connect(function() title.TextColor3 = BLUE end)
 title.MouseLeave:Connect(function() title.TextColor3 = W end)
 
-local PillGui = o("ScreenGui", {
-	Name = "SpectatePillGui", ResetOnSpawn = false,
+local pillGui = new("ScreenGui", {
+	Name = "SpectatePillGui",
+	ResetOnSpawn = false,
 	IgnoreGuiInset = true,
 	DisplayOrder = 0,
 	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 })
-local ok2 = pcall(function() PillGui.Parent = parentTarget end)
-if not ok2 then PillGui.Parent = Player:WaitForChild("PlayerGui") end
+if not pcall(function() pillGui.Parent = parentTarget end) then
+	pillGui.Parent = Player:WaitForChild("PlayerGui")
+end
 
-local pill = o("Frame", {
+local pill = new("Frame", {
 	Name = "PillSpectate",
-	Size = UDim2.new(0, 44, 0, 44),
 	Position = UDim2.new(0, 15, 0, 105),
+	Size = UDim2.new(0, 44, 0, 44),
 	BackgroundTransparency = 1,
 	BorderSizePixel = 0,
 	ZIndex = 1,
-}, PillGui)
+}, pillGui)
 
-local container = o("Frame", {
+local container = new("Frame", {
 	Name = "Container",
 	Size = UDim2.new(1, 0, 1, 0),
 	BackgroundTransparency = 1,
@@ -130,31 +136,25 @@ local container = o("Frame", {
 	ZIndex = 1,
 }, pill)
 
-local pillBg = o("Frame", {
+local pillBg = new("Frame", {
 	Name = "Background",
 	Size = UDim2.new(1, 0, 1, 0),
-	BackgroundColor3 = Color3.fromRGB(18, 18, 21),
+	BackgroundColor3 = PILL_BG,
 	BackgroundTransparency = 0.08,
 	BorderSizePixel = 0,
 	ZIndex = 1,
 }, container)
-o("UICorner", { CornerRadius = UDim.new(1, 0) }, pillBg)
+new("UICorner", { CornerRadius = UDim.new(1, 0) }, pillBg)
+addStroke(pillBg)
 
-local pillStroke = o("UIStroke", {
-	Color = YELLOW,
-	Thickness = 2,
-	Transparency = 0.2,
-	Enabled = false,
-}, pillBg)
-
-local pillIcon = o("Frame", {
+local icon = new("Frame", {
 	Name = "Icon",
 	Size = UDim2.new(1, 0, 1, 0),
 	BackgroundTransparency = 1,
 	ZIndex = 5,
 }, container)
 
-local pillImage = o("ImageLabel", {
+local iconImage = new("ImageLabel", {
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	Position = UDim2.new(0.5, 0, 0.5, 0),
 	Size = UDim2.new(0.7, 0, 0.7, 0),
@@ -163,10 +163,10 @@ local pillImage = o("ImageLabel", {
 	ImageColor3 = Color3.fromRGB(255, 255, 255),
 	ImageTransparency = 0,
 	ZIndex = 5,
-}, pillIcon)
-o("UIAspectRatioConstraint", {}, pillImage)
+}, icon)
+new("UIAspectRatioConstraint", {}, iconImage)
 
-local pillBtn = o("TextButton", {
+local pillBtn = new("TextButton", {
 	Name = "Button",
 	Size = UDim2.new(1, 0, 1, 0),
 	BackgroundTransparency = 1,
@@ -174,69 +174,91 @@ local pillBtn = o("TextButton", {
 	ZIndex = 6,
 }, container)
 
-local cam = workspace.CurrentCamera
-local players = Players:GetPlayers()
-local currentIndex = 1
-local menuOpen = false
+local function sortPlayers()
+	local list = Players:GetPlayers()
+	table.sort(list, function(a, b)
+		return string.lower(a.Name) < string.lower(b.Name)
+	end)
+	players = list
+end
 
 local function refreshPlayers()
-	players = Players:GetPlayers()
+	local previous = players[currentIndex]
+	sortPlayers()
+
 	if #players == 0 then
 		currentIndex = 1
 		return
 	end
-	if currentIndex > #players then
-		currentIndex = #players
-	elseif currentIndex < 1 then
-		currentIndex = 1
+
+	if previous then
+		for i, p in ipairs(players) do
+			if p == previous then
+				currentIndex = i
+				return
+			end
+		end
 	end
+
+	currentIndex = math.clamp(currentIndex, 1, #players)
 end
 
 local function findNextValid(startIdx, dir)
 	if #players == 0 then return 1 end
+
 	local i = startIdx
 	for _ = 1, #players do
 		if i < 1 or i > #players then return startIdx end
 		local p = players[i]
-		if p and p ~= Player then
-			return i
-		end
-		i = i + dir
+		if p and p ~= Player then return i end
+		i += dir
 	end
 	return startIdx
 end
 
 local function getCurrentTarget()
 	local p = players[currentIndex]
-	if p and p ~= Player then
-		return p
-	end
-	return nil
+	if p and p ~= Player then return p end
 end
 
 local function updateCameraAndTitle(index)
 	local p = players[index]
+
 	if not p or p == Player then
 		if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-			cam.CameraSubject = Player.Character.Humanoid
+			Cam.CameraSubject = Player.Character.Humanoid
 		end
 		title.Text = string.format("%s (@%s)", Player.DisplayName, Player.Name)
 		return
 	end
+
 	if p.Character and p.Character:FindFirstChild("Humanoid") then
-		cam.CameraSubject = p.Character.Humanoid
+		Cam.CameraSubject = p.Character.Humanoid
 		title.Text = string.format("%s (@%s)", p.DisplayName, p.Name)
 	end
 end
+
+sortPlayers()
+
+Players.PlayerAdded:Connect(function()
+	task.wait(0.1)
+	refreshPlayers()
+	if menuOpen then updateCameraAndTitle(currentIndex) end
+end)
+
+Players.PlayerRemoving:Connect(function()
+	task.wait(0.1)
+	refreshPlayers()
+	if menuOpen then updateCameraAndTitle(currentIndex) end
+end)
 
 task.spawn(function()
 	while true do
 		task.wait(10)
 		refreshPlayers()
+		if menuOpen then updateCameraAndTitle(currentIndex) end
 	end
 end)
-
-updateCameraAndTitle(currentIndex)
 
 pillBtn.MouseButton1Click:Connect(function()
 	if not menuOpen then
@@ -245,36 +267,32 @@ pillBtn.MouseButton1Click:Connect(function()
 		currentIndex = 1
 		bar.Position = UDim2.new(0.5, -110, 0.88, -25)
 		updateCameraAndTitle(currentIndex)
-		pillStroke.Enabled = true
 	else
 		menuOpen = false
 		bar.Position = UDim2.new(-1, -100, 0.88, -25)
 
 		if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-			cam.CameraSubject = Player.Character.Humanoid
+			Cam.CameraSubject = Player.Character.Humanoid
 		end
 
 		currentIndex = 1
-		pillStroke.Enabled = false
 	end
 end)
 
 prev.MouseButton1Click:Connect(function()
-	if #players == 0 then return end
 	if currentIndex <= 1 then return end
-	local newIdx = findNextValid(currentIndex - 1, -1)
-	if newIdx ~= currentIndex then
-		currentIndex = newIdx
+	local idx = findNextValid(currentIndex - 1, -1)
+	if idx ~= currentIndex then
+		currentIndex = idx
 		updateCameraAndTitle(currentIndex)
 	end
 end)
 
 nex.MouseButton1Click:Connect(function()
-	if #players == 0 then return end
 	if currentIndex >= #players then return end
-	local newIdx = findNextValid(currentIndex + 1, 1)
-	if newIdx ~= currentIndex then
-		currentIndex = newIdx
+	local idx = findNextValid(currentIndex + 1, 1)
+	if idx ~= currentIndex then
+		currentIndex = idx
 		updateCameraAndTitle(currentIndex)
 	end
 end)
@@ -283,14 +301,13 @@ title.MouseButton1Click:Connect(function()
 	local target = getCurrentTarget()
 	if not target then return end
 
-	local myChar = Player.Character
+	local myChar     = Player.Character
 	local targetChar = target.Character
 	if not myChar or not targetChar then return end
 
-	local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+	local myRoot     = myChar:FindFirstChild("HumanoidRootPart")
 	local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
 	if not myRoot or not targetRoot then return end
 
-	local offset = targetRoot.CFrame * CFrame.new(0, 0, -3)
-	myRoot.CFrame = offset
+	myRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 0, -3)
 end)
