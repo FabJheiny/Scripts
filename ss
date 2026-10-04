@@ -116,14 +116,6 @@ local function new(cls, props, parent)
 	return inst
 end
 
-local function addStroke(parent, thickness, color)
-	new("UIStroke", {
-		Color = color or PILL_LINE,
-		Thickness = thickness or 1,
-		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-	}, parent)
-end
-
 local sg = new("ScreenGui", {
 	Name = "SpectateGui",
 	ResetOnSpawn = false,
@@ -391,4 +383,23 @@ title.MouseButton1Click:Connect(function()
 	if not myRoot or not targetRoot then return end
 
 	myRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 0, -3)
+end)
+
+repeat task.wait() until LocalPlayer.Character
+RunService.RenderStepped:Connect(function()
+	LocalPlayer.CameraMaxZoomDistance = math.huge
+	LocalPlayer.CameraMinZoomDistance = 0.1
+	if LocalPlayer.CameraMode == Enum.CameraMode.LockFirstPerson then
+		LocalPlayer.CameraMode = Enum.CameraMode.Classic
+	end
+	if Cam.CameraType == Enum.CameraType.Fixed or
+	   Cam.CameraType == Enum.CameraType.Scriptable then
+		Cam.CameraType = Enum.CameraType.Custom
+	end
+	if Cam.CameraType == Enum.CameraType.Custom then
+		local dist = (Cam.CFrame.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+		if dist < 0.5 then
+			Cam.CFrame = Cam.CFrame * CFrame.new(0, 0, 1)
+		end
+	end
 end)
