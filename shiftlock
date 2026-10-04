@@ -9,7 +9,6 @@ UI = {
 	Container = Instance.new'Frame',
 	Background = Instance.new'Frame',
 	UICorner = Instance.new'UICorner',
-	UIStroke = Instance.new'UIStroke',
 	Icon = Instance.new'Frame',
 	ImageLabel = Instance.new'ImageLabel',
 	UIAspectRatioConstraint = Instance.new'UIAspectRatioConstraint',
@@ -17,12 +16,14 @@ UI = {
 }
 
 UI.MainGui.Name = 'MouseLockGui'
+UI.MainGui.IgnoreGuiInset = true
+UI.MainGui.ResetOnSpawn = false
 UI.MainGui.Parent = gethui() or game.GetService(game, 'CoreGui')
 
 UI.MouseLock.Size = UDim2.new(0, 44, 0, 44)
 UI.MouseLock.BackgroundTransparency = 1
 UI.MouseLock.BorderSizePixel = 0
-UI.MouseLock.Position = UDim2.new(0, 15, 0, 0)
+UI.MouseLock.Position = UDim2.new(0, 15, 0, 155)
 UI.MouseLock.Parent = UI.MainGui
 
 UI.Container.Size = UDim2.new(1, 0, 1, 0)
@@ -38,12 +39,6 @@ UI.Background.Parent = UI.Container
 
 UI.UICorner.CornerRadius = UDim.new(1,0)
 UI.UICorner.Parent = UI.Background
-
-UI.UIStroke.Color = Color3.fromRGB(0,170,255)
-UI.UIStroke.Thickness = 2
-UI.UIStroke.Transparency = 0.2
-UI.UIStroke.Enabled = false
-UI.UIStroke.Parent = UI.Background
 
 UI.Icon.Size = UDim2.new(1,0,1,0)
 UI.Icon.BackgroundTransparency = 1
@@ -80,9 +75,7 @@ UI.Button.MouseButton1Click:Connect(function()
 	IsItOn = not IsItOn
 	if IsItOn == true then
 		UserGameSettings.RotationType = Enum.RotationType.CameraRelative
-		UI.UIStroke.Enabled = true
 	else
 		UserGameSettings.RotationType = Enum.RotationType.MovementRelative
-		UI.UIStroke.Enabled = false
 	end
 end)
