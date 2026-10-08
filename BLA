@@ -9,6 +9,7 @@ KronUI.__index = KronUI
 local DIM     = Color3.fromRGB(150, 145, 165)
 local MID     = Color3.fromRGB(195, 190, 215)
 local W       = Color3.fromRGB(242, 240, 250)
+local DARK  = Color3.fromRGB(15, 15, 20)
 local FONT    = Enum.Font.GothamMedium
 local FONTB   = Enum.Font.GothamBold
 
@@ -16,7 +17,6 @@ local THEMES = {
     Dark = {
         bg        = Color3.fromRGB(16, 14, 22),
         panel     = Color3.fromRGB(22, 19, 31),
-        tabbar    = Color3.fromRGB(19, 16, 27),
         card      = Color3.fromRGB(28, 24, 39),
         hover     = Color3.fromRGB(40, 34, 54),
         line      = Color3.fromRGB(54, 46, 70),
@@ -26,7 +26,6 @@ local THEMES = {
     Darkness = {
         bg        = Color3.fromRGB(5, 5, 7),
         panel     = Color3.fromRGB(8, 8, 11),
-        tabbar    = Color3.fromRGB(6, 6, 8),
         card      = Color3.fromRGB(12, 12, 15),
         hover     = Color3.fromRGB(20, 20, 24),
         line      = Color3.fromRGB(30, 30, 36),
@@ -85,7 +84,6 @@ function KronUI.new(title, pillImage)
     local t0 = THEMES[self._currentThemeName]
     self._bg      = t0.bg
     self._panel   = t0.panel
-    self._tabbar  = t0.tabbar
     self._card    = t0.card
     self._hover   = t0.hover
     self._line    = t0.line
@@ -117,7 +115,6 @@ function KronUI.new(title, pillImage)
         self._currentThemeName = themeName
         self._bg      = theme.bg
         self._panel   = theme.panel
-        self._tabbar  = theme.tabbar
         self._card    = theme.card
         self._hover   = theme.hover
         self._line    = theme.line
@@ -338,11 +335,11 @@ function KronUI.new(title, pillImage)
         Name = "TabBar",
         Size = UDim2.new(0, TABBAR_W, 1, 0),
         Position = UDim2.new(0, 0, 0, 0),
-        BackgroundColor3 = self._tabbar,
+        BackgroundColor3 = self._bg,
         BorderSizePixel = 0,
     }, self.contentFrame)
     corner(self.tabBar, CORNER_R)
-    self:_registerBaseItem(self.tabBar, "BackgroundColor3", "tabbar")
+    self:_registerBaseItem(self.tabBar, "BackgroundColor3", "bg")
 
     for _, pos in ipairs({
         UDim2.new(0, 0, 0, 0),
@@ -352,17 +349,10 @@ function KronUI.new(title, pillImage)
         local tb = o("Frame", {
             Size = UDim2.new(0, CORNER_R, 0, CORNER_R),
             Position = pos,
-            BackgroundColor3 = self._tabbar, BorderSizePixel = 0,
+            BackgroundColor3 = self._bg, BorderSizePixel = 0,
         }, self.tabBar)
-        self:_registerBaseItem(tb, "BackgroundColor3", "tabbar")
+        self:_registerBaseItem(tb, "BackgroundColor3", "bg")
     end
-
-    local tabSep = o("Frame", {
-        Size = UDim2.new(0, 1, 1, 0),
-        Position = UDim2.new(1, -1, 0, 0),
-        BackgroundColor3 = self._line, BorderSizePixel = 0,
-    }, self.tabBar)
-    self:_registerBaseItem(tabSep, "BackgroundColor3", "line")
 
     self.tabList = o("ScrollingFrame", {
         Size = UDim2.new(1, 0, 1, 0),
@@ -929,17 +919,6 @@ function KronUI:_OpenTab(labelText)
 end
 
 function KronUI:_SelectTab(id)
-    if not self._tabIndicatorThemeRegistered then
-        self._tabIndicatorThemeRegistered = true
-        self:_registerThemeCallback(function(primary)
-            for _, t in ipairs(self._tabs) do
-                if t.id == self._activeTabId then
-                    tween(t.indicator, EASE_OUT(0.14), { BackgroundColor3 = primary })
-                end
-            end
-        end)
-    end
-
     if self._activeTabId == id then return end
     self._activeTabId = id
     for _, t in ipairs(self._tabs) do
@@ -949,11 +928,11 @@ function KronUI:_SelectTab(id)
         if isActive then
             t.btn.BackgroundColor3 = self._card
             tween(t.btn, ti, { BackgroundTransparency = 0 })
-            tween(t.indicator, ti, { BackgroundColor3 = self._accent, Size = UDim2.new(0, 3, 0, 20) })
+            tween(t.indicator, ti, { BackgroundColor3 = W, Size = UDim2.new(0, 3, 0, 20) })
             t.label.TextColor3 = W
         else
             tween(t.btn, ti, { BackgroundTransparency = 1 })
-            tween(t.indicator, ti, { BackgroundColor3 = self._line, Size = UDim2.new(0, 3, 0, 0) })
+            tween(t.indicator, ti, { Size = UDim2.new(0, 3, 0, 0) })
             t.label.TextColor3 = DIM
         end
     end
@@ -978,7 +957,7 @@ function KronUI:AddTab(name)
         AnchorPoint = Vector2.new(0, 0.5),
         Position = UDim2.new(0, 0, 0.5, 0),
         Size = UDim2.new(0, 3, 0, 0),
-        BackgroundColor3 = self._line, BorderSizePixel = 0,
+        BackgroundColor3 = W, BorderSizePixel = 0,
     }, btn)
     corner(indicator, "pill")
 
@@ -1392,11 +1371,10 @@ function KronUI:_BuildDropdown(text, options, default, callback)
         BackgroundTransparency = 1,
         Position = UDim2.new(1, -54, 0, 0),
         Size = UDim2.new(0, 30, 1, 0),
-        Font = FONTB, TextSize = 11, TextColor3 = self._accent,
+        Font = FONTB, TextSize = 11, TextColor3 = W,
         TextXAlignment = Enum.TextXAlignment.Right,
         Text = selected or "",
     }, head)
-    self:_registerThemeItem(selectedLabel, "TextColor3", "accent")
 
     local arrow = o("TextLabel", {
         BackgroundTransparency = 1,
@@ -1452,9 +1430,9 @@ function KronUI:_BuildDropdown(text, options, default, callback)
             local optLabel  = row:FindFirstChild("Label")
             local ti = EASE_OUT(animate and 0.14 or 0)
             if opt == selected then
-                tween(box, ti, { BackgroundColor3 = self._accent2 })
-                if boxStroke then tween(boxStroke, ti, { Color = self._accent }) end
-                if check     then tween(check,     ti, { TextTransparency = 0 }) end
+                tween(box, ti, { BackgroundColor3 = W })
+                if boxStroke then tween(boxStroke, ti, { Color = W }) end
+                if check     then tween(check,     ti, { TextTransparency = 0, TextColor3 = DARK }) end
                 if rowStroke then tween(rowStroke, ti, { Color = self._accent2, Transparency = 0.4 }) end
                 if optLabel  then optLabel.TextColor3 = W end
             else
@@ -1471,7 +1449,6 @@ function KronUI:_BuildDropdown(text, options, default, callback)
         holder.BackgroundColor3 = self._card
         holderStroke.Color = self._line
         updateRowColors(false)
-        selectedLabel.TextColor3  = self._accent
         list.ScrollBarImageColor3 = self._accent
         for _, data in pairs(rows) do
             data.row.BackgroundColor3 = self._panel
@@ -1502,7 +1479,7 @@ function KronUI:_BuildDropdown(text, options, default, callback)
             Size = UDim2.new(1, 0, 1, 0),
             BackgroundTransparency = 1,
             Text = "✓", Font = FONTB, TextSize = 10,
-            TextColor3 = W, TextTransparency = 1,
+            TextColor3 = DARK, TextTransparency = 1,
         }, box)
         o("TextLabel", {
             Name = "Label",
@@ -1606,11 +1583,10 @@ function KronUI:_BuildMultiDropdown(text, options, defaults, callback)
         BackgroundTransparency = 1,
         Position = UDim2.new(1, -54, 0, 0),
         Size = UDim2.new(0, 30, 1, 0),
-        Font = FONTB, TextSize = 11, TextColor3 = self._accent,
+        Font = FONTB, TextSize = 11, TextColor3 = W,
         TextXAlignment = Enum.TextXAlignment.Right,
         Text = "",
     }, head)
-    self:_registerThemeItem(selectedLabel, "TextColor3", "accent")
 
     local arrow = o("TextLabel", {
         BackgroundTransparency = 1,
@@ -1663,9 +1639,9 @@ function KronUI:_BuildMultiDropdown(text, options, defaults, callback)
         local isSel  = selectedSet[opt] ~= nil
         local ti     = EASE_OUT(animate and 0.14 or 0)
         if isSel then
-            tween(box, ti, { BackgroundColor3 = self._accent2 })
-            if boxStk then tween(boxStk, ti, { Color = self._accent }) end
-            if check  then tween(check,  ti, { TextTransparency = 0 }) end
+            tween(box, ti, { BackgroundColor3 = W })
+            if boxStk then tween(boxStk, ti, { Color = W }) end
+            if check  then tween(check,  ti, { TextTransparency = 0, TextColor3 = DARK }) end
             if rowStk then tween(rowStk, ti, { Color = self._accent2, Transparency = 0.4 }) end
             if lbl    then lbl.TextColor3 = W end
         else
@@ -1697,7 +1673,6 @@ function KronUI:_BuildMultiDropdown(text, options, defaults, callback)
         holder.BackgroundColor3 = self._card
         holderStroke.Color = self._line
         updateAllRows(false)
-        selectedLabel.TextColor3  = self._accent
         list.ScrollBarImageColor3 = self._accent
         for _, data in pairs(rows) do
             data.row.BackgroundColor3 = self._panel
@@ -1737,7 +1712,7 @@ function KronUI:_BuildMultiDropdown(text, options, defaults, callback)
                 Size = UDim2.new(1, 0, 1, 0),
                 BackgroundTransparency = 1,
                 Text = "v", Font = FONTB, TextSize = 10,
-                TextColor3 = W, TextTransparency = 1,
+                TextColor3 = DARK, TextTransparency = 1,
             }, box)
             o("TextLabel", {
                 Name = "Label",
