@@ -1774,3 +1774,123 @@ function KronUI:_BuildMultiDropdown(text, options, defaults, callback)
 
     local function buildRows(optList)
         for _, child in ipairs(list:GetChildren()) do
+            if not child:IsA("UIListLayout") and not child:IsA("UIPadding") then child:Destroy() end
+        end
+        rows = {}
+
+        for opt in pairs(selectedSet) do
+            if not table.find(optList, opt) then selectedSet[opt] = nil end
+        end
+
+        for i, opt in ipairs(optList) do
+            local row = o("TextButton", {
+                Size = UDim2.new(1, 0, 0, ROW_H),
+                BackgroundColor3 = self._panel,
+                BorderSizePixel = 0, AutoButtonColor = false, Text = "",
+                LayoutOrder = i,
+            }, list)
+            corner(row, 6)
+            strokeIn(row, 1, self._line)
+
+            local box = o("Frame", {
+                Name = "Box",
+                Size = UDim2.new(0, 13, 0, 13),
+                Position = UDim2.new(0, 8, 0.5, -6.5),
+                BackgroundColor3 = self._panel, BorderSizePixel = 0,
+            }, row)
+            corner(box, 4)
+            stroke(box, 1, self._line)
+            o("TextLabel", {
+                Name = "Check",
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                Text = "v", Font = FONTB, TextSize = 10,
+                TextColor3 = W, TextTransparency = 1,
+            }, box)
+            o("TextLabel", {
+                Name = "Label",
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, 28, 0, 0),
+                Size = UDim2.new(1, -34, 1, 0),
+                Font = FONT, TextSize = 11, TextColor3 = MID,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                Text = tostring(opt),
+            }, row)
+
+            rows[opt] = { row = row }
+
+            row.MouseEnter:Connect(function()
+                if not selectedSet[opt] then row.BackgroundColor3 = self._hover end
+            end)
+            row.MouseLeave:Connect(function()
+                row.BackgroundColor3 = self._panel
+            end)
+            row.MouseButton1Click:Connect(function()
+                self._playClick()
+                if selectedSet[opt] then selectedSet[opt] = nil
+                else selectedSet[opt] = true end
+                updateRowState(opt, true)
+                rebuildSelectionText()
+                if callback then
+                    local selList = {}
+                    for k, flag in pairs(selectedSet) do
+                        if flag then table.insert(selList, k) end
+                    end
+                    table.sort(selList)
+                    task.spawn(callback, selList)
+                end
+            end)
+        end
+
+        listH = math.min(#optList * (ROW_H + 4) + 4, LIST_MAX_H)
+        updateAllRows(false)
+        rebuildSelectionText()
+    end
+
+    buildRows(options)
+
+    local function setOpen(v)
+        open = v
+        local ti = EASE_OUT(0.2)
+        tween(listWrap, ti, { Size = UDim2.new(1, 0, 0, open and listH or 0) })
+        tween(arrow,    ti, { Rotation = open and 180 or 0 })
+    end
+
+    head.MouseEnter:Connect(function() if not open then holder.BackgroundColor3 = self._hover end end)
+    head.MouseLeave:Connect(function() if not open then holder.BackgroundColor3 = self._card  end end)
+
+    table.insert(self._connections, head.MouseButton1Click:Connect(function()
+        self._playClick()
+        setOpen(not open)
+    end))
+
+    return {
+        Frame      = holder,
+        GetSelected = function()
+            local sel = {}
+            for opt, flag in pairs(selectedSet) do
+                if flag then table.insert(sel, opt) end
+            end
+            table.sort(sel)
+            return sel
+        end,
+        SetSelected = function(newSel)
+            selectedSet = {}
+            if newSel then
+                for _, opt in ipairs(newSel) do
+                    if rows[opt] then selectedSet[opt] = true end
+                end
+            end
+            updateAllRows(true)
+            rebuildSelectionText()
+        end,
+        UpdateOptions = function(newOptions)
+            if open then setOpen(false) end
+            buildRows(newOptions or {})
+        end,
+        Close = function() setOpen(false) end,
+    }
+end
+
+return KronUI
