@@ -41,7 +41,7 @@ local LocalPlayer = Players.LocalPlayer
 local Camera      = workspace.CurrentCamera
 
 local KronUI = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/Lib"))()
+    "https://raw.githubusercontent.com/FabJheiny/Scripts/refs/heads/main/Library"))()
 
 local Settings = {
     Highlight = true, Name = false, Distance = true,
