@@ -94,7 +94,6 @@ function KronUI.new(title, pillImage)
 
     self._baseItems     = {}
     self._themeItems    = {}
-    self._themeGradients = {}
     self._themeCallbacks = {}
     self._xBtn          = nil
 
@@ -107,9 +106,6 @@ function KronUI.new(title, pillImage)
 
     function self:_registerThemeItem(obj, prop, role)
         table.insert(self._themeItems, {Object = obj, Property = prop, Role = role})
-    end
-    function self:_registerThemeGradient(grad)
-        table.insert(self._themeGradients, grad)
     end
     function self:_registerThemeCallback(cb)
         table.insert(self._themeCallbacks, cb)
@@ -134,13 +130,6 @@ function KronUI.new(title, pillImage)
         for _, item in ipairs(self._themeItems) do
             item.Object[item.Property] = (item.Role == "accent" and theme.primary or theme.secondary)
         end
-        for _, grad in ipairs(self._themeGradients) do
-            grad.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, theme.secondary),
-                ColorSequenceKeypoint.new(0.5, theme.primary),
-                ColorSequenceKeypoint.new(1, theme.secondary),
-            })
-        end
         for _, cb in ipairs(self._themeCallbacks) do
             cb(theme.primary, theme.secondary)
         end
@@ -151,13 +140,6 @@ function KronUI.new(title, pillImage)
         self._accent2 = secondary
         for _, item in ipairs(self._themeItems) do
             item.Object[item.Property] = (item.Role == "accent" and primary or secondary)
-        end
-        for _, grad in ipairs(self._themeGradients) do
-            grad.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, secondary),
-                ColorSequenceKeypoint.new(0.5, primary),
-                ColorSequenceKeypoint.new(1, secondary),
-            })
         end
         for _, cb in ipairs(self._themeCallbacks) do
             cb(primary, secondary)
@@ -259,29 +241,6 @@ function KronUI.new(title, pillImage)
     titleBtn.MouseLeave:Connect(function()
         tween(titleBtn, EASE_OUT(0.12), { TextColor3 = W })
     end)
-
-    local shimmer = o("Frame", {
-        Size = UDim2.new(1, 0, 0, 2),
-        Position = UDim2.new(0, 0, 1, -2),
-        BackgroundColor3 = self._accent,
-        BorderSizePixel = 0, ZIndex = 20,
-    }, topBar)
-    self:_registerThemeItem(shimmer, "BackgroundColor3", "accent")
-    local shimmerGrad = o("UIGradient", {
-        Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, self._accent2),
-            ColorSequenceKeypoint.new(0.5, self._accent),
-            ColorSequenceKeypoint.new(1, self._accent2),
-        }),
-        Offset = Vector2.new(-1, 0),
-    }, shimmer)
-    self:_registerThemeGradient(shimmerGrad)
-    self._shimmerTween = TweenService:Create(
-        shimmerGrad,
-        TweenInfo.new(2.4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false),
-        { Offset = Vector2.new(1, 0) }
-    )
-    self._shimmerTween:Play()
 
     local xBtn = o("TextButton", {
         Size = UDim2.new(0, 38, 1, 0), Position = UDim2.new(1, -38, 0, 0),
@@ -851,23 +810,6 @@ function KronUI.new(title, pillImage)
         tween(pillScale, EASE_OUT(0.12), { Scale = 1 })
     end)
 
-    local function frostBurst()
-        local ring = o("Frame", {
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = pill.Position,
-            Size = UDim2.new(0, PILL_SIZE, 0, PILL_SIZE),
-            BackgroundTransparency = 1,
-            ZIndex = 250,
-        }, self.btnGui)
-        corner(ring, "pill")
-        local rStroke = stroke(ring, 2, self._accent)
-        tween(ring, EASE_OUT(0.45), {
-            Size = UDim2.new(0, PILL_SIZE + 60, 0, PILL_SIZE + 60),
-        })
-        tween(rStroke, EASE_OUT(0.45), { Transparency = 1 })
-        task.delay(0.45, function() ring:Destroy() end)
-    end
-
     local function showPill()
         pill.Visible = true
         pill.Size = UDim2.new(0, 0, 0, 0)
@@ -927,7 +869,7 @@ function KronUI.new(title, pillImage)
                 if not dragging then return end
                 dragging = false
                 if not dragMoved then
-                    playClick(); frostBurst(); hidePill(); showMenu()
+                    playClick(); hidePill(); showMenu()
                 end
                 dragStart = nil; startPos = nil
             elseif inp.UserInputType == Enum.UserInputType.Touch then
@@ -936,7 +878,7 @@ function KronUI.new(title, pillImage)
                 dragging = false; dragMoved = false
                 _activeTouchId = nil; dragStart = nil; startPos = nil
                 if not wasMoved then
-                    playClick(); frostBurst(); hidePill(); showMenu()
+                    playClick(); hidePill(); showMenu()
                 end
             end
         end))
@@ -949,7 +891,6 @@ function KronUI:Destroy()
     for _, conn in ipairs(self._connections) do conn:Disconnect() end
     self._connections = {}
     if self._breatheTween then self._breatheTween:Cancel() end
-    if self._shimmerTween then self._shimmerTween:Cancel() end
     if self.gui    then self.gui:Destroy()    end
     if self.btnGui then self.btnGui:Destroy() end
 end
@@ -1006,11 +947,12 @@ function KronUI:_SelectTab(id)
         t.page.Visible = isActive
         local ti = EASE_OUT(0.14)
         if isActive then
-            tween(t.btn, ti, { BackgroundColor3 = self._card })
+            t.btn.BackgroundColor3 = self._card
+            tween(t.btn, ti, { BackgroundTransparency = 0 })
             tween(t.indicator, ti, { BackgroundColor3 = self._accent, Size = UDim2.new(0, 3, 0, 20) })
             t.label.TextColor3 = W
         else
-            tween(t.btn, ti, { BackgroundColor3 = self._tabbar })
+            tween(t.btn, ti, { BackgroundTransparency = 1 })
             tween(t.indicator, ti, { BackgroundColor3 = self._line, Size = UDim2.new(0, 3, 0, 0) })
             t.label.TextColor3 = DIM
         end
@@ -1025,7 +967,8 @@ function KronUI:AddTab(name)
 
     local btn = o("TextButton", {
         Size = UDim2.new(1, 0, 0, 30),
-        BackgroundColor3 = self._tabbar,
+        BackgroundColor3 = self._card,
+        BackgroundTransparency = 1,
         BorderSizePixel = 0, AutoButtonColor = false, Text = "",
         LayoutOrder = #self._tabs + 1,
     }, self.tabList)
@@ -1051,10 +994,15 @@ function KronUI:AddTab(name)
     }, btn)
 
     btn.MouseEnter:Connect(function()
-        if self._activeTabId ~= id then tween(btn, EASE_OUT(0.12), { BackgroundColor3 = self._hover }) end
+        if self._activeTabId ~= id then
+            btn.BackgroundColor3 = self._hover
+            tween(btn, EASE_OUT(0.12), { BackgroundTransparency = 0.4 })
+        end
     end)
     btn.MouseLeave:Connect(function()
-        if self._activeTabId ~= id then tween(btn, EASE_OUT(0.12), { BackgroundColor3 = self._tabbar }) end
+        if self._activeTabId ~= id then
+            tween(btn, EASE_OUT(0.12), { BackgroundTransparency = 1 })
+        end
     end)
 
     local page = o("ScrollingFrame", {
@@ -1317,22 +1265,6 @@ function KronUI:_BuildSlider(text, min, max, default, callback)
         BackgroundColor3 = self._accent, BorderSizePixel = 0,
     }, track)
     corner(fill, "pill")
-
-    local fillGrad = o("UIGradient", {
-        Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, self._accent2),
-            ColorSequenceKeypoint.new(0.5, self._accent),
-            ColorSequenceKeypoint.new(1, self._accent2),
-        }),
-        Offset = Vector2.new(-1, 0),
-    }, fill)
-    self:_registerThemeGradient(fillGrad)
-    local fillGradTween = TweenService:Create(
-        fillGrad,
-        TweenInfo.new(2.0, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false),
-        { Offset = Vector2.new(1, 0) }
-    )
-    fillGradTween:Play()
 
     local knob = o("Frame", {
         Size = UDim2.new(0, 11, 0, 11),
