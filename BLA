@@ -6,33 +6,19 @@ local CoreGui          = game:GetService("CoreGui")
 local KronUI = {}
 KronUI.__index = KronUI
 
+local BG      = Color3.fromRGB(5, 5, 7)
+local PANEL   = Color3.fromRGB(8, 8, 11)
+local CARD    = Color3.fromRGB(12, 12, 15)
+local HOVER   = Color3.fromRGB(20, 20, 24)
+local LINE    = Color3.fromRGB(30, 30, 36)
+local ACCENT  = Color3.fromRGB(45, 40, 55)
+local ACCENT2 = Color3.fromRGB(25, 22, 32)
 local DIM     = Color3.fromRGB(150, 145, 165)
 local MID     = Color3.fromRGB(195, 190, 215)
 local W       = Color3.fromRGB(242, 240, 250)
-local DARK  = Color3.fromRGB(15, 15, 20)
+local DARK    = Color3.fromRGB(15, 15, 20)
 local FONT    = Enum.Font.GothamMedium
 local FONTB   = Enum.Font.GothamBold
-
-local THEMES = {
-    Dark = {
-        bg        = Color3.fromRGB(16, 14, 22),
-        panel     = Color3.fromRGB(22, 19, 31),
-        card      = Color3.fromRGB(28, 24, 39),
-        hover     = Color3.fromRGB(40, 34, 54),
-        line      = Color3.fromRGB(54, 46, 70),
-        primary   = Color3.fromRGB(115, 120, 140),
-        secondary = Color3.fromRGB(75, 80, 95),
-    },
-    Darkness = {
-        bg        = Color3.fromRGB(5, 5, 7),
-        panel     = Color3.fromRGB(8, 8, 11),
-        card      = Color3.fromRGB(12, 12, 15),
-        hover     = Color3.fromRGB(20, 20, 24),
-        line      = Color3.fromRGB(30, 30, 36),
-        primary   = Color3.fromRGB(45, 40, 55),
-        secondary = Color3.fromRGB(25, 22, 32),
-    },
-}
 
 local function o(cls, props, par)
     local x = Instance.new(cls)
@@ -43,7 +29,7 @@ end
 
 local function stroke(par, t, c, transp)
     return o("UIStroke", {
-        Color = c or Color3.fromRGB(54, 46, 70), Thickness = t or 1,
+        Color = c or LINE, Thickness = t or 1,
         Transparency = transp or 0,
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
     }, par)
@@ -51,7 +37,7 @@ end
 
 local function strokeIn(par, t, c, transp)
     return o("UIStroke", {
-        Color = c or Color3.fromRGB(54, 46, 70), Thickness = t or 1,
+        Color = c or LINE, Thickness = t or 1,
         Transparency = transp or 0,
         ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
     }, par)
@@ -80,68 +66,17 @@ local TABBAR_W          = 76
 function KronUI.new(title, pillImage)
     local self = setmetatable({}, KronUI)
 
-    self._currentThemeName = "Darkness"
-    local t0 = THEMES[self._currentThemeName]
-    self._bg      = t0.bg
-    self._panel   = t0.panel
-    self._card    = t0.card
-    self._hover   = t0.hover
-    self._line    = t0.line
-    self._accent  = t0.primary
-    self._accent2 = t0.secondary
+    self._bg      = BG
+    self._panel   = PANEL
+    self._card    = CARD
+    self._hover   = HOVER
+    self._line    = LINE
+    self._accent  = ACCENT
+    self._accent2 = ACCENT2
 
-    self._baseItems     = {}
-    self._themeItems    = {}
-    self._themeCallbacks = {}
-    self._xBtn          = nil
-
-    self._tabs        = {}
+    self._xBtn = nil
+    self._tabs = {}
     self._activeTabId = nil
-
-    function self:_registerBaseItem(obj, prop, role)
-        table.insert(self._baseItems, {Object = obj, Property = prop, Role = role})
-    end
-
-    function self:_registerThemeItem(obj, prop, role)
-        table.insert(self._themeItems, {Object = obj, Property = prop, Role = role})
-    end
-    function self:_registerThemeCallback(cb)
-        table.insert(self._themeCallbacks, cb)
-    end
-
-    function self:SetTheme(themeName)
-        local theme = THEMES[themeName]
-        if not theme then return end
-        self._currentThemeName = themeName
-        self._bg      = theme.bg
-        self._panel   = theme.panel
-        self._card    = theme.card
-        self._hover   = theme.hover
-        self._line    = theme.line
-        self._accent  = theme.primary
-        self._accent2 = theme.secondary
-
-        for _, item in ipairs(self._baseItems) do
-            item.Object[item.Property] = theme[item.Role]
-        end
-        for _, item in ipairs(self._themeItems) do
-            item.Object[item.Property] = (item.Role == "accent" and theme.primary or theme.secondary)
-        end
-        for _, cb in ipairs(self._themeCallbacks) do
-            cb(theme.primary, theme.secondary)
-        end
-    end
-
-    function self:SetAccent(primary, secondary)
-        self._accent  = primary
-        self._accent2 = secondary
-        for _, item in ipairs(self._themeItems) do
-            item.Object[item.Property] = (item.Role == "accent" and primary or secondary)
-        end
-        for _, cb in ipairs(self._themeCallbacks) do
-            cb(primary, secondary)
-        end
-    end
 
     local player = Players.LocalPlayer
     local pg     = player:WaitForChild("PlayerGui", 10) or player.PlayerGui
@@ -181,12 +116,8 @@ function KronUI.new(title, pillImage)
         BorderSizePixel = 0, Active = true, ClipsDescendants = true,
     }, self.gui)
     corner(self.menuFrame, CORNER_R)
-    local menuStroke = stroke(self.menuFrame, 1, self._line)
-    self:_registerBaseItem(self.menuFrame, "BackgroundColor3", "bg")
-    self:_registerBaseItem(menuStroke, "Color", "line")
-
-    local menuAccentStroke = stroke(self.menuFrame, 1.5, self._accent, 0.6)
-    self:_registerThemeItem(menuAccentStroke, "Color", "accent")
+    stroke(self.menuFrame, 1, self._line)
+    stroke(self.menuFrame, 1.5, self._accent, 0.6)
 
     local uiScaleObj = Instance.new("UIScale")
     uiScaleObj.Scale  = getUIScale(_G.KronUIScale)
@@ -206,20 +137,17 @@ function KronUI.new(title, pillImage)
         BorderSizePixel = 0, Active = true, ZIndex = 10,
     }, self.menuFrame)
     corner(topBar, CORNER_R)
-    self:_registerBaseItem(topBar, "BackgroundColor3", "bg")
 
-    local c1 = o("Frame", {
+    o("Frame", {
         Size = UDim2.new(0, CORNER_R, 0, CORNER_R),
         Position = UDim2.new(0, 0, 1, -CORNER_R),
         BackgroundColor3 = self._bg, BorderSizePixel = 0, ZIndex = 11,
     }, topBar)
-    local c2 = o("Frame", {
+    o("Frame", {
         Size = UDim2.new(0, CORNER_R, 0, CORNER_R),
         Position = UDim2.new(1, -CORNER_R, 1, -CORNER_R),
         BackgroundColor3 = self._bg, BorderSizePixel = 0, ZIndex = 11,
     }, topBar)
-    self:_registerBaseItem(c1, "BackgroundColor3", "bg")
-    self:_registerBaseItem(c2, "BackgroundColor3", "bg")
 
     local titleBtn = o("TextButton", {
         Size = UDim2.new(1, -50, 1, 0),
@@ -246,19 +174,17 @@ function KronUI.new(title, pillImage)
         AutoButtonColor = false, ZIndex = 11,
     }, topBar)
     corner(xBtn, CORNER_R)
-    self:_registerBaseItem(xBtn, "BackgroundColor3", "bg")
 
     for _, pos in ipairs({
         UDim2.new(0, 0, 0, 0),
         UDim2.new(0, 0, 1, -CORNER_R),
         UDim2.new(1, -CORNER_R, 1, -CORNER_R),
     }) do
-        local cc = o("Frame", {
+        o("Frame", {
             Size = UDim2.new(0, CORNER_R, 0, CORNER_R),
             Position = pos,
             BackgroundColor3 = self._bg, BorderSizePixel = 0, ZIndex = 12,
         }, xBtn)
-        self:_registerBaseItem(cc, "BackgroundColor3", "bg")
     end
 
     self._xBtn = xBtn
@@ -316,20 +242,17 @@ function KronUI.new(title, pillImage)
         BorderSizePixel = 0,
     }, self.menuFrame)
     corner(self.contentFrame, CORNER_R)
-    self:_registerBaseItem(self.contentFrame, "BackgroundColor3", "panel")
 
-    local cf1 = o("Frame", {
+    o("Frame", {
         Size = UDim2.new(0, CORNER_R, 0, CORNER_R),
         Position = UDim2.new(0, 0, 0, 0),
         BackgroundColor3 = self._panel, BorderSizePixel = 0,
     }, self.contentFrame)
-    local cf2 = o("Frame", {
+    o("Frame", {
         Size = UDim2.new(0, CORNER_R, 0, CORNER_R),
         Position = UDim2.new(1, -CORNER_R, 0, 0),
         BackgroundColor3 = self._panel, BorderSizePixel = 0,
     }, self.contentFrame)
-    self:_registerBaseItem(cf1, "BackgroundColor3", "panel")
-    self:_registerBaseItem(cf2, "BackgroundColor3", "panel")
 
     self.tabBar = o("Frame", {
         Name = "TabBar",
@@ -339,19 +262,17 @@ function KronUI.new(title, pillImage)
         BorderSizePixel = 0,
     }, self.contentFrame)
     corner(self.tabBar, CORNER_R)
-    self:_registerBaseItem(self.tabBar, "BackgroundColor3", "bg")
 
     for _, pos in ipairs({
         UDim2.new(0, 0, 0, 0),
         UDim2.new(1, -CORNER_R, 0, 0),
         UDim2.new(1, -CORNER_R, 1, -CORNER_R),
     }) do
-        local tb = o("Frame", {
+        o("Frame", {
             Size = UDim2.new(0, CORNER_R, 0, CORNER_R),
             Position = pos,
             BackgroundColor3 = self._bg, BorderSizePixel = 0,
         }, self.tabBar)
-        self:_registerBaseItem(tb, "BackgroundColor3", "bg")
     end
 
     self.tabList = o("ScrollingFrame", {
@@ -365,7 +286,6 @@ function KronUI.new(title, pillImage)
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         CanvasSize = UDim2.new(1, 0, 0, 0),
     }, self.tabBar)
-    self:_registerThemeItem(self.tabList, "ScrollBarImageColor3", "accent")
     o("UIListLayout", {
         Padding = UDim.new(0, 4),
         SortOrder = Enum.SortOrder.LayoutOrder,
@@ -419,8 +339,6 @@ function KronUI.new(title, pillImage)
         local function refreshGripColor()
             setGripColor(gripActive and self._accent or self._line)
         end
-
-        self:_registerThemeCallback(function() refreshGripColor() end)
 
         handle.MouseEnter:Connect(function() gripActive = true; refreshGripColor() end)
         handle.MouseLeave:Connect(function()
@@ -476,7 +394,7 @@ function KronUI.new(title, pillImage)
         end))
     end
 
-    local POPUP_W, POPUP_H = 260, 178
+    local POPUP_W, POPUP_H = 260, 96
 
     local clickCatcher = o("TextButton", {
         Size = UDim2.new(1, 0, 1, 0),
@@ -495,9 +413,7 @@ function KronUI.new(title, pillImage)
         Visible = false, ZIndex = 100,
     }, self.menuFrame)
     corner(popup, 10)
-    local popupStroke = stroke(popup, 1, self._line)
-    self:_registerBaseItem(popup, "BackgroundColor3", "panel")
-    self:_registerBaseItem(popupStroke, "Color", "line")
+    stroke(popup, 1, self._line)
 
     o("TextLabel", {
         Size = UDim2.new(1, -20, 0, 18),
@@ -527,11 +443,10 @@ function KronUI.new(title, pillImage)
         BackgroundTransparency = 1,
         Text = tostring(_G.KronUIScale),
         Font = FONTB, TextSize = 11,
-        TextColor3 = self._accent,
+        TextColor3 = W,
         TextXAlignment = Enum.TextXAlignment.Right,
         ZIndex = 101,
     }, popup)
-    self:_registerThemeItem(scaleValueLabel, "TextColor3", "accent")
 
     local SLIDER_W = POPUP_W - 24
     local SLIDER_MIN, SLIDER_MAX = 1, 35
@@ -544,7 +459,6 @@ function KronUI.new(title, pillImage)
         ZIndex = 101,
     }, popup)
     corner(scaleTrack, "pill")
-    self:_registerBaseItem(scaleTrack, "BackgroundColor3", "line")
 
     local initialRel = (_G.KronUIScale - SLIDER_MIN) / (SLIDER_MAX - SLIDER_MIN)
 
@@ -555,7 +469,6 @@ function KronUI.new(title, pillImage)
         ZIndex = 101,
     }, scaleTrack)
     corner(scaleFill, "pill")
-    self:_registerThemeItem(scaleFill, "BackgroundColor3", "accent")
 
     local scaleKnob = o("Frame", {
         Size = UDim2.new(0, 12, 0, 12),
@@ -566,8 +479,7 @@ function KronUI.new(title, pillImage)
         ZIndex = 102,
     }, scaleTrack)
     corner(scaleKnob, "pill")
-    local scaleKnobStroke = stroke(scaleKnob, 1.5, self._accent)
-    self:_registerThemeItem(scaleKnobStroke, "Color", "accent")
+    stroke(scaleKnob, 1.5, self._accent)
 
     local scaleGrabber = o("TextButton", {
         Size = UDim2.new(1, 0, 0, 22),
@@ -623,84 +535,6 @@ function KronUI.new(title, pillImage)
         end))
     end
 
-    o("TextLabel", {
-        Size = UDim2.new(0, 120, 0, 14),
-        Position = UDim2.new(0, 12, 0, 92),
-        BackgroundTransparency = 1,
-        Text = "Tema",
-        Font = FONT, TextSize = 11,
-        TextColor3 = MID,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 101,
-    }, popup)
-
-    local themeHolder = o("Frame", {
-        Size = UDim2.new(0, POPUP_W - 24, 0, 32),
-        Position = UDim2.new(0, 12, 0, 114),
-        BackgroundTransparency = 1,
-        ZIndex = 101,
-    }, popup)
-    o("UIListLayout", {
-        FillDirection = Enum.FillDirection.Horizontal,
-        Padding = UDim.new(0, 8),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-    }, themeHolder)
-
-    local themeButtons = {}
-    local themeBtnW = (POPUP_W - 24 - 8) / 2
-
-    local function refreshThemeButtons()
-        for name, data in pairs(themeButtons) do
-            if name == self._currentThemeName then
-                data.btn.BackgroundColor3 = self._accent2
-                data.stroke.Color = self._accent
-                data.btn.TextColor3 = W
-            else
-                data.btn.BackgroundColor3 = self._card
-                data.stroke.Color = self._line
-                data.btn.TextColor3 = MID
-            end
-        end
-    end
-
-    for i, name in ipairs({ "Dark", "Darkness" }) do
-        local btn = o("TextButton", {
-            Size = UDim2.new(0, themeBtnW, 1, 0),
-            BackgroundColor3 = self._card,
-            BorderSizePixel = 0, AutoButtonColor = false,
-            Text = name,
-            Font = FONTB, TextSize = 11,
-            TextColor3 = MID,
-            LayoutOrder = i,
-            ZIndex = 102,
-        }, themeHolder)
-        corner(btn, 7)
-        local btnStroke = strokeIn(btn, 1, self._line)
-
-        themeButtons[name] = { btn = btn, stroke = btnStroke }
-
-        btn.MouseEnter:Connect(function()
-            if self._currentThemeName ~= name then
-                tween(btn, EASE_OUT(0.12), { BackgroundColor3 = self._hover })
-            end
-        end)
-        btn.MouseLeave:Connect(function()
-            if self._currentThemeName ~= name then
-                tween(btn, EASE_OUT(0.12), { BackgroundColor3 = self._card })
-            end
-        end)
-
-        table.insert(self._connections, btn.MouseButton1Click:Connect(function()
-            playClick()
-            self:SetTheme(name)
-            refreshThemeButtons()
-        end))
-    end
-
-    self:_registerThemeCallback(function()
-        refreshThemeButtons()
-    end)
-
     local popupOpen = false
 
     local function openPopup()
@@ -750,11 +584,8 @@ function KronUI.new(title, pillImage)
         Visible = false, ZIndex = 200,
     }, self.btnGui)
     corner(pill, "pill")
-    local pillStroke = stroke(pill, 1, self._line)
+    stroke(pill, 1, self._line)
     local pillGlow = stroke(pill, 1.5, self._accent, 0.7)
-    self:_registerBaseItem(pill, "BackgroundColor3", "bg")
-    self:_registerBaseItem(pillStroke, "Color", "line")
-    self:_registerThemeItem(pillGlow, "Color", "accent")
     self._pill = pill
 
     self._breatheTween = TweenService:Create(
@@ -997,7 +828,6 @@ function KronUI:AddTab(name)
         CanvasSize = UDim2.new(1, 0, 0, 0),
         Visible = false,
     }, self.pagesHolder)
-    self:_registerThemeItem(page, "ScrollBarImageColor3", "accent")
     o("UIListLayout", {
         Padding = UDim.new(0, 6),
         SortOrder = Enum.SortOrder.LayoutOrder,
@@ -1060,12 +890,11 @@ function KronUI:_BuildSectionLabel(text)
         BackgroundTransparency = 1,
         LayoutOrder = self:_nextOrder(),
     }, self.container)
-    local bar = o("Frame", {
+    o("Frame", {
         Size = UDim2.new(0, 3, 0, 12),
         Position = UDim2.new(0, 2, 0.5, -6),
         BackgroundColor3 = self._accent, BorderSizePixel = 0,
     }, holder)
-    self:_registerThemeItem(bar, "BackgroundColor3", "accent")
     o("TextLabel", {
         Size = UDim2.new(1, -16, 1, 0),
         Position = UDim2.new(0, 12, 0, 0),
@@ -1089,7 +918,6 @@ function KronUI:_BuildDivider()
         Position = UDim2.new(0, 0, 0.5, 0),
         BackgroundColor3 = self._line, BorderSizePixel = 0,
     }, holder)
-    self:_registerBaseItem(line, "BackgroundColor3", "line")
     o("UIGradient", {
         Transparency = NumberSequence.new({
             NumberSequenceKeypoint.new(0, 1),
@@ -1155,8 +983,6 @@ function KronUI:_BuildToggle(text, default, callback)
     end
     refresh(false)
 
-    self:_registerThemeCallback(function() refresh(false) end)
-
     btn.MouseEnter:Connect(function() if not state then btn.BackgroundColor3 = self._hover end end)
     btn.MouseLeave:Connect(function() btn.BackgroundColor3 = self._card end)
 
@@ -1196,11 +1022,6 @@ function KronUI:_BuildButton(text, callback)
         btn.TextColor3 = MID
     end)
 
-    self:_registerThemeCallback(function()
-        btn.BackgroundColor3 = self._card
-        btnStroke.Color = self._line
-    end)
-
     table.insert(self._connections, btn.MouseButton1Click:Connect(function()
         self._playClick()
         if callback then task.spawn(callback) end
@@ -1219,7 +1040,7 @@ function KronUI:_BuildSlider(text, min, max, default, callback)
         BorderSizePixel = 0,
         LayoutOrder = self:_nextOrder(),
     }, self.container)
-    local holderStroke = strokeIn(holder, 1, self._line)
+    strokeIn(holder, 1, self._line)
     corner(holder, 8)
 
     local label = o("TextLabel", {
@@ -1252,8 +1073,7 @@ function KronUI:_BuildSlider(text, min, max, default, callback)
         BackgroundColor3 = W, BorderSizePixel = 0,
     }, track)
     corner(knob, "pill")
-    local knobStroke = stroke(knob, 1.5, self._accent)
-    self:_registerThemeItem(knobStroke, "Color", "accent")
+    stroke(knob, 1.5, self._accent)
 
     local bubble = o("TextLabel", {
         AnchorPoint = Vector2.new(0.5, 1),
@@ -1262,17 +1082,7 @@ function KronUI:_BuildSlider(text, min, max, default, callback)
         Text = "", TextColor3 = W, Font = FONTB, TextSize = 10,
         Visible = false, ZIndex = 6,
     }, track)
-    self:_registerThemeItem(bubble, "BackgroundColor3", "accent")
     corner(bubble, 5)
-
-    self:_registerThemeCallback(function(primary, secondary)
-        fill.BackgroundColor3    = primary
-        knobStroke.Color         = primary
-        bubble.BackgroundColor3  = primary
-        track.BackgroundColor3   = self._line
-        holder.BackgroundColor3  = self._card
-        holderStroke.Color       = self._line
-    end)
 
     local function redraw()
         local rel = (value - min) / (max - min)
@@ -1348,7 +1158,7 @@ function KronUI:_BuildDropdown(text, options, default, callback)
         BorderSizePixel = 0, ClipsDescendants = true,
         LayoutOrder = self:_nextOrder(),
     }, self.container)
-    local holderStroke = strokeIn(holder, 1, self._line)
+    strokeIn(holder, 1, self._line)
     corner(holder, 8)
 
     local head = o("TextButton", {
@@ -1405,7 +1215,6 @@ function KronUI:_BuildDropdown(text, options, default, callback)
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         CanvasSize = UDim2.new(1, 0, 0, 0),
     }, listWrap)
-    self:_registerThemeItem(list, "ScrollBarImageColor3", "accent")
     o("UIListLayout", {
         Padding = UDim.new(0, 4),
         SortOrder = Enum.SortOrder.LayoutOrder,
@@ -1444,16 +1253,6 @@ function KronUI:_BuildDropdown(text, options, default, callback)
             end
         end
     end
-
-    self:_registerThemeCallback(function()
-        holder.BackgroundColor3 = self._card
-        holderStroke.Color = self._line
-        updateRowColors(false)
-        list.ScrollBarImageColor3 = self._accent
-        for _, data in pairs(rows) do
-            data.row.BackgroundColor3 = self._panel
-        end
-    end)
 
     local setOpen
     for i, opt in ipairs(options) do
@@ -1560,7 +1359,7 @@ function KronUI:_BuildMultiDropdown(text, options, defaults, callback)
         BorderSizePixel = 0, ClipsDescendants = true,
         LayoutOrder = self:_nextOrder(),
     }, self.container)
-    local holderStroke = strokeIn(holder, 1, self._line)
+    strokeIn(holder, 1, self._line)
     corner(holder, 8)
 
     local head = o("TextButton", {
@@ -1616,7 +1415,6 @@ function KronUI:_BuildMultiDropdown(text, options, defaults, callback)
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         CanvasSize = UDim2.new(1, 0, 0, 0),
     }, listWrap)
-    self:_registerThemeItem(list, "ScrollBarImageColor3", "accent")
     o("UIListLayout", {
         Padding = UDim.new(0, 4),
         SortOrder = Enum.SortOrder.LayoutOrder,
@@ -1668,16 +1466,6 @@ function KronUI:_BuildMultiDropdown(text, options, defaults, callback)
         else               selectedLabel.Text = #sel .. " sel."
         end
     end
-
-    self:_registerThemeCallback(function()
-        holder.BackgroundColor3 = self._card
-        holderStroke.Color = self._line
-        updateAllRows(false)
-        list.ScrollBarImageColor3 = self._accent
-        for _, data in pairs(rows) do
-            data.row.BackgroundColor3 = self._panel
-        end
-    end)
 
     local function buildRows(optList)
         for _, child in ipairs(list:GetChildren()) do
