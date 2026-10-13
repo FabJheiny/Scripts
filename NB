@@ -1,0 +1,1685 @@
+local Players            = game:GetService("Players")
+local RunService         = game:GetService("RunService")
+local UserGameSettings   = UserSettings():GetService("UserGameSettings")
+local CoreGui            = game:GetService("CoreGui")
+local UIS                = game:GetService("UserInputService")
+local TweenService       = game:GetService("TweenService")
+local StarterGui         = game:GetService("StarterGui")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+
+local LocalPlayer = Players.LocalPlayer
+local Cam         = workspace.CurrentCamera
+
+local function getHui()
+	local fn = rawget(getfenv(), "gethui")
+	if type(fn) == "function" then
+		local ok, res = pcall(fn)
+		if ok and res then return res end
+	end
+end
+
+local function getGlobalEnv()
+	if typeof(getgenv) == "function" then
+		local ok, env = pcall(getgenv)
+		if ok and env then return env end
+	end
+	return _G
+end
+
+local parentTarget = getHui() or CoreGui
+local genv = getGlobalEnv()
+
+if genv.SpectatePillGui_Cleanup then
+	pcall(genv.SpectatePillGui_Cleanup)
+	genv.SpectatePillGui_Cleanup = nil
+end
+
+for _, obj in ipairs(parentTarget:GetChildren()) do
+	if obj.Name == "SpectatePillGui" then
+		pcall(function() obj:Destroy() end)
+	end
+end
+
+local _shutdown = false
+local connections = {}
+
+local function track(conn)
+	table.insert(connections, conn)
+	return conn
+end
+
+local IsItOn = false
+
+local pillGui = Instance.new("ScreenGui")
+pillGui.Name = "SpectatePillGui"
+pillGui.ResetOnSpawn = false
+pillGui.IgnoreGuiInset = true
+pillGui.DisplayOrder = 0
+pillGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+if not pcall(function() pillGui.Parent = parentTarget end) then
+	pillGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+local PILL_BG    = Color3.fromRGB(18, 18, 21)
+local MID        = Color3.fromRGB(220, 225, 230)
+local W          = Color3.fromRGB(255, 255, 255)
+local BLUE       = Color3.fromRGB(90, 200, 255)
+local GREEN      = Color3.fromRGB(120, 230, 150)
+local RED        = Color3.fromRGB(240, 100, 100)
+local FONT       = Enum.Font.GothamMedium
+local BAR_TRANS  = 0.08
+
+local HOVER_COLOR = Color3.fromRGB(42, 42, 48)
+local PRESS_COLOR = Color3.fromRGB(65, 65, 72)
+
+local function new(cls, props, parent)
+	local inst = Instance.new(cls)
+	for k, v in pairs(props) do inst[k] = v end
+	if parent then inst.Parent = parent end
+	return inst
+end
+
+local function attachButtonFeedback(btn, bgFrame, baseTrans)
+	baseTrans = baseTrans or BAR_TRANS
+
+	local hovering  = false
+	local pressing  = false
+	local lockColor = nil
+	local lockTrans = nil
+
+	local function apply()
+		if lockColor then
+			bgFrame.BackgroundColor3 = lockColor
+			bgFrame.BackgroundTransparency = lockTrans or baseTrans
+			return
+		end
+		local targetColor
+		if pressing then
+			targetColor = PRESS_COLOR
+		elseif hovering then
+			targetColor = HOVER_COLOR
+		else
+			targetColor = PILL_BG
+		end
+		bgFrame.BackgroundColor3 = targetColor
+		bgFrame.BackgroundTransparency = baseTrans
+	end
+
+	btn.MouseEnter:Connect(function() hovering = true;  apply() end)
+	btn.MouseLeave:Connect(function() hovering = false; pressing = false; apply() end)
+	btn.MouseButton1Down:Connect(function() pressing = true;  apply() end)
+	btn.MouseButton1Up:Connect(function()   pressing = false; apply() end)
+
+	return {
+		setLock = function(color, trans)
+			lockColor = color
+			lockTrans = trans
+			apply()
+		end,
+		clearLock = function()
+			lockColor = nil
+			lockTrans = nil
+			apply()
+		end,
+	}
+end
+
+local MASTER_Y  = 70
+local PILL_SIZE = 44
+local GAP       = 10
+local STROKE_PAD = 3
+
+local BUTTON_DEFS = {
+	{ name = "MouseLock",    image = "rbxassetid://80450981243325"  },
+	{ name = "PillSpectate", image = "rbxassetid://95367294955296"  },
+	{ name = "PillExtra",    image = "rbxassetid://128627976860226" },
+	{ name = "PillWaypoint", image = "rbxassetid://127634562492512" },
+	{ name = "PillZoom",     image = "rbxassetid://121059419392731" },
+	{ name = "PillInstant",  image = "rbxassetid://137848670348849" },
+}
+
+local BUTTON_COUNT = #BUTTON_DEFS
+local stackHeight  = PILL_SIZE * BUTTON_COUNT + GAP * (BUTTON_COUNT - 1)
+local baseY        = PILL_SIZE + GAP
+local clipOffset   = PILL_SIZE / 2
+local baseYInner   = baseY - clipOffset
+local CLIP_HEIGHT  = baseYInner + stackHeight + STROKE_PAD
+
+local rig = new("Frame", {
+	Name = "Rig",
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.new(0, 15 + PILL_SIZE/2, 0, MASTER_Y + PILL_SIZE/2),
+	Size = UDim2.new(0, PILL_SIZE, 0, PILL_SIZE),
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	ZIndex = 1,
+}, pillGui)
+
+local stackClip = new("Frame", {
+	Name = "StackClip",
+	Position = UDim2.new(0, -STROKE_PAD, 0, clipOffset),
+	Size = UDim2.new(0, PILL_SIZE + STROKE_PAD * 2, 0, CLIP_HEIGHT),
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	ClipsDescendants = true,
+	ZIndex = 1,
+}, rig)
+
+local stackInner = new("Frame", {
+	Name = "StackInner",
+	Position = UDim2.new(0, STROKE_PAD, 0, baseYInner),
+	Size = UDim2.new(0, PILL_SIZE, 0, stackHeight),
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+}, stackClip)
+
+local function makePill(parent, index, imageId, pillName)
+	local y = (PILL_SIZE + GAP) * index
+
+	local frame = new("Frame", {
+		Name = pillName,
+		Position = UDim2.new(0, 0, 0, y),
+		Size = UDim2.new(0, PILL_SIZE, 0, PILL_SIZE),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+	}, parent)
+
+	local container = new("Frame", {
+		Name = "Container",
+		Size = UDim2.new(1, 0, 1, 0),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+	}, frame)
+
+	local bg = new("Frame", {
+		Name = "Background",
+		Size = UDim2.new(1, 0, 1, 0),
+		BackgroundColor3 = PILL_BG,
+		BackgroundTransparency = BAR_TRANS,
+		BorderSizePixel = 0,
+	}, container)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, bg)
+
+	local icon = new("Frame", {
+		Name = "Icon",
+		Size = UDim2.new(1, 0, 1, 0),
+		BackgroundTransparency = 1,
+		ZIndex = 5,
+	}, container)
+
+	local img = new("ImageLabel", {
+		Name = "Image",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 0, 0.5, 0),
+		Size = UDim2.new(0.7, 0, 0.7, 0),
+		BackgroundTransparency = 1,
+		Image = imageId,
+	}, icon)
+	new("UIAspectRatioConstraint", {}, img)
+
+	local btn = new("TextButton", {
+		Name = "Button",
+		Size = UDim2.new(1, 0, 1, 0),
+		BackgroundTransparency = 1,
+		Text = "",
+		ZIndex = 6,
+	}, container)
+
+	return btn, bg
+end
+
+local pillButtons = {}
+local pillStrokes = {}
+
+local function addStroke(bgFrame)
+	local s = Instance.new("UIStroke")
+	s.Color = Color3.fromRGB(255, 255, 255)
+	s.Thickness = 1.5
+	s.Transparency = 1
+	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	s.LineJoinMode = Enum.LineJoinMode.Round
+	s.Parent = bgFrame
+	return s
+end
+
+for i, def in ipairs(BUTTON_DEFS) do
+	local btn, bg = makePill(stackInner, i - 1, def.image, def.name)
+	attachButtonFeedback(btn, bg)
+	pillButtons[def.name] = btn
+	pillStrokes[def.name] = addStroke(bg)
+end
+
+local function setPillOn(name, on)
+	local s = pillStrokes[name]
+	if s then
+		s.Transparency = on and 0 or 1
+	end
+end
+
+local mlBtn    = pillButtons.MouseLock
+local pillBtn  = pillButtons.PillSpectate
+local pillBtn3 = pillButtons.PillExtra
+local pillBtn5 = pillButtons.PillWaypoint
+local pillBtn6 = pillButtons.PillZoom
+local pillBtn7 = pillButtons.PillInstant
+
+local master = new("Frame", {
+	Name = "PillMaster",
+	Position = UDim2.new(0, 15, 0, MASTER_Y),
+	Size = UDim2.new(0, PILL_SIZE, 0, PILL_SIZE),
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	ZIndex = 10,
+}, pillGui)
+
+local masterContainer = new("Frame", {
+	Name = "Container",
+	Size = UDim2.new(1, 0, 1, 0),
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	ZIndex = 10,
+}, master)
+
+local masterBg = new("Frame", {
+	Name = "Background",
+	Size = UDim2.new(1, 0, 1, 0),
+	BackgroundColor3 = PILL_BG,
+	BackgroundTransparency = BAR_TRANS,
+	BorderSizePixel = 0,
+	ZIndex = 10,
+}, masterContainer)
+new("UICorner", { CornerRadius = UDim.new(1, 0) }, masterBg)
+
+local masterIcon = new("Frame", {
+	Name = "Icon",
+	Size = UDim2.new(1, 0, 1, 0),
+	BackgroundTransparency = 1,
+	ZIndex = 11,
+}, masterContainer)
+
+local masterArrow = new("ImageLabel", {
+	Name = "Arrow",
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.new(0.5, 0, 0.5, 0),
+	Size = UDim2.new(0.7, 0, 0.7, 0),
+	BackgroundTransparency = 1,
+	Image = "rbxassetid://89079638857106",
+	ImageColor3 = W,
+	ImageTransparency = 0,
+	Rotation = 0,
+	ZIndex = 11,
+}, masterIcon)
+new("UIAspectRatioConstraint", {}, masterArrow)
+
+local masterBtn = new("TextButton", {
+	Name = "Button",
+	Size = UDim2.new(1, 0, 1, 0),
+	BackgroundTransparency = 1,
+	Text = "",
+	ZIndex = 12,
+}, masterContainer)
+
+local masterFeedback = attachButtonFeedback(masterBtn, masterBg)
+
+local stackOpen  = false
+local TWEEN_INFO = TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+
+local function setStack(open)
+	stackOpen = open
+
+	local openY     = baseYInner
+	local closedY   = -stackHeight
+	local targetY   = open and openY or closedY
+	local targetRot = open and 180 or 0
+
+	TweenService:Create(
+		stackInner, TWEEN_INFO, { Position = UDim2.new(0, STROKE_PAD, 0, targetY) }
+	):Play()
+
+	TweenService:Create(
+		masterArrow, TWEEN_INFO, { Rotation = targetRot }
+	):Play()
+end
+
+local function clampMaster(x, y)
+	local vp = Cam.ViewportSize
+	local maxX = math.max(0, vp.X - PILL_SIZE)
+	local maxY = math.max(0, vp.Y - PILL_SIZE)
+	return math.clamp(x, 0, maxX), math.clamp(y, 0, maxY)
+end
+
+local HOLD_TIME       = 0.75
+local DRAG_THRESHOLD  = 5
+
+local holding         = false
+local dragMode        = false
+local dragMoved       = false
+local holdToken       = 0
+local holdInput       = nil
+local lastInputPos    = nil
+local dragStartPos    = nil
+local dragStartMaster = nil
+
+local function isSameHold(input)
+	if not holdInput then return false end
+	if input == holdInput then return true end
+	if holdInput.UserInputType == Enum.UserInputType.MouseButton1
+	   and input.UserInputType == Enum.UserInputType.MouseMovement then
+		return true
+	end
+	return false
+end
+
+local function beginHold(input)
+	if holding then return end
+	holding         = true
+	dragMode        = false
+	dragMoved       = false
+	holdInput       = input
+	lastInputPos    = Vector2.new(input.Position.X, input.Position.Y)
+	dragStartPos    = lastInputPos
+	dragStartMaster = master.Position
+	holdToken      += 1
+	local myToken   = holdToken
+
+	task.delay(HOLD_TIME, function()
+		if _shutdown then return end
+		if holdToken == myToken and holding then
+			dragMode = true
+			if lastInputPos then
+				dragStartPos    = lastInputPos
+				dragStartMaster = master.Position
+			end
+			masterFeedback.setLock(W, 0.15)
+		end
+	end)
+end
+
+local function updateHold(input)
+	if not holding then return end
+	if not isSameHold(input) then return end
+
+	local current = Vector2.new(input.Position.X, input.Position.Y)
+	lastInputPos = current
+
+	local delta = current - dragStartPos
+	if delta.Magnitude > DRAG_THRESHOLD then
+		dragMoved = true
+	end
+
+	if dragMode then
+		local rawX = dragStartMaster.X.Offset + delta.X
+		local rawY = dragStartMaster.Y.Offset + delta.Y
+		local newX, newY = clampMaster(rawX, rawY)
+
+		master.Position = UDim2.new(0, newX, 0, newY)
+		rig.Position    = UDim2.new(0, newX + PILL_SIZE/2, 0, newY + PILL_SIZE/2)
+	end
+end
+
+local function endHold(input)
+	if not holding then return end
+	if holdInput and input ~= holdInput then return end
+
+	holding   = false
+	holdInput = nil
+	holdToken += 1
+
+	local wasDragMode = dragMode
+	dragMode = false
+
+	masterFeedback.clearLock()
+
+	if not wasDragMode and not dragMoved then
+		setStack(not stackOpen)
+	end
+end
+
+track(masterBtn.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+	or input.UserInputType == Enum.UserInputType.Touch then
+		beginHold(input)
+	end
+end))
+
+track(UIS.InputChanged:Connect(function(input)
+	if not holding then return end
+	if input.UserInputType == Enum.UserInputType.MouseMovement
+	or input.UserInputType == Enum.UserInputType.Touch then
+		updateHold(input)
+	end
+end))
+
+track(UIS.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+	or input.UserInputType == Enum.UserInputType.Touch then
+		endHold(input)
+	end
+end))
+
+setStack(true)
+
+RunService:BindToRenderStep("SmoothTrans", Enum.RenderPriority.Camera.Value + 1, function()
+	if IsItOn ~= true then return end
+	if not workspace.CurrentCamera then return end
+	if ((workspace.CurrentCamera.CFrame.Position - workspace.CurrentCamera.Focus.Position).Magnitude) < 0.6 then
+		return
+	else
+		workspace.CurrentCamera.Focus = (workspace.CurrentCamera.CFrame * CFrame.new(1.7, 0, 0)) * CFrame.new(0, 0, -((workspace.CurrentCamera.Focus.Position - workspace.CurrentCamera.CFrame.Position).Magnitude))
+		workspace.CurrentCamera.CFrame = workspace.CurrentCamera.CFrame * CFrame.new(1.7, 0, 0)
+	end
+end)
+
+mlBtn.MouseButton1Click:Connect(function()
+	IsItOn = not IsItOn
+	setPillOn("MouseLock", IsItOn)
+	if IsItOn == true then
+		UserGameSettings.RotationType = Enum.RotationType.CameraRelative
+	else
+		UserGameSettings.RotationType = Enum.RotationType.MovementRelative
+	end
+end)
+
+local infiniteZoomEnabled = false
+local zoomConn = nil
+
+local function setInfiniteZoom(enable)
+	infiniteZoomEnabled = enable
+
+	if zoomConn then
+		zoomConn:Disconnect()
+		zoomConn = nil
+	end
+
+	if not enable then
+		pcall(function()
+			LocalPlayer.CameraMode = Enum.CameraMode.Classic
+			LocalPlayer.CameraMaxZoomDistance = 128
+			LocalPlayer.CameraMinZoomDistance = 0.5
+		end)
+		return
+	end
+
+	zoomConn = track(RunService.RenderStepped:Connect(function()
+		pcall(function()
+			LocalPlayer.CameraMaxZoomDistance = math.huge
+			LocalPlayer.CameraMinZoomDistance = 0.1
+			if LocalPlayer.CameraMode == Enum.CameraMode.LockFirstPerson then
+				LocalPlayer.CameraMode = Enum.CameraMode.Classic
+			end
+			if Cam.CameraType == Enum.CameraType.Fixed
+			or Cam.CameraType == Enum.CameraType.Scriptable then
+				Cam.CameraType = Enum.CameraType.Custom
+			end
+			if Cam.CameraType == Enum.CameraType.Custom then
+				local char = LocalPlayer.Character
+				if not char then return end
+				local root = char:FindFirstChild("HumanoidRootPart")
+				if not root then return end
+				local dist = (Cam.CFrame.Position - root.Position).Magnitude
+				if dist < 0.5 then
+					Cam.CFrame = Cam.CFrame * CFrame.new(0, 0, 1)
+				end
+			end
+		end)
+	end))
+end
+
+local _firePrompt = rawget(getfenv(), "fireproximityprompt")
+if type(_firePrompt) ~= "function" then
+	_firePrompt = (type(fireproximityprompt) == "function") and fireproximityprompt or nil
+end
+
+local function firePrompt(prompt)
+	if _firePrompt then
+		pcall(_firePrompt, prompt)
+	end
+end
+
+local instantInteractEnabled = false
+local instantConn = nil
+
+local function setInstantInteraction(enable)
+	instantInteractEnabled = enable
+
+	if instantConn then
+		instantConn:Disconnect()
+		instantConn = nil
+	end
+
+	if not enable then
+		return
+	end
+
+	instantConn = track(ProximityPromptService.PromptButtonHoldBegan:Connect(function(prompt, player)
+		if instantInteractEnabled then
+			firePrompt(prompt)
+		end
+	end))
+end
+
+local players       = {}
+local currentIndex  = 1
+local menuOpen      = false
+local extraMenuOpen = false
+local waypointMenuOpen = false
+
+local bar = new("Frame", {
+	Name = "Bar",
+	Position = UDim2.new(-1, -100, 0.88, -25),
+	Size = UDim2.new(0, 220, 0, 50),
+	BackgroundColor3 = PILL_BG,
+	BackgroundTransparency = BAR_TRANS,
+	BorderSizePixel = 0,
+}, pillGui)
+new("UICorner", { CornerRadius = UDim.new(1, 0) }, bar)
+
+local prev = new("TextButton", {
+	Name = "Previous",
+	Position = UDim2.new(0.02, 0, 0.075, 0),
+	Size = UDim2.new(0.2, 0, 0.85, 0),
+	Text = "<",
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	Font = FONT,
+	TextColor3 = MID,
+	TextSize = 22,
+	AutoButtonColor = false,
+}, bar)
+prev.MouseEnter:Connect(function() prev.TextColor3 = BLUE end)
+prev.MouseLeave:Connect(function() prev.TextColor3 = MID end)
+
+local nex = new("TextButton", {
+	Name = "Next",
+	Position = UDim2.new(0.78, 0, 0.075, 0),
+	Size = UDim2.new(0.2, 0, 0.85, 0),
+	Text = ">",
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	Font = FONT,
+	TextColor3 = MID,
+	TextSize = 22,
+	AutoButtonColor = false,
+}, bar)
+nex.MouseEnter:Connect(function() nex.TextColor3 = BLUE end)
+nex.MouseLeave:Connect(function() nex.TextColor3 = MID end)
+
+local title = new("TextButton", {
+	Name = "Title",
+	Position = UDim2.new(0.22, 0, 0.1, 0),
+	Size = UDim2.new(0.56, 0, 0.8, 0),
+	Text = "",
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	Font = FONT,
+	TextColor3 = W,
+	TextSize = 14,
+	TextScaled = false,
+	TextTruncate = Enum.TextTruncate.AtEnd,
+	TextXAlignment = Enum.TextXAlignment.Center,
+	AutoButtonColor = false,
+}, bar)
+title.MouseEnter:Connect(function() title.TextColor3 = BLUE end)
+title.MouseLeave:Connect(function() title.TextColor3 = W end)
+
+-- ===== Pop-up de valor (Fly) - estilo balão com ponta =====
+local VALUE_POPUP_W    = 130
+local VALUE_POPUP_H    = 46
+local VALUE_POPUP_GAP  = 6
+local VALUE_TAIL       = 12
+local VALUE_CORNER     = 8
+local VALUE_OPEN_GRACE = 0.4
+local VALUE_EXTRA_DOWN = 22   -- empurra o balão mais para baixo do botão
+
+local valueBlocker = new("TextButton", {
+	Name = "ValuePopupBlocker",
+	Position = UDim2.new(0, 0, 0, 0),
+	Size = UDim2.new(1, 0, 1, 0),
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	Text = "",
+	AutoButtonColor = false,
+	Active = true,
+	Visible = false,
+	ZIndex = 15,
+}, pillGui)
+
+local activeValuePopup = nil
+local valueOpenedAt    = 0
+local valueTouchedAt   = 0
+
+local function makeTail(parent, onLeft)
+	local clip = new("Frame", {
+		Name = onLeft and "TailLeft" or "TailRight",
+		Position = onLeft and UDim2.new(0, -VALUE_TAIL, 0, 0) or UDim2.new(1, 0, 0, 0),
+		Size = UDim2.new(0, VALUE_TAIL, 0, VALUE_TAIL),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ClipsDescendants = true,
+		ZIndex = 20,
+	}, parent)
+
+	new("Frame", {
+		Name = "Diamond",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = onLeft and UDim2.new(1, 0, 0, 0) or UDim2.new(0, 0, 0, 0),
+		Size = UDim2.new(0, VALUE_TAIL * 1.4142, 0, VALUE_TAIL * 1.4142),
+		Rotation = 45,
+		BackgroundColor3 = PILL_BG,
+		BackgroundTransparency = 0,
+		BorderSizePixel = 0,
+		ZIndex = 20,
+	}, clip)
+
+	local filler = new("Frame", {
+		Name = onLeft and "FillerLeft" or "FillerRight",
+		AnchorPoint = onLeft and Vector2.new(0, 0) or Vector2.new(1, 0),
+		Position = onLeft and UDim2.new(0, 0, 0, 0) or UDim2.new(1, 0, 0, 0),
+		Size = UDim2.new(0, VALUE_CORNER, 0, VALUE_CORNER),
+		BackgroundColor3 = PILL_BG,
+		BackgroundTransparency = 0,
+		BorderSizePixel = 0,
+		ZIndex = 20,
+	}, parent)
+
+	return clip, filler
+end
+
+local function makeValuePopup(name, defaultText)
+	local frame = new("Frame", {
+		Name = name,
+		Position = UDim2.new(0, 0, 0, 0),
+		Size = UDim2.new(0, VALUE_POPUP_W, 0, VALUE_POPUP_H),
+		BackgroundColor3 = PILL_BG,
+		BackgroundTransparency = 0,
+		BorderSizePixel = 0,
+		Visible = false,
+		Active = true,
+		ZIndex = 20,
+	}, pillGui)
+	new("UICorner", { CornerRadius = UDim.new(0, VALUE_CORNER) }, frame)
+
+	local lc, lf = makeTail(frame, true)
+	local rc, rf = makeTail(frame, false)
+	local tails = { lc = lc, lf = lf, rc = rc, rf = rf }
+
+	local box = new("TextBox", {
+		Name = "NumberBox",
+		Position = UDim2.new(0, 10, 0, 4),
+		Size = UDim2.new(1, -20, 1, -8),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Font = FONT,
+		TextColor3 = W,
+		TextSize = 22,
+		Text = defaultText,
+		PlaceholderText = defaultText,
+		PlaceholderColor3 = MID,
+		TextXAlignment = Enum.TextXAlignment.Center,
+		ClearTextOnFocus = false,
+		ZIndex = 21,
+	}, frame)
+
+	frame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+			valueTouchedAt = os.clock()
+		end
+	end)
+	box.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+			valueTouchedAt = os.clock()
+		end
+	end)
+
+	return frame, box, tails
+end
+
+local function setTailSide(tails, onLeft)
+	tails.lc.Visible = onLeft
+	tails.lf.Visible = onLeft
+	tails.rc.Visible = not onLeft
+	tails.rf.Visible = not onLeft
+end
+
+local popup3, numberBox3, tails3 = makeValuePopup("PopupFly", "1")
+
+local function closeValuePopup()
+	local p = activeValuePopup
+	if not p then return end
+	activeValuePopup = nil
+
+	valueBlocker.Visible = false
+	p.frame.Visible = false
+	extraMenuOpen = false
+
+	if p.box:IsFocused() then
+		p.box:ReleaseFocus()
+	end
+end
+
+local function openValuePopup(frame, box, tails, anchorBtn, kind)
+	closeValuePopup()
+
+	local ap  = anchorBtn.AbsolutePosition
+	local asz = anchorBtn.AbsoluteSize
+	local vp  = Cam.ViewportSize
+
+	local onLeft = true
+	local x = ap.X + asz.X + VALUE_POPUP_GAP + VALUE_TAIL
+	if x + VALUE_POPUP_W > vp.X - 4 then
+		onLeft = false
+		x = ap.X - VALUE_POPUP_GAP - VALUE_TAIL - VALUE_POPUP_W
+	end
+	x = math.clamp(x, VALUE_TAIL + 4, math.max(VALUE_TAIL + 4, vp.X - VALUE_POPUP_W - VALUE_TAIL - 4))
+
+	local y = ap.Y + asz.Y + VALUE_POPUP_GAP + VALUE_EXTRA_DOWN
+	y = math.clamp(y, 4, math.max(4, vp.Y - VALUE_POPUP_H - 4))
+
+	setTailSide(tails, onLeft)
+	frame.Position = UDim2.new(0, x, 0, y)
+	frame.Visible = true
+	valueBlocker.Visible = true
+	valueOpenedAt = os.clock()
+
+	activeValuePopup = { frame = frame, box = box, kind = kind }
+	if kind == "fly" then
+		extraMenuOpen = true
+	end
+end
+
+valueBlocker.InputBegan:Connect(function(input)
+	if input.UserInputType ~= Enum.UserInputType.MouseButton1
+	and input.UserInputType ~= Enum.UserInputType.Touch then return end
+
+	if os.clock() - valueOpenedAt < VALUE_OPEN_GRACE then return end
+
+	local t = os.clock()
+	task.delay(0.05, function()
+		if _shutdown then return end
+		if not activeValuePopup then return end
+		if valueTouchedAt >= t - 0.05 then return end
+		closeValuePopup()
+	end)
+end)
+
+local bar5 = new("Frame", {
+	Name = "BarWaypoint",
+	Position = UDim2.new(-1, -100, 0.88, -25),
+	Size = UDim2.new(0, 220, 0, 50),
+	BackgroundColor3 = PILL_BG,
+	BackgroundTransparency = BAR_TRANS,
+	BorderSizePixel = 0,
+}, pillGui)
+new("UICorner", { CornerRadius = UDim.new(1, 0) }, bar5)
+
+local saveBtn5 = new("TextButton", {
+	Name = "Save",
+	Position = UDim2.new(0, 5, 0.5, 0),
+	AnchorPoint = Vector2.new(0, 0.5),
+	Size = UDim2.new(0, 100, 0, 40),
+	BackgroundColor3 = PILL_BG,
+	BackgroundTransparency = 0.3,
+	BorderSizePixel = 0,
+	Text = "",
+	AutoButtonColor = false,
+}, bar5)
+new("UICorner", { CornerRadius = UDim.new(1, 0) }, saveBtn5)
+
+local saveImg5 = new("ImageLabel", {
+	Name = "Image",
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.new(0.5, 0, 0.5, 0),
+	Size = UDim2.new(0.55, 0, 0.55, 0),
+	BackgroundTransparency = 1,
+	Image = "rbxassetid://98119420080865",
+	ImageColor3 = W,
+}, saveBtn5)
+new("UIAspectRatioConstraint", {}, saveImg5)
+
+saveBtn5.MouseEnter:Connect(function() saveImg5.ImageColor3 = GREEN end)
+saveBtn5.MouseLeave:Connect(function() saveImg5.ImageColor3 = W end)
+
+local tpBtn5 = new("TextButton", {
+	Name = "Teleport",
+	Position = UDim2.new(0, 115, 0.5, 0),
+	AnchorPoint = Vector2.new(0, 0.5),
+	Size = UDim2.new(0, 100, 0, 40),
+	BackgroundColor3 = PILL_BG,
+	BackgroundTransparency = 0.3,
+	BorderSizePixel = 0,
+	Text = "",
+	AutoButtonColor = false,
+}, bar5)
+new("UICorner", { CornerRadius = UDim.new(1, 0) }, tpBtn5)
+
+local tpImg5 = new("ImageLabel", {
+	Name = "Image",
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.new(0.5, 0, 0.5, 0),
+	Size = UDim2.new(0.55, 0, 0.55, 0),
+	BackgroundTransparency = 1,
+	Image = "rbxassetid://134973087992424",
+	ImageColor3 = W,
+}, tpBtn5)
+new("UIAspectRatioConstraint", {}, tpImg5)
+
+tpBtn5.MouseEnter:Connect(function() tpImg5.ImageColor3 = BLUE end)
+tpBtn5.MouseLeave:Connect(function() tpImg5.ImageColor3 = W end)
+
+-- ===== WAYPOINTS =====
+local WP_MAX              = 30
+local WP_ROW_HEIGHT       = 30
+local WP_ROW_GAP          = 4
+local WP_POPUP_PAD        = 5
+local WP_POPUP_MAX_ROWS   = 8
+local WP_POPUP_WIDTH      = 220
+local WP_FOOTER_H         = 30
+local WP_FOOTER_GAP       = 4
+local WP_SCROLL_THRESHOLD = 8
+
+local waypoints   = {}
+local wpPopupOpen = false
+
+local wpPopup = new("Frame", {
+	Name = "WaypointPopup",
+	Position = UDim2.new(-1, -100, 0.88, -25),
+	Size = UDim2.new(0, WP_POPUP_WIDTH, 0, 5 * 34 + 10),
+	BackgroundColor3 = PILL_BG,
+	BackgroundTransparency = BAR_TRANS,
+	BorderSizePixel = 0,
+	ZIndex = 5,
+	ClipsDescendants = true,
+}, pillGui)
+new("UICorner", { CornerRadius = UDim.new(0, 14) }, wpPopup)
+
+local wpScroll = new("ScrollingFrame", {
+	Name = "Scroll",
+	Position = UDim2.new(0, WP_POPUP_PAD, 0, WP_POPUP_PAD),
+	Size = UDim2.new(1, -WP_POPUP_PAD * 2, 1, -(WP_POPUP_PAD * 2 + WP_FOOTER_H + WP_FOOTER_GAP)),
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	ScrollBarThickness = 4,
+	ScrollBarImageColor3 = MID,
+	ScrollBarImageTransparency = 0.3,
+	VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar,
+	ScrollingDirection = Enum.ScrollingDirection.Y,
+	CanvasSize = UDim2.new(0, 0, 0, 0),
+	ZIndex = 6,
+}, wpPopup)
+
+local wpFooter = new("Frame", {
+	Name = "Footer",
+	AnchorPoint = Vector2.new(0, 1),
+	Position = UDim2.new(0, WP_POPUP_PAD, 1, -WP_POPUP_PAD),
+	Size = UDim2.new(1, -WP_POPUP_PAD * 2, 0, WP_FOOTER_H),
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	ZIndex = 6,
+}, wpPopup)
+
+local wpClearBtn = new("TextButton", {
+	Name = "Clear",
+	Size = UDim2.new(1, 0, 1, 0),
+	BackgroundColor3 = Color3.fromRGB(30, 30, 35),
+	BackgroundTransparency = 0.15,
+	BorderSizePixel = 0,
+	Text = "Limpar tudo",
+	Font = FONT,
+	TextColor3 = RED,
+	TextSize = 13,
+	AutoButtonColor = false,
+	ZIndex = 7,
+}, wpFooter)
+new("UICorner", { CornerRadius = UDim.new(0, 10) }, wpClearBtn)
+
+local wpConfirm = new("Frame", {
+	Name = "Confirm",
+	Size = UDim2.new(1, 0, 1, 0),
+	BackgroundColor3 = Color3.fromRGB(30, 30, 35),
+	BackgroundTransparency = 0.15,
+	BorderSizePixel = 0,
+	Visible = false,
+	ZIndex = 7,
+}, wpFooter)
+new("UICorner", { CornerRadius = UDim.new(0, 10) }, wpConfirm)
+
+local wpConfirmLabel = new("TextLabel", {
+	Name = "Label",
+	Position = UDim2.new(0, 10, 0, 0),
+	Size = UDim2.new(1, -110, 1, 0),
+	BackgroundTransparency = 1,
+	Text = "Apagar tudo?",
+	Font = FONT,
+	TextColor3 = W,
+	TextSize = 13,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ZIndex = 8,
+}, wpConfirm)
+
+local wpNoBtn = new("TextButton", {
+	Name = "No",
+	AnchorPoint = Vector2.new(1, 0.5),
+	Position = UDim2.new(1, -52, 0.5, 0),
+	Size = UDim2.new(0, 44, 0, 22),
+	BackgroundColor3 = Color3.fromRGB(55, 55, 62),
+	BackgroundTransparency = 0.1,
+	BorderSizePixel = 0,
+	Text = "Não",
+	Font = FONT,
+	TextColor3 = W,
+	TextSize = 12,
+	AutoButtonColor = false,
+	ZIndex = 8,
+}, wpConfirm)
+new("UICorner", { CornerRadius = UDim.new(0, 8) }, wpNoBtn)
+
+local wpYesBtn = new("TextButton", {
+	Name = "Yes",
+	AnchorPoint = Vector2.new(1, 0.5),
+	Position = UDim2.new(1, -4, 0.5, 0),
+	Size = UDim2.new(0, 44, 0, 22),
+	BackgroundColor3 = Color3.fromRGB(150, 50, 50),
+	BackgroundTransparency = 0.1,
+	BorderSizePixel = 0,
+	Text = "Sim",
+	Font = FONT,
+	TextColor3 = W,
+	TextSize = 12,
+	AutoButtonColor = false,
+	ZIndex = 8,
+}, wpConfirm)
+new("UICorner", { CornerRadius = UDim.new(0, 8) }, wpYesBtn)
+
+wpClearBtn.MouseEnter:Connect(function() wpClearBtn.BackgroundColor3 = HOVER_COLOR end)
+wpClearBtn.MouseLeave:Connect(function() wpClearBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 35) end)
+wpNoBtn.MouseEnter:Connect(function() wpNoBtn.BackgroundColor3 = Color3.fromRGB(75, 75, 84) end)
+wpNoBtn.MouseLeave:Connect(function() wpNoBtn.BackgroundColor3 = Color3.fromRGB(55, 55, 62) end)
+wpYesBtn.MouseEnter:Connect(function() wpYesBtn.BackgroundColor3 = Color3.fromRGB(190, 65, 65) end)
+wpYesBtn.MouseLeave:Connect(function() wpYesBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50) end)
+
+local function setClearConfirm(on)
+	wpConfirm.Visible = on
+	wpClearBtn.Visible = not on
+end
+
+local wpButtons = {}
+
+for i = 1, WP_MAX do
+	local y = (WP_ROW_HEIGHT + WP_ROW_GAP) * (i - 1)
+
+	local rowFrame = new("Frame", {
+		Name = "WP" .. i,
+		Position = UDim2.new(0, 0, 0, y),
+		Size = UDim2.new(1, 0, 0, WP_ROW_HEIGHT),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Visible = false,
+		ZIndex = 6,
+	}, wpScroll)
+
+	local b = new("TextButton", {
+		Name = "Row",
+		Position = UDim2.new(0, 0, 0, 0),
+		Size = UDim2.new(1, -62, 1, 0),
+		BackgroundColor3 = Color3.fromRGB(30, 30, 35),
+		BackgroundTransparency = 0.15,
+		BorderSizePixel = 0,
+		Text = "",
+		AutoButtonColor = false,
+		ZIndex = 7,
+	}, rowFrame)
+	new("UICorner", { CornerRadius = UDim.new(0, 10) }, b)
+
+	local wpImg = new("ImageLabel", {
+		Name = "Image",
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 6, 0.5, 0),
+		Size = UDim2.new(0, 18, 0, 18),
+		BackgroundTransparency = 1,
+		Image = "rbxassetid://98119420080865",
+		ImageColor3 = W,
+		ZIndex = 8,
+	}, b)
+	new("UIAspectRatioConstraint", {}, wpImg)
+
+	local wpLabel = new("TextLabel", {
+		Name = "Label",
+		Position = UDim2.new(0, 30, 0, 0),
+		Size = UDim2.new(1, -34, 1, 0),
+		BackgroundTransparency = 1,
+		Text = "",
+		Font = FONT,
+		TextColor3 = W,
+		TextSize = 13,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		ZIndex = 8,
+	}, b)
+
+	local editBox = new("TextBox", {
+		Name = "EditBox",
+		Position = UDim2.new(0, 30, 0, 0),
+		Size = UDim2.new(1, -34, 1, 0),
+		BackgroundTransparency = 1,
+		Text = "",
+		Font = FONT,
+		TextColor3 = BLUE,
+		TextSize = 13,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ClearTextOnFocus = false,
+		Visible = false,
+		ZIndex = 9,
+	}, b)
+
+	local editBtn = new("TextButton", {
+		Name = "EditBtn",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -30, 0.5, 0),
+		Size = UDim2.new(0, 26, 0, 26),
+		BackgroundColor3 = Color3.fromRGB(30, 30, 35),
+		BackgroundTransparency = 0.15,
+		BorderSizePixel = 0,
+		Text = "",
+		AutoButtonColor = false,
+		ZIndex = 7,
+	}, rowFrame)
+	new("UICorner", { CornerRadius = UDim.new(0, 8) }, editBtn)
+
+	local editImg = new("ImageLabel", {
+		Name = "Image",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 0, 0.5, 0),
+		Size = UDim2.new(0.6, 0, 0.6, 0),
+		BackgroundTransparency = 1,
+		Image = "rbxassetid://119395264015419",
+		ImageColor3 = MID,
+		ZIndex = 8,
+	}, editBtn)
+	new("UIAspectRatioConstraint", {}, editImg)
+
+	editBtn.MouseEnter:Connect(function() editImg.ImageColor3 = BLUE end)
+	editBtn.MouseLeave:Connect(function() editImg.ImageColor3 = MID end)
+
+	local delBtn = new("TextButton", {
+		Name = "DeleteBtn",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, 0, 0.5, 0),
+		Size = UDim2.new(0, 26, 0, 26),
+		BackgroundColor3 = Color3.fromRGB(30, 30, 35),
+		BackgroundTransparency = 0.15,
+		BorderSizePixel = 0,
+		Text = "",
+		AutoButtonColor = false,
+		ZIndex = 7,
+	}, rowFrame)
+	new("UICorner", { CornerRadius = UDim.new(0, 8) }, delBtn)
+
+	local delImg = new("ImageLabel", {
+		Name = "Image",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 0, 0.5, 0),
+		Size = UDim2.new(0.6, 0, 0.6, 0),
+		BackgroundTransparency = 1,
+		Image = "rbxassetid://134516266534000",
+		ImageColor3 = MID,
+		ZIndex = 8,
+	}, delBtn)
+	new("UIAspectRatioConstraint", {}, delImg)
+
+	delBtn.MouseEnter:Connect(function() delImg.ImageColor3 = RED end)
+	delBtn.MouseLeave:Connect(function() delImg.ImageColor3 = MID end)
+
+	wpButtons[i] = {
+		rowFrame = rowFrame,
+		button   = b,
+		img      = wpImg,
+		label    = wpLabel,
+		editBox  = editBox,
+		editBtn  = editBtn,
+		editImg  = editImg,
+		delBtn   = delBtn,
+		delImg   = delImg,
+	}
+end
+
+local function formatCoords(cf)
+	local p = cf.Position
+	return string.format("%d, %d, %d", math.round(p.X), math.round(p.Y), math.round(p.Z))
+end
+
+local function refreshWaypointPopup()
+	for i = 1, WP_MAX do
+		local wp = waypoints[i]
+		local entry = wpButtons[i]
+		if wp then
+			entry.rowFrame.Visible = true
+			entry.label.Text = wp.name or formatCoords(wp.cframe)
+			entry.editBox.Visible = false
+			entry.label.Visible = true
+		else
+			entry.rowFrame.Visible = false
+			entry.editBox.Visible = false
+			entry.label.Visible = true
+		end
+	end
+
+	local n = #waypoints
+	local contentH = 0
+	if n > 0 then
+		contentH = n * WP_ROW_HEIGHT + (n - 1) * WP_ROW_GAP
+	end
+	wpScroll.CanvasSize = UDim2.new(0, 0, 0, contentH)
+end
+
+local function closeWaypointPopup()
+	wpPopupOpen = false
+	wpPopup.Position = UDim2.new(-1, -100, 0.88, -25)
+	setClearConfirm(false)
+	for i = 1, WP_MAX do
+		local entry = wpButtons[i]
+		if entry.editBox.Visible then
+			entry.editBox.Visible = false
+			entry.label.Visible = true
+		end
+	end
+end
+
+wpClearBtn.MouseButton1Click:Connect(function()
+	if #waypoints == 0 then return end
+	setClearConfirm(true)
+end)
+
+wpNoBtn.MouseButton1Click:Connect(function()
+	setClearConfirm(false)
+end)
+
+wpYesBtn.MouseButton1Click:Connect(function()
+	table.clear(waypoints)
+	refreshWaypointPopup()
+	closeWaypointPopup()
+end)
+
+for i, entry in ipairs(wpButtons) do
+	local b       = entry.button
+	local editBtn = entry.editBtn
+	local delBtn  = entry.delBtn
+	local wpLabel = entry.label
+	local editBox = entry.editBox
+
+	editBtn.MouseButton1Click:Connect(function()
+		local wp = waypoints[i]
+		if not wp then return end
+
+		editBox.Text = wp.name or ""
+		editBox.Visible = true
+		wpLabel.Visible = false
+		editBox:CaptureFocus()
+	end)
+
+	editBox.FocusLost:Connect(function()
+		local wp = waypoints[i]
+		if wp then
+			local newName = editBox.Text
+			if newName == nil or newName == "" then newName = "WP" end
+			wp.name = newName
+			wpLabel.Text = newName
+		end
+		editBox.Visible = false
+		wpLabel.Visible = true
+	end)
+
+	delBtn.MouseButton1Click:Connect(function()
+		if not waypoints[i] then return end
+		table.remove(waypoints, i)
+		refreshWaypointPopup()
+
+		if #waypoints == 0 then
+			closeWaypointPopup()
+		end
+	end)
+
+	local pressActive    = false
+	local pressStartPos  = nil
+	local pressStartCanY = 0
+
+	local function cancelPress()
+		pressActive = false
+	end
+
+	b.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+			if editBox.Visible then return end
+			if not waypoints[i] then return end
+
+			pressActive    = true
+			pressStartPos  = Vector2.new(input.Position.X, input.Position.Y)
+			pressStartCanY = wpScroll.CanvasPosition.Y
+		end
+	end)
+
+	track(UIS.InputChanged:Connect(function(input)
+		if not pressActive then return end
+		if input.UserInputType ~= Enum.UserInputType.Touch
+		and input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
+
+		local cur = Vector2.new(input.Position.X, input.Position.Y)
+		if (cur - pressStartPos).Magnitude > WP_SCROLL_THRESHOLD then
+			cancelPress()
+		end
+	end))
+
+	b.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+			if not pressActive then return end
+
+			local endPos = Vector2.new(input.Position.X, input.Position.Y)
+			if (endPos - pressStartPos).Magnitude > WP_SCROLL_THRESHOLD then
+				cancelPress()
+				return
+			end
+			if math.abs(wpScroll.CanvasPosition.Y - pressStartCanY) > 1 then
+				cancelPress()
+				return
+			end
+
+			pressActive = false
+
+			local wp = waypoints[i]
+			if not wp then return end
+			local char = LocalPlayer.Character
+			if not char then return end
+			local root = char:FindFirstChild("HumanoidRootPart")
+			if not root then return end
+			root.CFrame = wp.cframe
+			closeWaypointPopup()
+		end
+	end)
+end
+
+saveBtn5.MouseButton1Click:Connect(function()
+	if #waypoints >= WP_MAX then return end
+	local char = LocalPlayer.Character
+	if not char then return end
+	local root = char:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+
+	local defaultName = "WP " .. (#waypoints + 1)
+	table.insert(waypoints, {
+		cframe = root.CFrame,
+		name = defaultName,
+	})
+	refreshWaypointPopup()
+end)
+
+tpBtn5.MouseButton1Click:Connect(function()
+	if wpPopupOpen then
+		closeWaypointPopup()
+		return
+	end
+	if #waypoints == 0 then return end
+
+	refreshWaypointPopup()
+	setClearConfirm(false)
+	wpScroll.CanvasPosition = Vector2.new(0, 0)
+
+	local n = #waypoints
+	local visibleRows = math.min(n, WP_POPUP_MAX_ROWS)
+	local h = WP_POPUP_PAD * 2
+		+ visibleRows * WP_ROW_HEIGHT
+		+ math.max(0, visibleRows - 1) * WP_ROW_GAP
+		+ WP_FOOTER_GAP + WP_FOOTER_H
+
+	wpPopup.Size     = UDim2.new(0, WP_POPUP_WIDTH, 0, h)
+	wpPopup.Position = UDim2.new(0.5, -WP_POPUP_WIDTH / 2, 0.88, -(h + 40))
+	wpPopupOpen = true
+end)
+
+-- ===== Fly =====
+local flySpeed   = 1
+local FLY_MULT   = 10
+local flying     = false
+local vVect      = 0
+local lastStablePos = nil
+local flyConn, noclipConn = nil, nil
+
+local function setFlySpeed(n)
+	flySpeed = math.clamp(math.floor(n), 1, 100)
+	numberBox3.Text = tostring(flySpeed)
+end
+
+numberBox3:GetPropertyChangedSignal("Text"):Connect(function()
+	local filtered = numberBox3.Text:gsub("%D", "")
+	if filtered ~= numberBox3.Text then
+		numberBox3.Text = filtered
+	end
+end)
+
+numberBox3.FocusLost:Connect(function()
+	local n = tonumber(numberBox3.Text) or 1
+	setFlySpeed(n)
+	closeValuePopup()
+end)
+
+local function sortPlayers()
+	local list = Players:GetPlayers()
+	table.sort(list, function(a, b)
+		return string.lower(a.Name) < string.lower(b.Name)
+	end)
+	players = list
+end
+
+local function findNextValid(startIdx, dir)
+	if #players <= 1 then return 1 end
+	local i = startIdx
+	for _ = 1, #players do
+		i += dir
+		if i < 1 then i = #players end
+		if i > #players then i = 1 end
+		local p = players[i]
+		if p and p ~= LocalPlayer then return i end
+	end
+	return startIdx
+end
+
+local function refreshPlayers()
+	local previous = players[currentIndex]
+	sortPlayers()
+	if #players == 0 then currentIndex = 1; return end
+
+	if previous and previous ~= LocalPlayer then
+		for i, p in ipairs(players) do
+			if p == previous then currentIndex = i; return end
+		end
+	end
+
+	currentIndex = 1
+	if players[1] == LocalPlayer and #players > 1 then
+		currentIndex = findNextValid(1, 1)
+	end
+end
+
+local function getCurrentTarget()
+	local p = players[currentIndex]
+	if p and p ~= LocalPlayer then return p end
+end
+
+local function updateCameraAndTitle(index)
+	local p = players[index]
+	if not p or p == LocalPlayer then
+		if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+			Cam.CameraSubject = LocalPlayer.Character.Humanoid
+		end
+		title.Text = string.format("%s (@%s)", LocalPlayer.DisplayName, LocalPlayer.Name)
+		return
+	end
+	if p.Character and p.Character:FindFirstChild("Humanoid") then
+		Cam.CameraSubject = p.Character.Humanoid
+		title.Text = string.format("%s (@%s)", p.DisplayName, p.Name)
+	end
+end
+
+sortPlayers()
+
+track(Players.PlayerAdded:Connect(function()
+	task.wait(0.1)
+	if _shutdown then return end
+	refreshPlayers()
+	if menuOpen then updateCameraAndTitle(currentIndex) end
+end))
+
+track(Players.PlayerRemoving:Connect(function()
+	task.wait(0.1)
+	if _shutdown then return end
+	refreshPlayers()
+	if menuOpen then updateCameraAndTitle(currentIndex) end
+end))
+
+task.spawn(function()
+	while not _shutdown do
+		task.wait(30)
+		if _shutdown then break end
+		refreshPlayers()
+		if menuOpen then updateCameraAndTitle(currentIndex) end
+	end
+end)
+
+local function hideAllBars()
+	bar.Position  = UDim2.new(-1, -100, 0.88, -25)
+	bar5.Position = UDim2.new(-1, -100, 0.88, -25)
+	closeWaypointPopup()
+end
+
+local function showBar(target)
+	hideAllBars()
+	target.Position = UDim2.new(0.5, -110, 0.88, -25)
+end
+
+local function getTarget()
+	local char = LocalPlayer.Character
+	if not char then return nil, nil, nil end
+	local hum  = char:FindFirstChildOfClass("Humanoid")
+	local root = char:FindFirstChild("HumanoidRootPart")
+	if hum and hum.SeatPart then
+		local v = hum.SeatPart.Parent
+		while v and not v:IsA("Model") do v = v.Parent end
+		return hum.SeatPart, v, hum
+	end
+	return root, nil, hum
+end
+
+local function toggleFly()
+	flying = not flying
+	local root, _, hum = getTarget()
+	if flying then
+		if root then lastStablePos = root.Position
+		else lastStablePos = Vector3.new(0, 50, 0) end
+		noclipConn = track(RunService.Stepped:Connect(function()
+			local _, vehicle = getTarget()
+			local char = LocalPlayer.Character
+			if char then
+				for _, v in pairs(char:GetDescendants()) do
+					if v:IsA("BasePart") then v.CanCollide = false end
+				end
+			end
+			if vehicle then
+				for _, v in pairs(vehicle:GetDescendants()) do
+					if v:IsA("BasePart") then v.CanCollide = false end
+				end
+			end
+		end))
+		flyConn = track(RunService.Heartbeat:Connect(function(dt)
+			local target, _, hum = getTarget()
+			if not target or not hum then return end
+			if hum.Health <= 0 then return end
+			if not lastStablePos then lastStablePos = target.Position end
+			target.Velocity    = Vector3.zero
+			target.RotVelocity = Vector3.zero
+			local velocity = flySpeed * FLY_MULT
+			local camCF = Cam.CFrame
+			local moveDir = hum.MoveDirection
+			local finalVelocity = Vector3.zero
+			if moveDir.Magnitude > 0 then
+				local localMove = camCF:VectorToObjectSpace(moveDir)
+				local rawDir = Vector3.new(localMove.X, 0, localMove.Z).Unit
+				finalVelocity = camCF:VectorToWorldSpace(rawDir) * velocity
+			end
+			finalVelocity = finalVelocity + Vector3.new(0, vVect * velocity, 0)
+			if finalVelocity.Magnitude > 0 then
+				lastStablePos = lastStablePos + (finalVelocity * dt)
+			end
+			target.CFrame = CFrame.new(lastStablePos, lastStablePos + camCF.LookVector)
+			if not hum.SeatPart then hum.PlatformStand = true end
+		end))
+	else
+		if flyConn   then flyConn:Disconnect();   flyConn = nil end
+		if noclipConn then noclipConn:Disconnect(); noclipConn = nil end
+		if hum then
+			hum.PlatformStand = false
+			pcall(function() hum:ChangeState(Enum.HumanoidStateType.GettingUp) end)
+		end
+	end
+	setPillOn("PillExtra", flying)
+end
+
+pillBtn.MouseButton1Click:Connect(function()
+	if not menuOpen then
+		menuOpen = true
+		refreshPlayers()
+		currentIndex = 1
+		if players[1] == LocalPlayer and #players > 1 then
+			currentIndex = findNextValid(1, 1)
+		end
+		showBar(bar)
+		updateCameraAndTitle(currentIndex)
+	else
+		menuOpen = false
+		bar.Position = UDim2.new(-1, -100, 0.88, -25)
+		if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+			Cam.CameraSubject = LocalPlayer.Character.Humanoid
+		end
+		currentIndex = 1
+	end
+	setPillOn("PillSpectate", menuOpen)
+end)
+
+prev.MouseButton1Click:Connect(function()
+	local idx = findNextValid(currentIndex, -1)
+	if idx ~= currentIndex then
+		currentIndex = idx
+		updateCameraAndTitle(currentIndex)
+	end
+end)
+nex.MouseButton1Click:Connect(function()
+	local idx = findNextValid(currentIndex, 1)
+	if idx ~= currentIndex then
+		currentIndex = idx
+		updateCameraAndTitle(currentIndex)
+	end
+end)
+
+title.MouseButton1Click:Connect(function()
+	local target = getCurrentTarget(); if not target then return end
+	local myChar     = LocalPlayer.Character
+	local targetChar = target.Character
+	if not myChar or not targetChar then return end
+	local myRoot     = myChar:FindFirstChild("HumanoidRootPart")
+	local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+	if not myRoot or not targetRoot then return end
+	myRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 0, -3)
+end)
+
+local VALUE_POPUP_HOLD_TIME = 0.5 * 0.7
+
+local extraHolding   = false
+local extraHoldToken = 0
+
+pillBtn3.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+	or input.UserInputType == Enum.UserInputType.Touch then
+		extraHolding = true
+		extraHoldToken += 1
+		local myToken = extraHoldToken
+		task.delay(VALUE_POPUP_HOLD_TIME, function()
+			if _shutdown then return end
+			if extraHoldToken == myToken and extraHolding then
+				extraHolding = false
+				vVect = 0
+				openValuePopup(popup3, numberBox3, tails3, pillBtn3, "fly")
+			end
+		end)
+	end
+end)
+
+pillBtn3.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+	or input.UserInputType == Enum.UserInputType.Touch then
+		if extraHolding then
+			extraHolding = false
+			extraHoldToken += 1
+			toggleFly()
+		end
+	end
+end)
+
+pillBtn5.MouseButton1Click:Connect(function()
+	if not waypointMenuOpen then
+		waypointMenuOpen = true
+		showBar(bar5)
+		menuOpen = false
+		vVect = 0
+		setPillOn("PillSpectate", false)
+	else
+		waypointMenuOpen = false
+		bar5.Position = UDim2.new(-1, -100, 0.88, -25)
+		closeWaypointPopup()
+	end
+	setPillOn("PillWaypoint", waypointMenuOpen)
+end)
+
+pillBtn6.MouseButton1Click:Connect(function()
+	setInfiniteZoom(not infiniteZoomEnabled)
+	setPillOn("PillZoom", infiniteZoomEnabled)
+end)
+
+pillBtn7.MouseButton1Click:Connect(function()
+	setInstantInteraction(not instantInteractEnabled)
+	setPillOn("PillInstant", instantInteractEnabled)
+end)
+
+track(UIS.InputBegan:Connect(function(input, gpe)
+	if gpe then return end
+	if not flying then return end
+	if input.KeyCode == Enum.KeyCode.Space then vVect = 1 end
+end))
+track(UIS.InputEnded:Connect(function(input)
+	if input.KeyCode == Enum.KeyCode.Space then vVect = 0 end
+end))
+track(UIS.InputBegan:Connect(function(input, gpe)
+	if gpe then return end
+	if not flying then return end
+	if input.KeyCode == Enum.KeyCode.LeftShift then vVect = -1 end
+end))
+track(UIS.InputEnded:Connect(function(input)
+	if input.KeyCode == Enum.KeyCode.LeftShift then vVect = 0 end
+end))
+
+local function cleanup()
+	_shutdown = true
+
+	for _, conn in ipairs(connections) do
+		pcall(function() conn:Disconnect() end)
+	end
+	connections = {}
+
+	pcall(function() RunService:UnbindFromRenderStep("SmoothTrans") end)
+
+	if IsItOn then
+		pcall(function()
+			UserGameSettings.RotationType = Enum.RotationType.MovementRelative
+		end)
+		IsItOn = false
+	end
+
+	pcall(function()
+		LocalPlayer.CameraMode = Enum.CameraMode.Classic
+		LocalPlayer.CameraMaxZoomDistance = 128
+		LocalPlayer.CameraMinZoomDistance = 0.5
+	end)
+
+	local char = LocalPlayer.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	if hum then
+		pcall(function()
+			hum.PlatformStand = false
+			hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+		end)
+	end
+
+	pcall(function() pillGui:Destroy() end)
+end
+
+genv.SpectatePillGui_Cleanup = cleanup
