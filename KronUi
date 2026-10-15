@@ -222,12 +222,12 @@ function KronUI.new(title, pillImage, opts)
 
     local LEFT_BTN_SIZE = 36
     local LEFT_IMG_SIZE = 28
-    local leftBtn = o("TextButton", {
-        AnchorPoint = Vector2.new(0, 0.5),
-        Position = UDim2.new(0, 12, 0.5, 0),
-        Size = UDim2.new(0, LEFT_BTN_SIZE, 0, LEFT_BTN_SIZE),
-        BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 12,
-    }, topBar)
+    local leftBtn = o("Frame", {
+    AnchorPoint = Vector2.new(0, 0.5),
+    Position = UDim2.new(0, 12, 0.5, 0),
+    Size = UDim2.new(0, LEFT_BTN_SIZE, 0, LEFT_BTN_SIZE),
+    BackgroundTransparency = 1, ZIndex = 12,
+}, topBar)
     local leftImg = o("ImageLabel", {
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(0.5, 0, 0.5, 0),
@@ -236,13 +236,6 @@ function KronUI.new(title, pillImage, opts)
         Image = asset(opts.SettingsIcon or DEFAULT_SETTINGS_ICON),
         ImageColor3 = W, ScaleType = Enum.ScaleType.Fit, ZIndex = 13,
     }, leftBtn)
-    hover(leftBtn,
-        function() leftImg.ImageColor3 = ACCENT end,
-        function() leftImg.ImageColor3 = W end)
-    table.insert(self._connections, leftBtn.MouseButton1Click:Connect(function()
-        self:_ToggleSettings()
-    end))
-    self._settingsBtn = leftBtn
 
     local titleX = 12 + LEFT_BTN_SIZE + 6
     local hasSub = opts.Subtitle ~= nil
